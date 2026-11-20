@@ -1,6 +1,7 @@
-import postgres from "postgres";
+import type postgres from "postgres";
 import type { MultiPolygon, Polygon } from "geojson";
-import { env } from "../../lib/env";
+import { databasePool } from "../../db/pool";
+import { safeSourceUrl } from "../../lib/source-url";
 import type { Catalog, DatasetMetadata, Geography, Observation, ProvinceMapData, Source } from "./types";
 
 export type DatasetRow = {
@@ -59,7 +60,7 @@ export function toDataset(row: DatasetRow): DatasetMetadata {
     id: row.source_id,
     publisher: row.publisher,
     title: row.source_title,
-    url: row.source_url,
+    url: safeSourceUrl(row.source_url),
     citation: row.citation_text,
     license: row.license,
     access: row.access_right,
@@ -106,9 +107,7 @@ export async function loadPublishedGeography(sql: postgres.TransactionSql) {
 }
 
 export async function loadDatabaseCatalog(): Promise<Catalog> {
-  const client = postgres(env.DATABASE_URL, { max: 1, connect_timeout: 4 });
-  try {
-    return await client.begin("isolation level repeatable read read only", async (sql) => {
+  return databasePool().begin("isolation level repeatable read read only", async (sql) => {
       const release = await loadPublishedGeography(sql);
       if (!release) return { mode: "database", publicationStatus: "unpublished", source: null, geographies: [], observations: [] };
 
@@ -172,16 +171,11 @@ export async function loadDatabaseCatalog(): Promise<Catalog> {
           };
         }),
       };
-    });
-  } finally {
-    await client.end();
-  }
+  });
 }
 
 export async function loadProvinceMap(): Promise<ProvinceMapData> {
-  const client = postgres(env.DATABASE_URL, { max: 1, connect_timeout: 4 });
-  try {
-    return await client.begin("isolation level repeatable read read only", async (sql) => {
+  return databasePool().begin("isolation level repeatable read read only", async (sql) => {
       const release = await loadPublishedGeography(sql);
       if (!release) return { type: "FeatureCollection", features: [], dataset: null };
       const shapes = await sql<(DatasetRow & {
@@ -219,8 +213,5 @@ export async function loadProvinceMap(): Promise<ProvinceMapData> {
         })),
         dataset: shapes[0] ? toDataset(shapes[0]) : null,
       };
-    });
-  } finally {
-    await client.end();
-  }
+  });
 }

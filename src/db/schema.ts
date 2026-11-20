@@ -5,6 +5,7 @@ import {
   date,
   foreignKey,
   index,
+  integer,
   numeric,
   pgSchema,
   primaryKey,
@@ -16,6 +17,12 @@ import {
 import { sql } from "drizzle-orm";
 
 export const marketEntry = pgSchema("market_entry");
+
+export const apiQuotas = marketEntry.table("api_quotas", {
+  route: text("route").primaryKey(),
+  windowStart: timestamp("window_start", { withTimezone: true }).notNull(),
+  requests: integer("requests").notNull(),
+});
 
 const geometry = customType<{ data: string; driverData: string }>({
   dataType() {
@@ -65,6 +72,33 @@ export const datasetVersions = marketEntry.table("dataset_versions", {
     and (${table.checksum} ~ '^[a-f0-9]{64}$') is true
   )`),
   check("dataset_publication_date_check", sql`${table.publicationStatus} <> 'published' or ${table.publishedAt} is not null`),
+]);
+
+export const releaseBatches = marketEntry.table("release_batches", {
+  id: uuid("batch_id").defaultRandom().primaryKey(),
+  kind: text("kind").notNull(),
+  geographyCode: text("geography_code").notNull(),
+  fingerprint: text("fingerprint").notNull().unique(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [
+  check("release_batch_kind_check", sql`${table.kind} in ('foundation', 'wave2')`),
+]);
+
+export const releaseMembers = marketEntry.table("release_members", {
+  batchId: uuid("batch_id").notNull().references(() => releaseBatches.id),
+  datasetId: uuid("dataset_version_id").notNull().references(() => datasetVersions.datasetVersionId),
+}, (table) => [primaryKey({ columns: [table.batchId, table.datasetId] })]);
+
+export const releaseAudit = marketEntry.table("release_audit", {
+  id: uuid("event_id").defaultRandom().primaryKey(),
+  batchId: uuid("batch_id").notNull().references(() => releaseBatches.id),
+  action: text("action").notNull(),
+  actor: text("actor").notNull(),
+  note: text("note"),
+  happenedAt: timestamp("happened_at", { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [
+  unique("release_audit_batch_action_unique").on(table.batchId, table.action),
+  check("release_audit_action_check", sql`${table.action} in ('import', 'approve', 'publish', 'retire', 'local_publish')`),
 ]);
 
 export const geographyVersions = marketEntry.table("geography_versions", {

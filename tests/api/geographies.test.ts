@@ -40,7 +40,7 @@ test("GET /api/geographies/:geoId returns 404 for an unknown place", async () =>
 });
 
 test("GET /api/health reports the service without claiming database readiness", async () => {
-  const response = await health();
+  const response = await health(new Request("http://localhost/api/health"));
   expect(response.status).toBe(200);
   const body = await response.json();
   expect(["ok", "degraded"]).toContain(body.status);

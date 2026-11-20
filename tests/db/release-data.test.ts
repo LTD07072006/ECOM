@@ -3,10 +3,18 @@ import { copyFile, mkdtemp, readFile, rmdir, unlink, writeFile } from "node:fs/p
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createHash } from "node:crypto";
-import { loadRelease } from "../../src/db/release-data";
+import { dataset, loadRelease } from "../../src/db/release-data";
 
 const snapshot = "data/sprint1";
 const manifest = join(snapshot, "manifest.json");
+
+test("dataset metadata preserves raw-source fingerprints and rejects malformed hashes", async () => {
+  const wave2 = JSON.parse(await readFile("data/sprint3/manifest.json", "utf8"));
+  const entry = wave2.series[0].dataset;
+  expect(dataset.parse(entry)).toHaveProperty("sourceSha256", entry.sourceSha256);
+  expect(dataset.parse(wave2.series.at(-1).dataset)).toHaveProperty("sourceSha256", null);
+  expect(dataset.safeParse({ ...entry, sourceSha256: "not-a-sha256" }).success).toBe(false);
+});
 
 test("the pinned release has matching official administrative, boundary, and population codes", async () => {
   const release = await loadRelease(manifest);

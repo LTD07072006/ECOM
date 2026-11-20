@@ -10,6 +10,7 @@
     "lint": "tsc --noEmit",
     "test": "bun test tests/api tests/db tests/features tests/smoke",
     "test:e2e": "playwright test tests/e2e",
+    "test:pilot": "bun run scripts/sprint4-smoke.ts",
     "test:db": "bun test tests/db/database.integration.test.ts tests/features/geography/database-repository.test.ts tests/features/geography/database-integrity.test.ts",
     "db:generate": "bun --bun drizzle-kit generate",
     "db:migrate": "bun run src/db/migrate.ts",

@@ -4,12 +4,14 @@ import postgres from "postgres";
 import { env } from "../lib/env";
 import { registerDataset } from "./dataset-store";
 import { loadWave2 } from "./wave2-data";
+import { assertLocalPublish, auditLocalPublish, lockReleases, recordImport } from "./release-workflow";
+import { safeSourceUrl } from "../lib/source-url";
 
 async function importWave2(release: Awaited<ReturnType<typeof loadWave2>>, publish: boolean) {
   const client = postgres(env.DATABASE_URL, { max: 1 });
   try {
     await client.begin(async (tx) => {
-      await tx`select pg_advisory_xact_lock(hashtext('market_entry:official_release'))`;
+      await lockReleases(tx);
       await tx`set local timezone to 'UTC'`;
       const { geographyVersion, year } = release.manifest;
       const provinces = await tx<{ geo_id: string; admin_code: string }[]>`
@@ -24,10 +26,15 @@ async function importWave2(release: Awaited<ReturnType<typeof loadWave2>>, publi
       const provinceIds = new Map(provinces.map((geo) => [geo.admin_code, geo.geo_id]));
       if (!provinceIds.size) throw new Error(`Publish the ${geographyVersion} foundation before importing Wave 2`);
 
-      const importedIds = new Set<string>();
-      for (const series of release.series) {
-        const versionId = await registerDataset(tx, series.dataset);
-        importedIds.add(versionId);
+      const registeredSeries = [];
+      for (const series of release.series) registeredSeries.push({ series, ...(await registerDataset(tx, series.dataset)) });
+      const airportDataset = await registerDataset(tx, release.manifest.airports);
+      const airportVersion = airportDataset.id;
+      const importedIds = [...new Set([...registeredSeries.map(({ id }) => id), airportVersion])];
+      const batchId = await recordImport(tx, "wave2", geographyVersion, release.manifest, importedIds);
+      if (airportDataset.published && registeredSeries.every(({ published }) => published)) return;
+
+      for (const { series, id: versionId } of registeredSeries) {
         const { code, label, definition, unit, valueType, scope } = series.indicator;
         await tx`
           insert into market_entry.indicator_definitions
@@ -54,10 +61,9 @@ async function importWave2(release: Awaited<ReturnType<typeof loadWave2>>, publi
         await tx`insert into market_entry.observations ${tx(records)} on conflict on constraint observations_natural_key do nothing`;
       }
 
-      const airportVersion = await registerDataset(tx, release.manifest.airports);
-      importedIds.add(airportVersion);
       const boundary = release.boundaryDataset;
       for (const airport of release.points) {
+        if (!safeSourceUrl(airport.url)) throw new Error("Airport record must use a valid HTTPS source URL without credentials.");
         const matches = await tx<{ geo_id: string }[]>`
           select geo.geo_id
           from market_entry.geo_boundaries shape
@@ -80,10 +86,13 @@ async function importWave2(release: Awaited<ReturnType<typeof loadWave2>>, publi
         `;
       }
 
-      if (publish) await tx`
-        update market_entry.dataset_versions set publication_status = 'published', published_at = coalesce(published_at, now())
-        where dataset_version_id = any(${[...importedIds]}::uuid[])
-      `;
+      if (publish) {
+        await tx`
+          update market_entry.dataset_versions set publication_status = 'published', published_at = coalesce(published_at, now())
+          where dataset_version_id = any(${importedIds}::uuid[])
+        `;
+        await auditLocalPublish(tx, batchId);
+      }
     });
   } finally {
     await client.end();
@@ -95,6 +104,7 @@ try {
   if (!["--validate", "--stage", "--publish"].includes(mode) || extra.length) {
     throw new Error("Usage: bun run db:import:wave2 [--validate|--stage|--publish] [manifest.json]");
   }
+  assertLocalPublish(mode === "--publish");
   const release = await loadWave2(resolve(manifest));
   if (mode !== "--validate") await importWave2(release, mode === "--publish");
   console.log(JSON.stringify({
@@ -103,6 +113,6 @@ try {
     observations: release.series.reduce((count, series) => count + series.values.length, 0), airports: release.points.length,
   }));
 } catch (error) {
-  console.error(error);
+  console.error(error instanceof Error && error.name !== "PostgresError" ? error.message : "The database import failed.");
   process.exitCode = 1;
 }

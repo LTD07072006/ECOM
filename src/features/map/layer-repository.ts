@@ -1,6 +1,6 @@
-import postgres from "postgres";
 import type { Point } from "geojson";
-import { env } from "../../lib/env";
+import { databasePool } from "../../db/pool";
+import { safeSourceUrl } from "../../lib/source-url";
 import { loadPublishedGeography, publishedDatasetColumns, publicReleaseConditions, toDataset, type DatasetRow } from "../geography/database-repository";
 import { indicatorGroups, type MapLayers, type StatisticalLayer } from "./layers";
 
@@ -21,9 +21,7 @@ type StatisticalRow = DatasetRow & {
 };
 
 export async function loadMapLayers(): Promise<MapLayers> {
-  const client = postgres(env.DATABASE_URL, { max: 1, connect_timeout: 4 });
-  try {
-    return await client.begin("isolation level repeatable read read only", async (sql) => {
+  return databasePool().begin("isolation level repeatable read read only", async (sql) => {
       const geography = await loadPublishedGeography(sql);
       if (!geography) return { indicators: [], infrastructure: null };
 
@@ -97,13 +95,10 @@ export async function loadMapLayers(): Promise<MapLayers> {
             type: "FeatureCollection",
             features: pois.map((poi) => ({
               type: "Feature", id: poi.source_key, geometry: poi.geometry,
-              properties: { name: poi.name, code: poi.code, geoId: poi.geo_id, province: poi.province, url: poi.reference_url },
+              properties: { name: poi.name, code: poi.code, geoId: poi.geo_id, province: poi.province, url: safeSourceUrl(poi.reference_url) ?? "" },
             })),
           },
         } : null,
       };
-    });
-  } finally {
-    await client.end();
-  }
+  });
 }

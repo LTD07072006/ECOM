@@ -2,14 +2,18 @@ import { error, json } from "../../../../lib/http";
 import { loadPublicCatalog } from "../../../../features/geography/catalog";
 import { getProfile } from "../../../../features/geography/domain";
 import { profilesToCsv } from "../../../../features/shortlist/export";
+import { boundedQuery, observeApi, uuidPattern } from "../../../../lib/api-operations";
 
-const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+export function GET(request: Request) {
+  return observeApi("export", () => exportProfiles(request));
+}
 
-export async function GET(request: Request) {
-  const params = new URL(request.url).searchParams;
-  const ids = (params.get("ids") ?? "").split(",").map((id) => id.trim()).filter(Boolean);
+async function exportProfiles(request: Request) {
+  const params = boundedQuery(request, "ids", "format");
+  if (!params) return error("Invalid export parameters.", 400);
+  const ids = (params.get("ids") ?? "").split(",").map((id) => id.trim().toLowerCase());
   const format = params.get("format") ?? "";
-  if (!ids.length || ids.length > 20 || new Set(ids).size !== ids.length) return error("Provide one or more unique geography IDs.", 400);
+  if (!ids[0] || ids.length > 20 || new Set(ids).size !== ids.length) return error("Provide one to twenty unique geography IDs.", 400);
   if (ids.some((id) => !uuidPattern.test(id))) return error("Export IDs must be valid geography IDs.", 400);
   if (format !== "json" && format !== "csv") return error("Export format must be json or csv.", 400);
 

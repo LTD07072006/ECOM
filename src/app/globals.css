@@ -1,6 +1,6 @@
 :root {
   --ink: #17211f;
-  --muted: #687572;
+  --muted: #4f625e;
   --paper: #f3f0e8;
   --panel: #fbfaf5;
   --line: rgba(23, 33, 31, 0.15);
@@ -247,4 +247,42 @@ h1 {
   .database-map-workspace { grid-template-columns: minmax(0, 1fr); }
   .database-map-stage { min-height: 65vh; }
   .database-map-workspace .workspace-panel { min-height: 15rem; border-top: 1px solid var(--line); }
+}
+.search-status { font-size: .875rem; margin: .5rem 0 0; }
+.search-status:empty { margin: 0; }
+
+:where(a, button, input, select, summary, textarea):focus-visible {
+  outline: 3px solid #0f5c5a;
+  outline-offset: 3px;
+}
+.database-map-stage :focus-visible { outline-color: #fff; }
+
+.release-shell { max-width: 76rem; margin: 0 auto; padding: clamp(1.25rem, 4vw, 4rem); }
+.release-shell h1 { margin: .65em 0 .5em; max-width: none; }
+.release-shell h2 { margin-top: 2rem; }
+.release-shell a { color: var(--teal); }
+.release-shell form, .release-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: .75rem; }
+.release-shell form { max-width: 48rem; }
+.release-shell form label { flex-basis: 100%; font-weight: 700; }
+.release-shell :where(input, textarea, button) { font: inherit; border: 1px solid var(--teal); border-radius: .4rem; padding: .55rem .75rem; }
+.release-shell :where(input, textarea) { flex: 1 1 16rem; min-width: 0; background: var(--panel); }
+.release-shell button { color: #fff; background: var(--teal); cursor: pointer; }
+.release-shell button:disabled { opacity: .65; cursor: wait; }
+.release-error { color: #9e2d25; font-weight: 700; }
+.release-metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 10rem), 1fr)); gap: 1rem; }
+.release-metrics > div, .release-batch, .release-dataset { background: var(--panel); border: 1px solid #a6b5ad; border-radius: .5rem; padding: 1rem; }
+.release-metrics dd { margin: .15rem 0 0; font-size: 1.65rem; }
+.release-batch, .release-dataset { margin: .75rem 0; }
+.release-shell summary { cursor: pointer; }
+.release-batch > :where(button, form) { margin-top: 1rem; }
+.release-shell code { overflow-wrap: anywhere; }
+.release-dataset dl { display: grid; grid-template-columns: minmax(9rem, 1fr) minmax(0, 3fr); gap: .5rem 1rem; }
+.release-dataset dt { font-weight: 700; }
+.release-dataset dd { margin: 0; overflow-wrap: anywhere; }
+@media (max-width: 40rem) {
+  .release-dataset dl { grid-template-columns: minmax(0, 1fr); }
+  .release-dataset dd { margin-bottom: .4rem; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; transition: none !important; animation: none !important; }
 }

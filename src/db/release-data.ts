@@ -9,6 +9,7 @@ const code = z.string().regex(/^(VN|[0-9]{2}|[0-9]{5})$/);
 export const dataset = z.object({
   file: z.string().regex(/^[\w.-]+\.json(?:\.gz)?$/),
   sha256: z.string().regex(/^[a-f0-9]{64}$/),
+  sourceSha256: z.string().regex(/^[a-f0-9]{64}$/).nullable().optional(),
   datasetCode: text,
   version: text,
   owner: text,

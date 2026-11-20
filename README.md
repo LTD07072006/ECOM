@@ -52,6 +52,11 @@ Map-first investor attraction platform for exploring Vietnam with transparent ma
 
 Open `http://localhost:3000`.
 
+Sprint 4 adds internal dataset review at `/internal/releases`. See the
+[release runbook and acceptance checklist](docs/sprint4-release-runbook.md) for
+pilot setup, role tokens, staged publication, monitoring, backups and rollback.
+The direct `--publish` commands above are for local bootstrap.
+
 ## Environment
 
 Keep real credentials in the ignored `.env` file or inject them at runtime. `.env.example` lists the variable names with blank values. `DATABASE_URL` stays server-side. For an existing Docker volume, use the database role's existing password in `.env`. `POSTGRES_PASSWORD` initializes the role on a new volume.
@@ -64,6 +69,7 @@ bun run build
 ```
 
 Run `bun run test:e2e` against a running app. Set `E2E_BASE_URL` when it uses a port other than 3000.
+Install Chromium with `bunx playwright install chromium` or specify `E2E_CHROMIUM_PATH` for an existing compatible installation.
 
 The PostGIS integration test is opt-in because it requires a running local database:
 

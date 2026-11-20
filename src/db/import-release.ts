@@ -5,18 +5,24 @@ import { normalizeSearch } from "../features/geography/domain";
 import { env } from "../lib/env";
 import { loadRelease, type Release } from "./release-data";
 import { registerDataset } from "./dataset-store";
+import { assertLocalPublish, auditLocalPublish, lockReleases, recordImport } from "./release-workflow";
 
 async function importRelease(release: Release, publish: boolean) {
   const client = postgres(env.DATABASE_URL, { max: 1 });
   try {
     await client.begin(async (tx) => {
-      await tx`select pg_advisory_xact_lock(hashtext('market_entry:official_release'))`;
+      await lockReleases(tx);
       await tx`set local timezone to 'UTC'`;
       const { manifest } = release;
-      const adminDataset = await registerDataset(tx, manifest.administration);
-      const boundaryDataset = await registerDataset(tx, manifest.boundaries);
-      const populationDataset = await registerDataset(tx, manifest.population);
+      const admin = await registerDataset(tx, manifest.administration);
+      const boundary = await registerDataset(tx, manifest.boundaries);
+      const populationRelease = await registerDataset(tx, manifest.population);
+      const { id: adminDataset } = admin;
+      const { id: boundaryDataset } = boundary;
+      const { id: populationDataset } = populationRelease;
       const geography = manifest.geography;
+      const batchId = await recordImport(tx, "foundation", geography.code, manifest, [adminDataset, boundaryDataset, populationDataset]);
+      if (admin.published && boundary.published && populationRelease.published) return;
       await tx`
         insert into market_entry.geography_versions (authority_source_id, dataset_version_id, code, name, effective_from)
         values (${manifest.administration.source.id}, ${adminDataset}, ${geography.code}, ${geography.name}, ${geography.effectiveFrom})
@@ -128,6 +134,7 @@ async function importRelease(release: Release, publish: boolean) {
           update market_entry.dataset_versions set publication_status = 'retired'
           where dataset_code = 'DEMO_CONTEXT' and version_label = 'demo-v1' and owner_name is null
         `;
+        await auditLocalPublish(tx, batchId);
       }
     });
   } finally {
@@ -140,6 +147,7 @@ try {
   if (!["--validate", "--stage", "--publish"].includes(mode) || extra.length) {
     throw new Error("Usage: bun run db:import [--validate|--stage|--publish] [manifest.json]");
   }
+  assertLocalPublish(mode === "--publish");
   const release = await loadRelease(resolve(manifest));
   if (mode !== "--validate") await importRelease(release, mode === "--publish");
   console.log(JSON.stringify({
@@ -152,6 +160,6 @@ try {
     observations: release.population.values.length,
   }));
 } catch (error) {
-  console.error(error);
+  console.error(error instanceof Error && error.name !== "PostgresError" ? error.message : "The database import failed.");
   process.exitCode = 1;
 }

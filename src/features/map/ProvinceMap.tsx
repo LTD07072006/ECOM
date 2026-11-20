@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { ExpressionSpecification, GeoJSONSource, Map as MapLibreMap, Popup as MapPopup } from "maplibre-gl";
 import type { DatasetMetadata, ProvinceMapData } from "../geography/types";
+import { safeSourceUrl } from "../../lib/source-url";
 import { colorScale, layerColor, missingColor, type InfrastructureLayer, type StatisticalLayer } from "./layers";
 
 const provinceSource = "provinces";
@@ -24,6 +25,7 @@ export function ProvinceMap({ selectedId, onSelect, layer, infrastructure }: {
   useEffect(() => {
     const request = new AbortController();
     let map: MapLibreMap | null = null;
+    let removeLifecycleListeners: (() => void) | undefined;
 
     async function mountMap() {
       const response = await fetch("/api/map/provinces", { signal: request.signal });
@@ -47,6 +49,11 @@ export function ProvinceMap({ selectedId, onSelect, layer, infrastructure }: {
 
       const view = new Map({
         container: container.current,
+        style: {
+          version: 8,
+          sources: {},
+          layers: [{ id: "water", type: "background", paint: { "background-color": "#132e2c" } }],
+        },
         bounds,
         fitBoundsOptions: { padding: 28, duration: 0 },
         maxZoom: 11,
@@ -58,28 +65,14 @@ export function ProvinceMap({ selectedId, onSelect, layer, infrastructure }: {
       mapRef.current = view;
       view.touchZoomRotate.disableRotation();
       let initialized = false;
-      let retryFrame: number | null = null;
-      const removeLifecycleListeners = () => {
+      removeLifecycleListeners = () => {
         view.off("style.load", handleMapLifecycle);
         view.off("load", handleMapLifecycle);
-        view.off("idle", handleMapLifecycle);
-        view.off("render", handleMapLifecycle);
-        if (retryFrame !== null) {
-          cancelAnimationFrame(retryFrame);
-          retryFrame = null;
-        }
       };
       const initializeLayers = () => {
         if (initialized || request.signal.aborted || !container.current || mapRef.current !== view) return;
         if (!view.isStyleLoaded()) return;
         try {
-          if (view.getSource(provinceSource)) {
-            initialized = true;
-            setDataset(result.meta.dataset);
-            setStatus("ready");
-            removeLifecycleListeners();
-            return;
-          }
           view.addSource(provinceSource, { type: "geojson", data: result.data, promoteId: "id" });
           view.addLayer({
             id: fillLayer, type: "fill", source: provinceSource,
@@ -98,29 +91,33 @@ export function ProvinceMap({ selectedId, onSelect, layer, infrastructure }: {
             paint: { "circle-radius": 5, "circle-color": "#73d8f5", "circle-stroke-color": "#132e2c", "circle-stroke-width": 1.5 },
           });
           view.on("click", airportLayer, (event) => {
-          const feature = event.features?.[0];
-          if (!feature || feature.geometry.type !== "Point") return;
-          const item = feature.properties;
-          const [longitude, latitude] = feature.geometry.coordinates;
-          const content = document.createElement("div");
-          content.className = "airport-popup";
-          const title = document.createElement("strong");
-          title.textContent = item.code ? `${item.name} (${item.code})` : item.name;
-          const province = document.createElement("p");
-          province.textContent = item.province;
-          const source = document.createElement("a");
-          source.textContent = "Airport record";
-          source.href = item.url;
-          content.append(title, province, source);
-          popupRef.current?.remove();
-          popupRef.current = new Popup({ maxWidth: "240px" }).setLngLat([longitude, latitude]).setDOMContent(content).addTo(view);
-        });
+            const feature = event.features?.[0];
+            if (!feature || feature.geometry.type !== "Point") return;
+            const item = feature.properties;
+            const [longitude, latitude] = feature.geometry.coordinates;
+            const content = document.createElement("div");
+            content.className = "airport-popup";
+            const title = document.createElement("strong");
+            title.textContent = item.code ? `${item.name} (${item.code})` : item.name;
+            const province = document.createElement("p");
+            province.textContent = item.province;
+            content.append(title, province);
+            const url = typeof item.url === "string" ? safeSourceUrl(item.url) : null;
+            if (url) {
+              const source = document.createElement("a");
+              source.textContent = "Airport record";
+              source.href = url;
+              content.append(source);
+            }
+            popupRef.current?.remove();
+            popupRef.current = new Popup({ maxWidth: "240px" }).setLngLat([longitude, latitude]).setDOMContent(content).addTo(view);
+          });
           view.on("click", fillLayer, (event) => {
-          if (view.getLayoutProperty(airportLayer, "visibility") === "visible"
-            && view.queryRenderedFeatures(event.point, { layers: [airportLayer] }).length) return;
-          const id = event.features?.[0]?.properties.id;
-          if (typeof id === "string") onSelect(id);
-        });
+            if (view.getLayoutProperty(airportLayer, "visibility") === "visible"
+              && view.queryRenderedFeatures(event.point, { layers: [airportLayer] }).length) return;
+            const id = event.features?.[0]?.properties.id;
+            if (typeof id === "string") onSelect(id);
+          });
           view.on("mouseenter", fillLayer, () => { view.getCanvas().style.cursor = "pointer"; });
           view.on("mouseleave", fillLayer, () => { view.getCanvas().style.cursor = ""; });
           view.on("mouseenter", airportLayer, () => { view.getCanvas().style.cursor = "pointer"; });
@@ -128,32 +125,18 @@ export function ProvinceMap({ selectedId, onSelect, layer, infrastructure }: {
           initialized = true;
           setDataset(result.meta.dataset);
           setStatus("ready");
-          removeLifecycleListeners();
+          removeLifecycleListeners?.();
         } catch {
-          scheduleInitialization();
+          setStatus("unavailable");
+          removeLifecycleListeners?.();
         }
-      };
-      const scheduleInitialization = () => {
-        if (retryFrame !== null || initialized || request.signal.aborted) return;
-        retryFrame = requestAnimationFrame(() => {
-          retryFrame = null;
-          initializeLayers();
-          if (!initialized) scheduleInitialization();
-        });
       };
       function handleMapLifecycle() {
         initializeLayers();
-        if (!initialized) scheduleInitialization();
       }
-      for (const event of ["style.load", "load", "idle", "render"] as const) {
-        view.on(event, handleMapLifecycle);
-      }
+      view.on("style.load", handleMapLifecycle);
+      view.on("load", handleMapLifecycle);
       view.addControl(new NavigationControl({ showCompass: false }), "top-right");
-      view.setStyle({
-        version: 8,
-        sources: {},
-        layers: [{ id: "water", type: "background", paint: { "background-color": "#132e2c" } }],
-      });
       queueMicrotask(handleMapLifecycle);
     }
 
@@ -162,6 +145,7 @@ export function ProvinceMap({ selectedId, onSelect, layer, infrastructure }: {
     });
     return () => {
       request.abort();
+      removeLifecycleListeners?.();
       map?.remove();
       mapRef.current = null;
       previousId.current = null;
