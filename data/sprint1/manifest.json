@@ -1,0 +1,63 @@
+{
+  "geography": {
+    "code": "VN_ADMIN_2025_07",
+    "name": "Vietnam two-tier administrative catalog effective 1 July 2025",
+    "effectiveFrom": "2025-07-01",
+    "provinces": 34,
+    "communes": 3321
+  },
+  "administration": {
+    "file": "administration.json",
+    "sha256": "7fa313b216caf62369d29e8e5bf3e75f4eef1fd0475c3d96b6ccfcb392a4baa2",
+    "datasetCode": "VN_ADMIN_CATALOG",
+    "version": "2025-07-01",
+    "owner": "Market Intelligence Data Steward",
+    "dataAsOf": "2025-07-01",
+    "reviewedOn": "2026-11-20",
+    "reviewIntervalDays": 90,
+    "source": {
+      "id": "35bedc57-5bca-4191-bbfc-dd745583ca75",
+      "publisher": "Cục Thống kê, Bộ Tài chính",
+      "title": "Danh mục đơn vị hành chính tại ngày 01/07/2025",
+      "url": "https://danhmuchanhchinh.nso.gov.vn/Doi_Chieu_Moi.aspx",
+      "license": "Public administrative names and codes. Attribute Cục Thống kê and the Government Portal.",
+      "citation": "Cục Thống kê, historical administration export with base date 01/07/2025. Code list under Decision 19/2025/QĐ-TTg."
+    }
+  },
+  "boundaries": {
+    "file": "province-boundaries.json.gz",
+    "sha256": "c4970ed21e83d51e18b8494a4881c9c0771a36a41aac2e77ecfcc5589ecde199",
+    "datasetCode": "VN_PROVINCE_BOUNDARIES",
+    "version": "COD-AB v02",
+    "owner": "Market Intelligence Data Steward",
+    "dataAsOf": "2025-07-01",
+    "reviewedOn": "2026-11-20",
+    "reviewIntervalDays": 90,
+    "source": {
+      "id": "58e3cc6e-0ec8-48f8-8707-5a9c256c1aea",
+      "publisher": "Cục Thống kê / OCHA HDX",
+      "title": "Viet Nam Subnational Administrative Boundaries (COD-AB)",
+      "url": "https://data.humdata.org/dataset/3cb544a9-9d04-4f54-94e2-93230efd8ceb",
+      "license": "CC BY 3.0 IGO",
+      "citation": "Cục Thống kê and OCHA HDX Viet Nam COD-AB v02, ADM1. Display geometry simplified and An Giang ring topology corrected."
+    }
+  },
+  "population": {
+    "file": "population-2025.json",
+    "sha256": "5954461f178f9b91fa8679a750c10948dfccd6df608ee0b8bd1fe6f8dad4bfd4",
+    "datasetCode": "VN_NSO_AVERAGE_POPULATION",
+    "version": "PL.V02.01-2025",
+    "owner": "Market Intelligence Data Steward",
+    "dataAsOf": "2025-12-31",
+    "reviewedOn": "2026-11-20",
+    "reviewIntervalDays": 365,
+    "source": {
+      "id": "201cd5b8-7211-49fc-9fc8-9504eb47fea4",
+      "publisher": "Cục Thống kê, Bộ Tài chính",
+      "title": "Diện tích, dân số và mật độ dân số phân theo địa phương, PL.V02.01",
+      "url": "https://www.nso.gov.vn/px-web-2/?pxid=PLV0201&theme=PLV02D%C3%A2n+s%E1%BB%91+v%C3%A0+lao+%C4%91%E1%BB%99ng",
+      "license": "Public PX-Web statistical table. Credit Cục Thống kê when reproducing figures.",
+      "citation": "Cục Thống kê, Statistical Yearbook 2025 supplementary table PL.V02.01 for 34 provinces, average population."
+    }
+  }
+}

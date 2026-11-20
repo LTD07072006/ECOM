@@ -1,0 +1,27 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1795183503500,
+      "tag": "0000_gorgeous_hercules",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1795185717759,
+      "tag": "0001_sprint1_data_foundation",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1795188446658,
+      "tag": "0002_sprint3_infrastructure",
+      "breakpoints": true
+    }
+  ]
+}

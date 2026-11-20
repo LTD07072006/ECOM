@@ -1,0 +1,290 @@
+{
+  "geographyVersion": "VN_ADMIN_2025_07",
+  "year": 2025,
+  "series": [
+    {
+      "indicator": {
+        "code": "GRDP_PC",
+        "label": "GRDP per capita",
+        "definition": "Gross regional domestic product per resident at current prices.",
+        "unit": "million VND/person",
+        "valueType": "decimal",
+        "scope": "current_prices_per_resident"
+      },
+      "coverage": "national_provinces",
+      "method": "NSO 34-province appendix, table PL.V03.02, 2025 column, matched to July 2025 province codes.",
+      "limitations": "Figures follow the period and coverage of the source. Province-level statistics.",
+      "dataset": {
+        "file": "grdp.json",
+        "sha256": "3e15a6eebe561a775e75c15aebcddbe42cf861adfd3e8109b39dc4bb3fc242b0",
+        "datasetCode": "VN_NSO_PL_V03_02",
+        "version": "PL.V03.02-2025",
+        "sourceSha256": "2e08b3dcd5868635a0721e1085b34101439b4b5fa9a78baa595376f3131f6506",
+        "owner": "Market Intelligence Data Steward",
+        "dataAsOf": "2025-12-31",
+        "reviewedOn": "2026-11-20",
+        "reviewIntervalDays": 365,
+        "source": {
+          "id": "eb4e764f-7849-51e0-a14b-e2256273105f",
+          "type": "official",
+          "publisher": "Cục Thống kê, Bộ Tài chính",
+          "title": "Statistical Yearbook 2025 appendix, table PL.V03.02",
+          "url": "https://www.nso.gov.vn/px-web-2?pxid=PLV0302&theme=PLV03T%C3%A0i%20kho%E1%BA%A3n%20qu%E1%BB%91c%20gia",
+          "license": "Public NSO statistics. Credit Cục Thống kê when reproducing.",
+          "citation": "Cục Thống kê, Bộ Tài chính, Statistical Yearbook 2025 appendix, table PL.V03.02"
+        }
+      }
+    },
+    {
+      "indicator": {
+        "code": "GRDP_GROWTH",
+        "label": "GRDP growth",
+        "definition": "Annual percentage change in provincial gross regional domestic product at constant prices.",
+        "unit": "%",
+        "valueType": "decimal",
+        "scope": "real_grdp_year_over_year"
+      },
+      "coverage": "national_provinces",
+      "method": "NSO 34-province appendix, table PL.V03.01, 2025 column, matched to July 2025 province codes. Subtracted 100 from the published previous-year index.",
+      "limitations": "Figures follow the period and coverage of the source. Province-level statistics.",
+      "dataset": {
+        "file": "growth.json",
+        "sha256": "41c448fba71a0fd6f29261fd96e24652869d6516f66b7623fbe9d8212a5b65ec",
+        "datasetCode": "VN_NSO_PL_V03_01",
+        "version": "PL.V03.01-2025",
+        "sourceSha256": "79e8c2adcf9135a28b149251d465a52c230f388fe637379e623b174aa28b72f5",
+        "owner": "Market Intelligence Data Steward",
+        "dataAsOf": "2025-12-31",
+        "reviewedOn": "2026-11-20",
+        "reviewIntervalDays": 365,
+        "source": {
+          "id": "0a577bda-8aa6-5757-9c05-9d4d4006efbc",
+          "type": "official",
+          "publisher": "Cục Thống kê, Bộ Tài chính",
+          "title": "Statistical Yearbook 2025 appendix, table PL.V03.01",
+          "url": "https://www.nso.gov.vn/px-web-2?pxid=PLV0301&theme=PLV03T%C3%A0i%20kho%E1%BA%A3n%20qu%E1%BB%91c%20gia",
+          "license": "Public NSO statistics. Credit Cục Thống kê when reproducing.",
+          "citation": "Cục Thống kê, Bộ Tài chính, Statistical Yearbook 2025 appendix, table PL.V03.01"
+        }
+      }
+    },
+    {
+      "indicator": {
+        "code": "RETAIL_TOTAL",
+        "label": "Retail sales and consumer services",
+        "definition": "Total retail sales of goods and consumer service revenue at current prices.",
+        "unit": "billion VND",
+        "valueType": "decimal",
+        "scope": "goods_and_consumer_services_current_prices"
+      },
+      "coverage": "national_provinces",
+      "method": "NSO 34-province appendix, table PL.V08.01, 2025 column, matched to July 2025 province codes.",
+      "limitations": "Current-price figures include price changes. Coverage is province level.",
+      "dataset": {
+        "file": "retail.json",
+        "sha256": "38c5cd0f60cea54728c9e0a2fc8d41e0240b94c054b28ae7f6863f32d11bfd7e",
+        "datasetCode": "VN_NSO_PL_V08_01",
+        "version": "PL.V08.01-2025",
+        "sourceSha256": "ca37b0f597ec837559df6b15e2ed9800ba007cfd6f2db726172cfc1117650aa9",
+        "owner": "Market Intelligence Data Steward",
+        "dataAsOf": "2025-12-31",
+        "reviewedOn": "2026-11-20",
+        "reviewIntervalDays": 365,
+        "source": {
+          "id": "32828a80-b993-551d-870f-940a3c08490c",
+          "type": "official",
+          "publisher": "Cục Thống kê, Bộ Tài chính",
+          "title": "Statistical Yearbook 2025 appendix, table PL.V08.01",
+          "url": "https://www.nso.gov.vn/px-web-2?pxid=PLV0801&theme=PLV08Th%C6%B0%C6%A1ng%20m%E1%BA%A1i",
+          "license": "Public NSO statistics. Credit Cục Thống kê when reproducing.",
+          "citation": "Cục Thống kê, Bộ Tài chính, Statistical Yearbook 2025 appendix, table PL.V08.01"
+        }
+      }
+    },
+    {
+      "indicator": {
+        "code": "FDI_LICENSED",
+        "label": "Licensed FDI registered capital",
+        "definition": "Total registered capital reported in the annual licensed foreign direct investment table.",
+        "unit": "million USD",
+        "valueType": "decimal",
+        "scope": "annual_licensed_fdi_registered_capital"
+      },
+      "coverage": "national_provinces",
+      "method": "NSO 34-province appendix, table PL.V04.02, 2025 column, matched to July 2025 province codes.",
+      "limitations": "Amounts follow the registered-capital definition in the source table. Negative values are preserved as reported. An omitted province or blank cell is unavailable. Disbursements are a separate measure.",
+      "dataset": {
+        "file": "fdi.json",
+        "sha256": "547a78f871d73ee1551d3231a42bc5b0d054942432ef3b67804b47f279e3665c",
+        "datasetCode": "VN_NSO_PL_V04_02",
+        "version": "PL.V04.02-2025",
+        "sourceSha256": "6169d31fb04d7aea020ed132b408b618465deffb4b41780389b2bc4b8ce0049c",
+        "owner": "Market Intelligence Data Steward",
+        "dataAsOf": "2025-12-31",
+        "reviewedOn": "2026-11-20",
+        "reviewIntervalDays": 365,
+        "source": {
+          "id": "24002436-1265-5bab-b9f2-148c5e81e5d1",
+          "type": "official",
+          "publisher": "Cục Thống kê, Bộ Tài chính",
+          "title": "Statistical Yearbook 2025 appendix, table PL.V04.02",
+          "url": "https://www.nso.gov.vn/px-web-2?pxid=PLV0402&theme=PLV04%C4%90%E1%BA%A7u%20t%C6%B0%20v%C3%A0%20XD",
+          "license": "Public NSO statistics. Credit Cục Thống kê when reproducing.",
+          "citation": "Cục Thống kê, Bộ Tài chính, Statistical Yearbook 2025 appendix, table PL.V04.02"
+        }
+      }
+    },
+    {
+      "indicator": {
+        "code": "ENTERPRISES_NEW",
+        "label": "New enterprise registrations",
+        "definition": "Enterprises newly registered during the reporting year.",
+        "unit": "enterprises",
+        "valueType": "integer",
+        "scope": "new_registrations"
+      },
+      "coverage": "national_provinces",
+      "method": "NSO 34-province appendix, table PL.V05.01, 2025 column, matched to July 2025 province codes.",
+      "limitations": "Counts new registrations during the year. The stock of operating enterprises is a separate measure.",
+      "dataset": {
+        "file": "business.json",
+        "sha256": "d155391fb697f138713c5ebffed3547d415f2dbb84ec6bf0690dbf73a9c9c178",
+        "datasetCode": "VN_NSO_PL_V05_01",
+        "version": "PL.V05.01-2025",
+        "sourceSha256": "1bf75427ce579c1e91ffc78b3dc51940654d92c4bab35f79765decf89a94e353",
+        "owner": "Market Intelligence Data Steward",
+        "dataAsOf": "2025-12-31",
+        "reviewedOn": "2026-11-20",
+        "reviewIntervalDays": 365,
+        "source": {
+          "id": "7f8a1a74-a9a1-5ce4-af95-ad20d2c0b8c8",
+          "type": "official",
+          "publisher": "Cục Thống kê, Bộ Tài chính",
+          "title": "Statistical Yearbook 2025 appendix, table PL.V05.01",
+          "url": "https://www.nso.gov.vn/px-web-2?pxid=PLV0501&theme=PLV05Doanh%20nghiep",
+          "license": "Public NSO statistics. Credit Cục Thống kê when reproducing.",
+          "citation": "Cục Thống kê, Bộ Tài chính, Statistical Yearbook 2025 appendix, table PL.V05.01"
+        }
+      }
+    },
+    {
+      "indicator": {
+        "code": "LABOR_FORCE",
+        "label": "Labour force aged 15+",
+        "definition": "Size of the labour force aged 15 years and older.",
+        "unit": "thousand people",
+        "valueType": "decimal",
+        "scope": "labour_force_age_15_plus"
+      },
+      "coverage": "national_provinces",
+      "method": "NSO 34-province appendix, table PL.V02.24, 2025 column, matched to July 2025 province codes.",
+      "limitations": "Figures follow the period and coverage of the source. Province-level statistics.",
+      "dataset": {
+        "file": "workforce.json",
+        "sha256": "c776980f136646283a0362ca109bc0a869af07172e8b03c9961cd83e7eee10d8",
+        "datasetCode": "VN_NSO_PL_V02_24",
+        "version": "PL.V02.24-2025",
+        "sourceSha256": "a5b67eab8772c9142a4f9b722f13871b7ac4dec98aa9e1518cc6df95b6629bc1",
+        "owner": "Market Intelligence Data Steward",
+        "dataAsOf": "2025-12-31",
+        "reviewedOn": "2026-11-20",
+        "reviewIntervalDays": 365,
+        "source": {
+          "id": "c38ac9c3-c56d-5043-a9c9-c675cf8c1afc",
+          "type": "official",
+          "publisher": "Cục Thống kê, Bộ Tài chính",
+          "title": "Statistical Yearbook 2025 appendix, table PL.V02.24",
+          "url": "https://www.nso.gov.vn/px-web-2?pxid=PLV0224&theme=PLV02D%C3%A2n%20s%E1%BB%91%20v%C3%A0%20lao%20%C4%91%E1%BB%99ng",
+          "license": "Public NSO statistics. Credit Cục Thống kê when reproducing.",
+          "citation": "Cục Thống kê, Bộ Tài chính, Statistical Yearbook 2025 appendix, table PL.V02.24"
+        }
+      }
+    },
+    {
+      "indicator": {
+        "code": "TRAINED_LABOR_RATE",
+        "label": "Share of trained workers aged 15+",
+        "definition": "Reported share of workers aged 15 years and older who have received training.",
+        "unit": "%",
+        "valueType": "percent",
+        "scope": "trained_workers_age_15_plus"
+      },
+      "coverage": "national_provinces",
+      "method": "NSO 34-province appendix, table PL.V02.27, 2025 column, matched to July 2025 province codes.",
+      "limitations": "Figures follow the period and coverage of the source. Province-level statistics.",
+      "dataset": {
+        "file": "talent.json",
+        "sha256": "fb9661a247f5fdc55d745f9652e691ac8a75d18861e26e8e14b549b8444ef859",
+        "datasetCode": "VN_NSO_PL_V02_27",
+        "version": "PL.V02.27-2025",
+        "sourceSha256": "cfe4e28bd6c682197d5668a297ee51016112e285b42c77c5e184aa15ecd6919f",
+        "owner": "Market Intelligence Data Steward",
+        "dataAsOf": "2025-12-31",
+        "reviewedOn": "2026-11-20",
+        "reviewIntervalDays": 365,
+        "source": {
+          "id": "aaac4032-1973-5f82-aeb7-80c8f6fa7313",
+          "type": "official",
+          "publisher": "Cục Thống kê, Bộ Tài chính",
+          "title": "Statistical Yearbook 2025 appendix, table PL.V02.27",
+          "url": "https://www.nso.gov.vn/px-web-2?pxid=PLV0227&theme=PLV02D%C3%A2n%20s%E1%BB%91%20v%C3%A0%20lao%20%C4%91%E1%BB%99ng",
+          "license": "Public NSO statistics. Credit Cục Thống kê when reproducing.",
+          "citation": "Cục Thống kê, Bộ Tài chính, Statistical Yearbook 2025 appendix, table PL.V02.27"
+        }
+      }
+    },
+    {
+      "indicator": {
+        "code": "GRDP_GROWTH",
+        "label": "GRDP growth",
+        "definition": "Annual percentage change in provincial gross regional domestic product at constant prices.",
+        "unit": "%",
+        "valueType": "decimal",
+        "scope": "real_grdp_year_over_year"
+      },
+      "coverage": "selected_provinces",
+      "method": "Published provincial growth rates transcribed from sections 2.1 and 2.3 of the NSO press release.",
+      "limitations": "Four provinces explicitly identified in the release narrative. Coverage for comparison is limited to these provinces and revisions may differ.",
+      "dataset": {
+        "file": "growth-press.json",
+        "sha256": "8429789136e4f64db5f297b92f5321299c509823d0df5b6103b42eeda9f6d42c",
+        "datasetCode": "VN_NSO_GRDP_PRESS",
+        "version": "2025-press-estimate",
+        "sourceSha256": null,
+        "owner": "Market Intelligence Data Steward",
+        "dataAsOf": "2025-12-31",
+        "reviewedOn": "2026-11-20",
+        "reviewIntervalDays": 365,
+        "source": {
+          "id": "7a3d4b16-865a-5fa6-b3b5-dc8db4a82e3a",
+          "type": "official",
+          "publisher": "Cục Thống kê, Bộ Tài chính",
+          "title": "2025 provincial GRDP growth press release",
+          "url": "https://www.nso.gov.vn/du-lieu-va-so-lieu-thong-ke/2026/01/thong-cao-bao-chi-ve-ket-qua-tang-truong-tong-san-pham-tren-dia-ban-grdp-cua-34-tinh-thanh-pho-nam-2025/",
+          "license": "Public NSO statistics. Credit Cục Thống kê when reproducing.",
+          "citation": "Cục Thống kê, Bộ Tài chính, 2025 provincial GRDP growth press release"
+        }
+      }
+    }
+  ],
+  "airports": {
+    "file": "airports.json",
+    "sha256": "6f67ee51137dccf876a65aed126a9a52350cc324b6defab3f4e094d337b3b784",
+    "datasetCode": "VN_OURAIRPORTS_SCHEDULED",
+    "version": "2026-11-20",
+    "sourceSha256": "85b63e21319fcd648d4741872205bbb1c89000d39bb1ded2cf41d8d11c7fe518",
+    "owner": "Market Intelligence Data Steward",
+    "dataAsOf": "2026-11-20",
+    "reviewedOn": "2026-11-20",
+    "reviewIntervalDays": 90,
+    "source": {
+      "id": "b8fe5db0-8ad8-530b-b64b-514d597b529b",
+      "type": "manual",
+      "publisher": "OurAirports",
+      "title": "Vietnam civil airport locations with scheduled service in the source snapshot",
+      "url": "https://ourairports.com/data/",
+      "license": "Public Domain",
+      "citation": "OurAirports, Vietnam civil airport locations with scheduled service in the source snapshot"
+    }
+  }
+}

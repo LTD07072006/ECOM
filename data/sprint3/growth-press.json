@@ -1,0 +1,21 @@
+{
+  "periodLabel": "2025 (estimated)",
+  "values": [
+    {
+      "code": "01",
+      "value": 8.16
+    },
+    {
+      "code": "22",
+      "value": 11.89
+    },
+    {
+      "code": "31",
+      "value": 11.81
+    },
+    {
+      "code": "79",
+      "value": 7.53
+    }
+  ]
+}

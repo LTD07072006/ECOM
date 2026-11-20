@@ -1,0 +1,147 @@
+{
+  "year": 2025,
+  "method": "PX-Web table PL.V02.01. National and provincial values were mapped to official codes and converted from thousands of people to the nearest person.",
+  "limitations": "Annual average estimates for 2025 in the 34-province statistical appendix. Commune-level estimates are unavailable in this table.",
+  "values": [
+    {
+      "code": "01",
+      "people": 8857526
+    },
+    {
+      "code": "04",
+      "people": 562929
+    },
+    {
+      "code": "08",
+      "people": 1748247
+    },
+    {
+      "code": "11",
+      "people": 667417
+    },
+    {
+      "code": "12",
+      "people": 501163
+    },
+    {
+      "code": "14",
+      "people": 1341225
+    },
+    {
+      "code": "15",
+      "people": 1675666
+    },
+    {
+      "code": "19",
+      "people": 1711576
+    },
+    {
+      "code": "20",
+      "people": 820632
+    },
+    {
+      "code": "22",
+      "people": 1411579
+    },
+    {
+      "code": "24",
+      "people": 3572353
+    },
+    {
+      "code": "25",
+      "people": 3701533
+    },
+    {
+      "code": "31",
+      "people": 4149871
+    },
+    {
+      "code": "33",
+      "people": 3235167
+    },
+    {
+      "code": "37",
+      "people": 3843770
+    },
+    {
+      "code": "38",
+      "people": 3771769
+    },
+    {
+      "code": "40",
+      "people": 3497754
+    },
+    {
+      "code": "42",
+      "people": 1335144
+    },
+    {
+      "code": "44",
+      "people": 1594134
+    },
+    {
+      "code": "46",
+      "people": 1190336
+    },
+    {
+      "code": "48",
+      "people": 2856383
+    },
+    {
+      "code": "51",
+      "people": 1881239
+    },
+    {
+      "code": "52",
+      "people": 3182652
+    },
+    {
+      "code": "56",
+      "people": 1898547
+    },
+    {
+      "code": "66",
+      "people": 2849199
+    },
+    {
+      "code": "68",
+      "people": 3356375
+    },
+    {
+      "code": "75",
+      "people": 4493699
+    },
+    {
+      "code": "79",
+      "people": 13803797
+    },
+    {
+      "code": "80",
+      "people": 2980280
+    },
+    {
+      "code": "82",
+      "people": 3403776
+    },
+    {
+      "code": "86",
+      "people": 3379606
+    },
+    {
+      "code": "91",
+      "people": 3694596
+    },
+    {
+      "code": "92",
+      "people": 3224937
+    },
+    {
+      "code": "96",
+      "people": 2150443
+    },
+    {
+      "code": "VN",
+      "people": 102345320
+    }
+  ]
+}
