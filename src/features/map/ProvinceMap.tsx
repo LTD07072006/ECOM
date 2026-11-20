@@ -71,15 +71,15 @@ export function ProvinceMap({ selectedId, onSelect, layer, infrastructure }: {
       };
       const initializeLayers = () => {
         if (initialized || request.signal.aborted || !container.current || mapRef.current !== view) return;
-        if (view.getSource(provinceSource)) {
-          initialized = true;
-          setDataset(result.meta.dataset);
-          setStatus("ready");
-          removeLifecycleListeners();
-          return;
-        }
         if (!view.isStyleLoaded()) return;
         try {
+          if (view.getSource(provinceSource)) {
+            initialized = true;
+            setDataset(result.meta.dataset);
+            setStatus("ready");
+            removeLifecycleListeners();
+            return;
+          }
           view.addSource(provinceSource, { type: "geojson", data: result.data, promoteId: "id" });
           view.addLayer({
             id: fillLayer, type: "fill", source: provinceSource,
