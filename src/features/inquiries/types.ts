@@ -8,6 +8,7 @@ export type InquirySubmission = {
   country?: string;
   sector?: string;
   geographyIds: string[];
+  noticeVersion: string;
 };
 
 export type InquiryProvenance = {

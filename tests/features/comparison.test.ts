@@ -43,3 +43,16 @@ test("comparison refuses ambiguous snapshots and incomplete selections", () => {
   const duplicate = { ...profiles[1], observations: [...profiles[1].observations, profiles[1].observations[0]] };
   expect(compareProfiles([profiles[0], duplicate]).compatible).toBe(false);
 });
+
+test("compares compatible rows independently and rejects matching version labels from different sources", () => {
+  const first = { ...profiles[0], observations: profiles[0].observations.map((o) => ({ ...o, value: 100, quality: "verified" as const })) };
+  const second = { ...profiles[1], observations: profiles[1].observations.map((o, index) => ({
+    ...o, value: 200, quality: "verified" as const,
+    source: index === 0 ? { ...o.source, id: "different-source" } : o.source,
+  })) };
+  const result = compareProfiles([first, second]);
+  expect(result.compatible).toBe(false);
+  expect(result.rows[0].reason).toContain("source");
+  expect(result.rows[0].values).toEqual([null, null]);
+  expect(result.rows[1].values).toEqual([100, 200]);
+});

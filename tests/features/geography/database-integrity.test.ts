@@ -47,3 +47,33 @@ databaseTest("published geography, boundaries, observations, and dataset sources
     await sql.end();
   }
 });
+
+databaseTest("published boundary topology and license remain within the pinned release baseline", async () => {
+  const sql = postgres(env.DATABASE_URL, { max: 1 });
+  try {
+    const [result] = await sql<{ invalid: number; overlapping: number; area_km2: number; missing_license: number }[]>`
+      with boundaries as (
+        select b.* from market_entry.geo_boundaries b
+        join market_entry.dataset_versions d using (dataset_version_id)
+        join market_entry.source_registry s on s.source_id = d.source_id
+        where d.publication_status = 'published' and s.access_right = 'public' and s.status = 'active'
+      )
+      select
+        (select count(*)::int from boundaries where not ST_IsValid(geom) or ST_IsEmpty(geom) or ST_SRID(geom) <> 4326) invalid,
+        (select count(*)::int from boundaries a join boundaries b on a.dataset_version_id = b.dataset_version_id
+          and a.geo_id < b.geo_id and a.geom && b.geom and ST_Relate(a.geom, b.geom, '2********')) overlapping,
+        (select coalesce(sum(ST_Area(ST_Intersection(a.geom,b.geom)::geography))/1000000,0)::float
+          from boundaries a join boundaries b on a.dataset_version_id = b.dataset_version_id
+          and a.geo_id < b.geo_id and a.geom && b.geom and ST_Relate(a.geom,b.geom,'2********')) area_km2,
+        (select count(*)::int from market_entry.dataset_versions d join market_entry.source_registry s using (source_id)
+          where d.publication_status = 'published' and s.access_right = 'public' and (btrim(s.license) = '' or btrim(s.citation_text) = '')) missing_license
+    `;
+    expect(result.invalid).toBe(0);
+    expect(result.missing_license).toBe(0);
+    // The pinned simplified source already has overlaps. Flag any increase for review.
+    expect(result.overlapping).toBeLessThanOrEqual(57);
+    expect(result.area_km2).toBeLessThanOrEqual(9.0);
+  } finally {
+    await sql.end();
+  }
+}, 30_000);

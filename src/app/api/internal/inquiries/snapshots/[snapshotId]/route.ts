@@ -1,19 +1,24 @@
-import { releaseRole } from "../../../../../../features/releases/authorization";
-import { getInquiryReportSnapshot, snapshotGeographyNames } from "../../../../../../features/inquiries/snapshots";
+import { snapshotMethodNotAllowed, withStewardSnapshot } from "../../../../../../features/inquiries/snapshot-http";
+import { getInquiryReportSnapshot, snapshotGeographyNames, visibleSnapshot } from "../../../../../../features/inquiries/snapshots";
+import { uuidPattern } from "../../../../../../lib/api-operations";
 import { error, json } from "../../../../../../lib/http";
 
-export async function GET(request: Request, context: { params: Promise<{ snapshotId: string }> }) {
-  if (releaseRole(request) !== "steward") return error("A valid steward access token is required.", 401);
-  const { snapshotId } = await context.params;
-  const snapshot = await getInquiryReportSnapshot(snapshotId);
-  if (!snapshot) return error("Report snapshot not found.", 404);
-  return json({ data: { ...snapshot, geography_names: await snapshotGeographyNames(snapshot.filters.geographyIds) } });
+export const dynamic = "force-dynamic";
+
+export function GET(request: Request, context: { params: Promise<{ snapshotId: string }> }) {
+  return withStewardSnapshot(request, async () => {
+    const { snapshotId } = await context.params;
+    if (!uuidPattern.test(snapshotId)) return error("Invalid report snapshot ID.", 400);
+    const snapshot = await getInquiryReportSnapshot(snapshotId);
+    if (!snapshot) return error("Report snapshot not found.", 404);
+    return json({ data: { ...visibleSnapshot(snapshot), geography_names: await snapshotGeographyNames(snapshot.filters.geographyIds) } });
+  });
 }
 
-export async function PATCH(_request: Request, _context: { params: Promise<{ snapshotId: string }> }) {
-  return error("Report snapshots are immutable; create a correction snapshot instead.", 405);
+export function PATCH(request: Request) {
+  return snapshotMethodNotAllowed(request, "GET", "Report snapshots are immutable. Create a correction snapshot.");
 }
 
-export async function DELETE() {
-  return error("Report snapshots are immutable; retention cleanup is the only deletion path.", 405);
+export function DELETE(request: Request) {
+  return snapshotMethodNotAllowed(request, "GET", "Report snapshots can only be deleted by retention cleanup.");
 }

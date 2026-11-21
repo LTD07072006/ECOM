@@ -1,0 +1,2007 @@
+{
+  "id": "c41a8091-a2f4-4cf1-9e00-5bfc84f1265f",
+  "prevId": "e7f4c239-e900-45cd-bd38-a91e9b637bf6",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "market_entry.api_client_quotas": {
+      "name": "api_client_quotas",
+      "schema": "market_entry",
+      "columns": {
+        "route": {
+          "name": "route",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "client_key": {
+          "name": "client_key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "window_start": {
+          "name": "window_start",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "requests": {
+          "name": "requests",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "api_client_quotas_window_idx": {
+          "name": "api_client_quotas_window_idx",
+          "columns": [
+            {
+              "expression": "window_start",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {
+        "api_client_quotas_route_client_key_pk": {
+          "name": "api_client_quotas_route_client_key_pk",
+          "columns": [
+            "route",
+            "client_key"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "market_entry.api_quotas": {
+      "name": "api_quotas",
+      "schema": "market_entry",
+      "columns": {
+        "route": {
+          "name": "route",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "window_start": {
+          "name": "window_start",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "requests": {
+          "name": "requests",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "market_entry.dataset_versions": {
+      "name": "dataset_versions",
+      "schema": "market_entry",
+      "columns": {
+        "dataset_version_id": {
+          "name": "dataset_version_id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "source_id": {
+          "name": "source_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "dataset_code": {
+          "name": "dataset_code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "version_label": {
+          "name": "version_label",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "checksum": {
+          "name": "checksum",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "published_at": {
+          "name": "published_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "owner_name": {
+          "name": "owner_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "data_as_of": {
+          "name": "data_as_of",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "reviewed_at": {
+          "name": "reviewed_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "review_due_at": {
+          "name": "review_due_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "publication_status": {
+          "name": "publication_status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'draft'"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "dataset_versions_source_id_source_registry_source_id_fk": {
+          "name": "dataset_versions_source_id_source_registry_source_id_fk",
+          "tableFrom": "dataset_versions",
+          "tableTo": "source_registry",
+          "schemaTo": "market_entry",
+          "columnsFrom": [
+            "source_id"
+          ],
+          "columnsTo": [
+            "source_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "dataset_source_code_version_unique": {
+          "name": "dataset_source_code_version_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "source_id",
+            "dataset_code",
+            "version_label"
+          ]
+        },
+        "dataset_source_identity_unique": {
+          "name": "dataset_source_identity_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "dataset_version_id",
+            "source_id"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "dataset_publication_status_check": {
+          "name": "dataset_publication_status_check",
+          "value": "\"market_entry\".\"dataset_versions\".\"publication_status\" in ('draft', 'validated', 'published', 'retired')"
+        },
+        "dataset_review_dates_check": {
+          "name": "dataset_review_dates_check",
+          "value": "\"market_entry\".\"dataset_versions\".\"review_due_at\" >= \"market_entry\".\"dataset_versions\".\"reviewed_at\""
+        },
+        "dataset_validation_metadata_check": {
+          "name": "dataset_validation_metadata_check",
+          "value": "\"market_entry\".\"dataset_versions\".\"publication_status\" not in ('validated', 'published') or (\n    nullif(btrim(\"market_entry\".\"dataset_versions\".\"owner_name\"), '') is not null and \"market_entry\".\"dataset_versions\".\"data_as_of\" is not null\n    and \"market_entry\".\"dataset_versions\".\"reviewed_at\" is not null and \"market_entry\".\"dataset_versions\".\"review_due_at\" is not null\n    and (\"market_entry\".\"dataset_versions\".\"checksum\" ~ '^[a-f0-9]{64}$') is true\n  )"
+        },
+        "dataset_publication_date_check": {
+          "name": "dataset_publication_date_check",
+          "value": "\"market_entry\".\"dataset_versions\".\"publication_status\" <> 'published' or \"market_entry\".\"dataset_versions\".\"published_at\" is not null"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "market_entry.geo_boundaries": {
+      "name": "geo_boundaries",
+      "schema": "market_entry",
+      "columns": {
+        "geo_id": {
+          "name": "geo_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "dataset_version_id": {
+          "name": "dataset_version_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "geom": {
+          "name": "geom",
+          "type": "geometry",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "geo_boundaries_geo_id_geo_units_geo_id_fk": {
+          "name": "geo_boundaries_geo_id_geo_units_geo_id_fk",
+          "tableFrom": "geo_boundaries",
+          "tableTo": "geo_units",
+          "schemaTo": "market_entry",
+          "columnsFrom": [
+            "geo_id"
+          ],
+          "columnsTo": [
+            "geo_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "geo_boundaries_dataset_version_id_dataset_versions_dataset_version_id_fk": {
+          "name": "geo_boundaries_dataset_version_id_dataset_versions_dataset_version_id_fk",
+          "tableFrom": "geo_boundaries",
+          "tableTo": "dataset_versions",
+          "schemaTo": "market_entry",
+          "columnsFrom": [
+            "dataset_version_id"
+          ],
+          "columnsTo": [
+            "dataset_version_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "geo_boundaries_geo_id_dataset_version_id_pk": {
+          "name": "geo_boundaries_geo_id_dataset_version_id_pk",
+          "columns": [
+            "geo_id",
+            "dataset_version_id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "geo_boundaries_geometry_check": {
+          "name": "geo_boundaries_geometry_check",
+          "value": "ST_SRID(\"market_entry\".\"geo_boundaries\".\"geom\") = 4326 AND ST_NDims(\"market_entry\".\"geo_boundaries\".\"geom\") = 2\n    AND ST_GeometryType(\"market_entry\".\"geo_boundaries\".\"geom\") IN ('ST_Polygon', 'ST_MultiPolygon')\n    AND NOT ST_IsEmpty(\"market_entry\".\"geo_boundaries\".\"geom\") AND ST_IsValid(\"market_entry\".\"geo_boundaries\".\"geom\")"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "market_entry.geo_units": {
+      "name": "geo_units",
+      "schema": "market_entry",
+      "columns": {
+        "geo_id": {
+          "name": "geo_id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "geography_version_id": {
+          "name": "geography_version_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "admin_code": {
+          "name": "admin_code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "display_name": {
+          "name": "display_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "normalized_name": {
+          "name": "normalized_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "level": {
+          "name": "level",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "parent_geo_id": {
+          "name": "parent_geo_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "valid_from": {
+          "name": "valid_from",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "valid_to": {
+          "name": "valid_to",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "latitude": {
+          "name": "latitude",
+          "type": "numeric(9, 6)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "longitude": {
+          "name": "longitude",
+          "type": "numeric(9, 6)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "geom": {
+          "name": "geom",
+          "type": "geometry",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "geometry_status": {
+          "name": "geometry_status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'point_only'"
+        },
+        "parent_level": {
+          "name": "parent_level",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "generated": {
+            "as": "CASE level WHEN 'province' THEN 'country' WHEN 'commune' THEN 'province' END",
+            "type": "stored"
+          }
+        }
+      },
+      "indexes": {
+        "geo_units_normalized_name_idx": {
+          "name": "geo_units_normalized_name_idx",
+          "columns": [
+            {
+              "expression": "normalized_name",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "geo_units_parent_idx": {
+          "name": "geo_units_parent_idx",
+          "columns": [
+            {
+              "expression": "parent_geo_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "geo_units_geography_version_id_geography_versions_geography_version_id_fk": {
+          "name": "geo_units_geography_version_id_geography_versions_geography_version_id_fk",
+          "tableFrom": "geo_units",
+          "tableTo": "geography_versions",
+          "schemaTo": "market_entry",
+          "columnsFrom": [
+            "geography_version_id"
+          ],
+          "columnsTo": [
+            "geography_version_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "geo_units_parent_fkey": {
+          "name": "geo_units_parent_fkey",
+          "tableFrom": "geo_units",
+          "tableTo": "geo_units",
+          "schemaTo": "market_entry",
+          "columnsFrom": [
+            "parent_geo_id",
+            "geography_version_id",
+            "parent_level"
+          ],
+          "columnsTo": [
+            "geo_id",
+            "geography_version_id",
+            "level"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "geo_units_version_admin_unique": {
+          "name": "geo_units_version_admin_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "geography_version_id",
+            "admin_code"
+          ]
+        },
+        "geo_units_identity_unique": {
+          "name": "geo_units_identity_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "geo_id",
+            "geography_version_id",
+            "level"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "geo_level_check": {
+          "name": "geo_level_check",
+          "value": "\"market_entry\".\"geo_units\".\"level\" in ('country', 'province', 'commune')"
+        },
+        "geo_geometry_status_check": {
+          "name": "geo_geometry_status_check",
+          "value": "\"market_entry\".\"geo_units\".\"geometry_status\" in ('not_available', 'point_only', 'boundary_available', 'boundary_verified', 'restricted')"
+        },
+        "geo_dates_check": {
+          "name": "geo_dates_check",
+          "value": "\"market_entry\".\"geo_units\".\"valid_to\" is null or \"market_entry\".\"geo_units\".\"valid_to\" >= \"market_entry\".\"geo_units\".\"valid_from\""
+        },
+        "geo_units_parent_check": {
+          "name": "geo_units_parent_check",
+          "value": "(\"market_entry\".\"geo_units\".\"level\" = 'country') = (\"market_entry\".\"geo_units\".\"parent_geo_id\" IS NULL)"
+        },
+        "geo_units_coordinates_check": {
+          "name": "geo_units_coordinates_check",
+          "value": "(\"market_entry\".\"geo_units\".\"latitude\" IS NULL AND \"market_entry\".\"geo_units\".\"longitude\" IS NULL) OR (\"market_entry\".\"geo_units\".\"latitude\" BETWEEN -90 AND 90 AND \"market_entry\".\"geo_units\".\"longitude\" BETWEEN -180 AND 180)"
+        },
+        "geo_units_geometry_check": {
+          "name": "geo_units_geometry_check",
+          "value": "\"market_entry\".\"geo_units\".\"geom\" IS NULL OR (ST_SRID(\"market_entry\".\"geo_units\".\"geom\") = 4326 AND ST_IsValid(\"market_entry\".\"geo_units\".\"geom\"))"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "market_entry.geography_versions": {
+      "name": "geography_versions",
+      "schema": "market_entry",
+      "columns": {
+        "geography_version_id": {
+          "name": "geography_version_id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "authority_source_id": {
+          "name": "authority_source_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "dataset_version_id": {
+          "name": "dataset_version_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "code": {
+          "name": "code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "effective_from": {
+          "name": "effective_from",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "effective_to": {
+          "name": "effective_to",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'draft'"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "geography_versions_authority_source_id_source_registry_source_id_fk": {
+          "name": "geography_versions_authority_source_id_source_registry_source_id_fk",
+          "tableFrom": "geography_versions",
+          "tableTo": "source_registry",
+          "schemaTo": "market_entry",
+          "columnsFrom": [
+            "authority_source_id"
+          ],
+          "columnsTo": [
+            "source_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "geography_dataset_source_fkey": {
+          "name": "geography_dataset_source_fkey",
+          "tableFrom": "geography_versions",
+          "tableTo": "dataset_versions",
+          "schemaTo": "market_entry",
+          "columnsFrom": [
+            "dataset_version_id",
+            "authority_source_id"
+          ],
+          "columnsTo": [
+            "dataset_version_id",
+            "source_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "geography_versions_code_unique": {
+          "name": "geography_versions_code_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "code"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "geography_status_check": {
+          "name": "geography_status_check",
+          "value": "\"market_entry\".\"geography_versions\".\"status\" in ('draft', 'active', 'retired')"
+        },
+        "geography_dates_check": {
+          "name": "geography_dates_check",
+          "value": "\"market_entry\".\"geography_versions\".\"effective_to\" is null or \"market_entry\".\"geography_versions\".\"effective_to\" >= \"market_entry\".\"geography_versions\".\"effective_from\""
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "market_entry.indicator_definitions": {
+      "name": "indicator_definitions",
+      "schema": "market_entry",
+      "columns": {
+        "indicator_id": {
+          "name": "indicator_id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "code": {
+          "name": "code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "label": {
+          "name": "label",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "description": {
+          "name": "description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "domain": {
+          "name": "domain",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "value_type": {
+          "name": "value_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "unit": {
+          "name": "unit",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "period_type": {
+          "name": "period_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "polarity": {
+          "name": "polarity",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'context_only'"
+        },
+        "is_proxy": {
+          "name": "is_proxy",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "score_eligible": {
+          "name": "score_eligible",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'draft'"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "indicator_definitions_code_unique": {
+          "name": "indicator_definitions_code_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "code"
+          ]
+        },
+        "indicator_unit_value_type_unique": {
+          "name": "indicator_unit_value_type_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "indicator_id",
+            "unit",
+            "value_type"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "indicator_value_type_check": {
+          "name": "indicator_value_type_check",
+          "value": "\"market_entry\".\"indicator_definitions\".\"value_type\" in ('integer', 'decimal', 'percent', 'text', 'category')"
+        },
+        "indicator_period_type_check": {
+          "name": "indicator_period_type_check",
+          "value": "\"market_entry\".\"indicator_definitions\".\"period_type\" in ('point', 'month', 'quarter', 'year', 'survey')"
+        },
+        "indicator_polarity_check": {
+          "name": "indicator_polarity_check",
+          "value": "\"market_entry\".\"indicator_definitions\".\"polarity\" in ('higher', 'lower', 'neutral', 'context_only')"
+        },
+        "indicator_score_check": {
+          "name": "indicator_score_check",
+          "value": "\"market_entry\".\"indicator_definitions\".\"polarity\" <> 'context_only' or not \"market_entry\".\"indicator_definitions\".\"score_eligible\""
+        },
+        "indicator_status_check": {
+          "name": "indicator_status_check",
+          "value": "\"market_entry\".\"indicator_definitions\".\"status\" in ('draft', 'active', 'retired')"
+        },
+        "indicator_unit_check": {
+          "name": "indicator_unit_check",
+          "value": "btrim(\"market_entry\".\"indicator_definitions\".\"unit\") <> ''"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "market_entry.infrastructure_pois": {
+      "name": "infrastructure_pois",
+      "schema": "market_entry",
+      "columns": {
+        "dataset_version_id": {
+          "name": "dataset_version_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "geo_id": {
+          "name": "geo_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "source_key": {
+          "name": "source_key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "code": {
+          "name": "code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "kind": {
+          "name": "kind",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "reference_url": {
+          "name": "reference_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "geom": {
+          "name": "geom",
+          "type": "geometry",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "infrastructure_pois_geo_idx": {
+          "name": "infrastructure_pois_geo_idx",
+          "columns": [
+            {
+              "expression": "geo_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "infrastructure_pois_dataset_fkey": {
+          "name": "infrastructure_pois_dataset_fkey",
+          "tableFrom": "infrastructure_pois",
+          "tableTo": "dataset_versions",
+          "schemaTo": "market_entry",
+          "columnsFrom": [
+            "dataset_version_id"
+          ],
+          "columnsTo": [
+            "dataset_version_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "infrastructure_pois_geo_fkey": {
+          "name": "infrastructure_pois_geo_fkey",
+          "tableFrom": "infrastructure_pois",
+          "tableTo": "geo_units",
+          "schemaTo": "market_entry",
+          "columnsFrom": [
+            "geo_id"
+          ],
+          "columnsTo": [
+            "geo_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "infrastructure_pois_dataset_version_id_source_key_pk": {
+          "name": "infrastructure_pois_dataset_version_id_source_key_pk",
+          "columns": [
+            "dataset_version_id",
+            "source_key"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "infrastructure_pois_kind_check": {
+          "name": "infrastructure_pois_kind_check",
+          "value": "\"market_entry\".\"infrastructure_pois\".\"kind\" = 'airport'"
+        },
+        "infrastructure_pois_point_check": {
+          "name": "infrastructure_pois_point_check",
+          "value": "CASE WHEN ST_SRID(\"market_entry\".\"infrastructure_pois\".\"geom\") = 4326\n    AND ST_NDims(\"market_entry\".\"infrastructure_pois\".\"geom\") = 2 AND ST_GeometryType(\"market_entry\".\"infrastructure_pois\".\"geom\") = 'ST_Point' AND NOT ST_IsEmpty(\"market_entry\".\"infrastructure_pois\".\"geom\")\n    THEN ST_X(\"market_entry\".\"infrastructure_pois\".\"geom\") BETWEEN -180 AND 180 AND ST_Y(\"market_entry\".\"infrastructure_pois\".\"geom\") BETWEEN -90 AND 90 ELSE false END"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "market_entry.inquiry_audit": {
+      "name": "inquiry_audit",
+      "schema": "market_entry",
+      "columns": {
+        "event_id": {
+          "name": "event_id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "inquiry_id": {
+          "name": "inquiry_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "actor": {
+          "name": "actor",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "action": {
+          "name": "action",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "from_status": {
+          "name": "from_status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "to_status": {
+          "name": "to_status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "note": {
+          "name": "note",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "notice_version": {
+          "name": "notice_version",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "happened_at": {
+          "name": "happened_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "inquiry_audit_inquiry_happened_idx": {
+          "name": "inquiry_audit_inquiry_happened_idx",
+          "columns": [
+            {
+              "expression": "inquiry_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "happened_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "inquiry_audit_inquiry_id_investor_inquiries_inquiry_id_fk": {
+          "name": "inquiry_audit_inquiry_id_investor_inquiries_inquiry_id_fk",
+          "tableFrom": "inquiry_audit",
+          "tableTo": "investor_inquiries",
+          "schemaTo": "market_entry",
+          "columnsFrom": [
+            "inquiry_id"
+          ],
+          "columnsTo": [
+            "inquiry_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "inquiry_audit_action_check": {
+          "name": "inquiry_audit_action_check",
+          "value": "\"market_entry\".\"inquiry_audit\".\"action\" in ('submitted', 'status_changed', 'note_added', 'anonymized')"
+        },
+        "inquiry_audit_note_length_check": {
+          "name": "inquiry_audit_note_length_check",
+          "value": "\"market_entry\".\"inquiry_audit\".\"note\" is null or length(\"market_entry\".\"inquiry_audit\".\"note\") between 1 and 5000"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "market_entry.inquiry_report_snapshot_audit": {
+      "name": "inquiry_report_snapshot_audit",
+      "schema": "market_entry",
+      "columns": {
+        "event_id": {
+          "name": "event_id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "snapshot_id": {
+          "name": "snapshot_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "actor": {
+          "name": "actor",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "action": {
+          "name": "action",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "happened_at": {
+          "name": "happened_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "inquiry_report_snapshot_audit_snapshot_idx": {
+          "name": "inquiry_report_snapshot_audit_snapshot_idx",
+          "columns": [
+            {
+              "expression": "snapshot_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "happened_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "inquiry_report_snapshot_audit_snapshot_id_inquiry_report_snapshots_snapshot_id_fk": {
+          "name": "inquiry_report_snapshot_audit_snapshot_id_inquiry_report_snapshots_snapshot_id_fk",
+          "tableFrom": "inquiry_report_snapshot_audit",
+          "tableTo": "inquiry_report_snapshots",
+          "schemaTo": "market_entry",
+          "columnsFrom": [
+            "snapshot_id"
+          ],
+          "columnsTo": [
+            "snapshot_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "inquiry_report_snapshot_audit_action_check": {
+          "name": "inquiry_report_snapshot_audit_action_check",
+          "value": "\"market_entry\".\"inquiry_report_snapshot_audit\".\"action\" in ('created', 'exported', 'compared')"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "market_entry.inquiry_report_snapshots": {
+      "name": "inquiry_report_snapshots",
+      "schema": "market_entry",
+      "columns": {
+        "snapshot_id": {
+          "name": "snapshot_id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "period_start": {
+          "name": "period_start",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "period_end": {
+          "name": "period_end",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "filters": {
+          "name": "filters",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "metrics": {
+          "name": "metrics",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "time_zone": {
+          "name": "time_zone",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'UTC'"
+        },
+        "formula_version": {
+          "name": "formula_version",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'inquiry-funnel-v3'"
+        },
+        "corrects_snapshot_id": {
+          "name": "corrects_snapshot_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "retention_at": {
+          "name": "retention_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now() + interval '2 years'"
+        },
+        "created_by": {
+          "name": "created_by",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "inquiry_report_snapshots_period_idx": {
+          "name": "inquiry_report_snapshots_period_idx",
+          "columns": [
+            {
+              "expression": "period_start",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "period_end",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "inquiry_report_snapshots_corrects_fk": {
+          "name": "inquiry_report_snapshots_corrects_fk",
+          "tableFrom": "inquiry_report_snapshots",
+          "tableTo": "inquiry_report_snapshots",
+          "schemaTo": "market_entry",
+          "columnsFrom": [
+            "corrects_snapshot_id"
+          ],
+          "columnsTo": [
+            "snapshot_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "market_entry.inquiry_snapshot_privacy_key": {
+      "name": "inquiry_snapshot_privacy_key",
+      "schema": "market_entry",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "boolean",
+          "primaryKey": true,
+          "notNull": true,
+          "default": true
+        },
+        "key": {
+          "name": "key",
+          "type": "bytea",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "inquiry_snapshot_privacy_key_id_check": {
+          "name": "inquiry_snapshot_privacy_key_id_check",
+          "value": "\"market_entry\".\"inquiry_snapshot_privacy_key\".\"id\""
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "market_entry.investor_inquiries": {
+      "name": "investor_inquiries",
+      "schema": "market_entry",
+      "columns": {
+        "inquiry_id": {
+          "name": "inquiry_id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "reference_code": {
+          "name": "reference_code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "email": {
+          "name": "email",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "message": {
+          "name": "message",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "organization": {
+          "name": "organization",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "country": {
+          "name": "country",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "sector": {
+          "name": "sector",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "geography_ids": {
+          "name": "geography_ids",
+          "type": "uuid[]",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "ARRAY[]::uuid[]"
+        },
+        "provenance": {
+          "name": "provenance",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'new'"
+        },
+        "close_reason": {
+          "name": "close_reason",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "retention_at": {
+          "name": "retention_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "anonymized_at": {
+          "name": "anonymized_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "investor_inquiries_status_updated_idx": {
+          "name": "investor_inquiries_status_updated_idx",
+          "columns": [
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "updated_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "investor_inquiries_geography_ids_idx": {
+          "name": "investor_inquiries_geography_ids_idx",
+          "columns": [
+            {
+              "expression": "geography_ids",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "gin",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "investor_inquiries_reference_code_unique": {
+          "name": "investor_inquiries_reference_code_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "reference_code"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "inquiry_status_check": {
+          "name": "inquiry_status_check",
+          "value": "\"market_entry\".\"investor_inquiries\".\"status\" in ('new', 'contacted', 'qualified', 'closed')"
+        },
+        "inquiry_close_reason_check": {
+          "name": "inquiry_close_reason_check",
+          "value": "\"market_entry\".\"investor_inquiries\".\"close_reason\" is null or \"market_entry\".\"investor_inquiries\".\"close_reason\" in ('spam', 'duplicate', 'out_of_scope', 'resolved')"
+        },
+        "inquiry_closed_reason_required_check": {
+          "name": "inquiry_closed_reason_required_check",
+          "value": "(\"market_entry\".\"investor_inquiries\".\"status\" = 'closed') = (\"market_entry\".\"investor_inquiries\".\"close_reason\" is not null)"
+        },
+        "inquiry_email_length_check": {
+          "name": "inquiry_email_length_check",
+          "value": "\"market_entry\".\"investor_inquiries\".\"email\" is null or length(\"market_entry\".\"investor_inquiries\".\"email\") between 3 and 254"
+        },
+        "inquiry_message_length_check": {
+          "name": "inquiry_message_length_check",
+          "value": "\"market_entry\".\"investor_inquiries\".\"message\" is null or length(\"market_entry\".\"investor_inquiries\".\"message\") between 10 and 5000"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "market_entry.observations": {
+      "name": "observations",
+      "schema": "market_entry",
+      "columns": {
+        "observation_id": {
+          "name": "observation_id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "geo_id": {
+          "name": "geo_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "indicator_id": {
+          "name": "indicator_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "period_start": {
+          "name": "period_start",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "period_end": {
+          "name": "period_end",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "period_label": {
+          "name": "period_label",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "value_numeric": {
+          "name": "value_numeric",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "value_text": {
+          "name": "value_text",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "value_type": {
+          "name": "value_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "unit": {
+          "name": "unit",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "scope": {
+          "name": "scope",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "source_id": {
+          "name": "source_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "dataset_version_id": {
+          "name": "dataset_version_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "quality_status": {
+          "name": "quality_status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "missing_reason": {
+          "name": "missing_reason",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "verified_at": {
+          "name": "verified_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "method_note": {
+          "name": "method_note",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "limitations": {
+          "name": "limitations",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "observations_indicator_period_idx": {
+          "name": "observations_indicator_period_idx",
+          "columns": [
+            {
+              "expression": "indicator_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "period_start",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "period_end",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "observations_geo_id_geo_units_geo_id_fk": {
+          "name": "observations_geo_id_geo_units_geo_id_fk",
+          "tableFrom": "observations",
+          "tableTo": "geo_units",
+          "schemaTo": "market_entry",
+          "columnsFrom": [
+            "geo_id"
+          ],
+          "columnsTo": [
+            "geo_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "observations_indicator_id_indicator_definitions_indicator_id_fk": {
+          "name": "observations_indicator_id_indicator_definitions_indicator_id_fk",
+          "tableFrom": "observations",
+          "tableTo": "indicator_definitions",
+          "schemaTo": "market_entry",
+          "columnsFrom": [
+            "indicator_id"
+          ],
+          "columnsTo": [
+            "indicator_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "observations_source_id_source_registry_source_id_fk": {
+          "name": "observations_source_id_source_registry_source_id_fk",
+          "tableFrom": "observations",
+          "tableTo": "source_registry",
+          "schemaTo": "market_entry",
+          "columnsFrom": [
+            "source_id"
+          ],
+          "columnsTo": [
+            "source_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "observations_dataset_version_id_dataset_versions_dataset_version_id_fk": {
+          "name": "observations_dataset_version_id_dataset_versions_dataset_version_id_fk",
+          "tableFrom": "observations",
+          "tableTo": "dataset_versions",
+          "schemaTo": "market_entry",
+          "columnsFrom": [
+            "dataset_version_id"
+          ],
+          "columnsTo": [
+            "dataset_version_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "observations_indicator_fkey": {
+          "name": "observations_indicator_fkey",
+          "tableFrom": "observations",
+          "tableTo": "indicator_definitions",
+          "schemaTo": "market_entry",
+          "columnsFrom": [
+            "indicator_id",
+            "unit",
+            "value_type"
+          ],
+          "columnsTo": [
+            "indicator_id",
+            "unit",
+            "value_type"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "observations_dataset_source_fkey": {
+          "name": "observations_dataset_source_fkey",
+          "tableFrom": "observations",
+          "tableTo": "dataset_versions",
+          "schemaTo": "market_entry",
+          "columnsFrom": [
+            "dataset_version_id",
+            "source_id"
+          ],
+          "columnsTo": [
+            "dataset_version_id",
+            "source_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "observations_natural_key": {
+          "name": "observations_natural_key",
+          "nullsNotDistinct": false,
+          "columns": [
+            "geo_id",
+            "indicator_id",
+            "period_start",
+            "period_end",
+            "scope",
+            "dataset_version_id"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "observation_quality_check": {
+          "name": "observation_quality_check",
+          "value": "\"market_entry\".\"observations\".\"quality_status\" in ('verified', 'supported', 'unavailable')"
+        },
+        "observation_missing_reason_check": {
+          "name": "observation_missing_reason_check",
+          "value": "\"market_entry\".\"observations\".\"missing_reason\" is null or \"market_entry\".\"observations\".\"missing_reason\" in ('no_data', 'not_applicable', 'not_comparable', 'restricted')"
+        },
+        "observation_period_check": {
+          "name": "observation_period_check",
+          "value": "\"market_entry\".\"observations\".\"period_end\" >= \"market_entry\".\"observations\".\"period_start\""
+        },
+        "observation_scope_check": {
+          "name": "observation_scope_check",
+          "value": "btrim(\"market_entry\".\"observations\".\"scope\") <> ''"
+        },
+        "observations_value_check": {
+          "name": "observations_value_check",
+          "value": "CASE\n    WHEN \"market_entry\".\"observations\".\"quality_status\" = 'unavailable' THEN \"market_entry\".\"observations\".\"value_numeric\" IS NULL AND \"market_entry\".\"observations\".\"value_text\" IS NULL AND \"market_entry\".\"observations\".\"missing_reason\" IS NOT NULL\n    WHEN \"market_entry\".\"observations\".\"value_type\" IN ('text', 'category') THEN \"market_entry\".\"observations\".\"value_numeric\" IS NULL AND \"market_entry\".\"observations\".\"value_text\" IS NOT NULL AND btrim(\"market_entry\".\"observations\".\"value_text\") <> '' AND \"market_entry\".\"observations\".\"missing_reason\" IS NULL\n    ELSE \"market_entry\".\"observations\".\"value_numeric\" IS NOT NULL AND \"market_entry\".\"observations\".\"value_text\" IS NULL AND \"market_entry\".\"observations\".\"missing_reason\" IS NULL\n      AND \"market_entry\".\"observations\".\"value_numeric\" > '-Infinity'::numeric AND \"market_entry\".\"observations\".\"value_numeric\" < 'Infinity'::numeric\n      AND (\"market_entry\".\"observations\".\"value_type\" <> 'integer' OR \"market_entry\".\"observations\".\"value_numeric\" = trunc(\"market_entry\".\"observations\".\"value_numeric\"))\n      AND (\"market_entry\".\"observations\".\"value_type\" <> 'percent' OR \"market_entry\".\"observations\".\"value_numeric\" BETWEEN 0 AND 100)\n    END"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "market_entry.release_audit": {
+      "name": "release_audit",
+      "schema": "market_entry",
+      "columns": {
+        "event_id": {
+          "name": "event_id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "batch_id": {
+          "name": "batch_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "action": {
+          "name": "action",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "actor": {
+          "name": "actor",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "note": {
+          "name": "note",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "happened_at": {
+          "name": "happened_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "release_audit_batch_id_release_batches_batch_id_fk": {
+          "name": "release_audit_batch_id_release_batches_batch_id_fk",
+          "tableFrom": "release_audit",
+          "tableTo": "release_batches",
+          "schemaTo": "market_entry",
+          "columnsFrom": [
+            "batch_id"
+          ],
+          "columnsTo": [
+            "batch_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "release_audit_batch_action_unique": {
+          "name": "release_audit_batch_action_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "batch_id",
+            "action"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "release_audit_action_check": {
+          "name": "release_audit_action_check",
+          "value": "\"market_entry\".\"release_audit\".\"action\" in ('import', 'approve', 'publish', 'retire', 'local_publish')"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "market_entry.release_batches": {
+      "name": "release_batches",
+      "schema": "market_entry",
+      "columns": {
+        "batch_id": {
+          "name": "batch_id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "kind": {
+          "name": "kind",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "geography_code": {
+          "name": "geography_code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "fingerprint": {
+          "name": "fingerprint",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "release_batches_fingerprint_unique": {
+          "name": "release_batches_fingerprint_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "fingerprint"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "release_batch_kind_check": {
+          "name": "release_batch_kind_check",
+          "value": "\"market_entry\".\"release_batches\".\"kind\" in ('foundation', 'wave2')"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "market_entry.release_members": {
+      "name": "release_members",
+      "schema": "market_entry",
+      "columns": {
+        "batch_id": {
+          "name": "batch_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "dataset_version_id": {
+          "name": "dataset_version_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "release_members_batch_id_release_batches_batch_id_fk": {
+          "name": "release_members_batch_id_release_batches_batch_id_fk",
+          "tableFrom": "release_members",
+          "tableTo": "release_batches",
+          "schemaTo": "market_entry",
+          "columnsFrom": [
+            "batch_id"
+          ],
+          "columnsTo": [
+            "batch_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "release_members_dataset_version_id_dataset_versions_dataset_version_id_fk": {
+          "name": "release_members_dataset_version_id_dataset_versions_dataset_version_id_fk",
+          "tableFrom": "release_members",
+          "tableTo": "dataset_versions",
+          "schemaTo": "market_entry",
+          "columnsFrom": [
+            "dataset_version_id"
+          ],
+          "columnsTo": [
+            "dataset_version_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "release_members_batch_id_dataset_version_id_pk": {
+          "name": "release_members_batch_id_dataset_version_id_pk",
+          "columns": [
+            "batch_id",
+            "dataset_version_id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "market_entry.source_registry": {
+      "name": "source_registry",
+      "schema": "market_entry",
+      "columns": {
+        "source_id": {
+          "name": "source_id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "publisher": {
+          "name": "publisher",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "title": {
+          "name": "title",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "url": {
+          "name": "url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "source_type": {
+          "name": "source_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "license": {
+          "name": "license",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "access_right": {
+          "name": "access_right",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "collected_at": {
+          "name": "collected_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "verified_at": {
+          "name": "verified_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "citation_text": {
+          "name": "citation_text",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'active'"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "source_type_check": {
+          "name": "source_type_check",
+          "value": "\"market_entry\".\"source_registry\".\"source_type\" in ('official', 'survey', 'partner', 'model', 'manual')"
+        },
+        "access_right_check": {
+          "name": "access_right_check",
+          "value": "\"market_entry\".\"source_registry\".\"access_right\" in ('public', 'internal', 'restricted')"
+        },
+        "source_status_check": {
+          "name": "source_status_check",
+          "value": "\"market_entry\".\"source_registry\".\"status\" in ('active', 'expired', 'revoked')"
+        },
+        "source_license_check": {
+          "name": "source_license_check",
+          "value": "btrim(\"market_entry\".\"source_registry\".\"license\") <> ''"
+        }
+      },
+      "isRLSEnabled": false
+    }
+  },
+  "enums": {},
+  "schemas": {
+    "market_entry": "market_entry"
+  },
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "views": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}

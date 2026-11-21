@@ -288,7 +288,30 @@ h1 {
 }
 
 .inquiry-page { width: min(72rem, 100%); margin: 0 auto; padding: clamp(1rem, 4vw, 3rem); }
+.decision-link { display: inline-block; margin-top: 1rem; color: inherit; font-weight: 700; }
+.decision-page { width: min(72rem, 100%); padding: clamp(1.25rem, 5vw, 3.5rem); margin: auto; line-height: 1.55; }
+.decision-page h1 { font-size: clamp(2.2rem, 7vw, 4.5rem); max-width: 18ch; }
+.decision-page a { color: var(--teal); }
+.decision-flow section { border-top: 1px solid var(--line); padding: 1.3rem 0; }
+.decision-flow h2 { font-size: 1.4rem; margin: 0 0 .7rem; }
+.decision-flow label { display: grid; gap: .35rem; }
+.decision-flow :is(input[type="number"], select) { width: 100%; max-width: 23rem; padding: .6rem; border: 1px solid #70817b; background: var(--panel); color: var(--ink); }
+.decision-flow button { background: var(--teal); color: white; border: 0; padding: .7rem 1rem; cursor: pointer; }
+.decision-filters { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 17rem), 1fr)); gap: 1rem; margin: 1rem 0; }
+.decision-places { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 13rem), 1fr)); gap: .5rem; border: 1px solid var(--line); padding: 1rem; }
+.decision-places label, .decision-checklist label { display: flex; align-items: baseline; gap: .5rem; }
+.decision-table-wrap { overflow-x: auto; }
+.decision-table-wrap table { border-collapse: collapse; width: 100%; min-width: 35rem; }
+.decision-table-wrap th, .decision-table-wrap td { text-align: left; vertical-align: top; border-bottom: 1px solid var(--line); padding: .75rem; }
+.decision-mismatch { display: block; font-weight: 400; margin-top: .4rem; }
+.decision-result { background: #e3ece7; padding: 1rem; margin-top: 1rem; }
+.decision-checklist { list-style: none; padding: 0; display: grid; gap: .7rem; }
 .inquiry-page h1 { max-width: none; font-size: clamp(2rem, 5vw, 4rem); }
+.inquiry-privacy-page { max-width: 48rem; line-height: 1.6; overflow-wrap: anywhere; }
+.inquiry-privacy-page a, .inquiry-form a { color: var(--teal); }
+.inquiry-form .inquiry-consent { display: flex; align-items: flex-start; gap: .5rem; }
+.inquiry-consent input { accent-color: var(--teal); }
+.inquiry-honeypot { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); pointer-events: none; }
 .inquiry-dashboard { overflow-wrap: anywhere; }
 .inquiry-dashboard-tabs, .inquiry-report-actions {
   display: flex; flex-wrap: wrap; align-items: center; gap: .65rem;

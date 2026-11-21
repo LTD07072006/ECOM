@@ -68,7 +68,7 @@ test("the internal page keeps data behind its role gate and supports reviewer ke
   await field.fill("v".repeat(43));
   await field.press("Enter");
   await expect(page.getByRole("heading", { name: "Dataset freshness" })).toBeVisible();
-  await expect(page.getByText("Signed in as reviewer")).toBeVisible();
+  await expect(page.getByText(/Signed in as .*reviewer/i)).toBeVisible();
   await expect(page.getByText("VN_ADMIN_CATALOG")).toBeVisible();
   await page.getByRole("button", { name: "Sign out" }).click();
   await expect(field).toBeVisible();

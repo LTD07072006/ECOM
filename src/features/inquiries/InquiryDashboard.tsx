@@ -244,7 +244,10 @@ export function InquiryDashboard() {
 
   function exportSnapshot(snapshotId: string) {
     void run("Preparing stored snapshot CSV…", async () => {
-      const response = await fetch(`/api/internal/inquiries/snapshots/export?id=${encodeURIComponent(snapshotId)}`, { cache: "no-store", headers: { authorization: `Bearer ${token}` } });
+      const response = await fetch("/api/internal/inquiries/snapshots/export", {
+        method: "POST", cache: "no-store", headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
+        body: JSON.stringify({ id: snapshotId }),
+      });
       if (!response.ok) throw new Error("Unable to export stored snapshot.");
       saveCsv(await response.blob(), `inquiry-snapshot-${snapshotId}.csv`);
       setNotice("Stored snapshot CSV downloaded.");
@@ -254,7 +257,10 @@ export function InquiryDashboard() {
   function compareSnapshot() {
     if (!selectedSnapshot || !compareId) return;
     void run("Comparing report snapshots…", async () => {
-      const response = await fetch(`/api/internal/inquiries/snapshots/compare?left=${encodeURIComponent(selectedSnapshot.snapshot_id)}&right=${encodeURIComponent(compareId)}`, { headers: { authorization: `Bearer ${token}` }, cache: "no-store" });
+      const response = await fetch("/api/internal/inquiries/snapshots/compare", {
+        method: "POST", cache: "no-store", headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
+        body: JSON.stringify({ left: selectedSnapshot.snapshot_id, right: compareId }),
+      });
       const body = await response.json().catch(() => null) as { data?: Comparison; error?: string } | null;
       if (!response.ok) {
         if (response.status === 409 && body?.data) {
@@ -402,7 +408,7 @@ export function InquiryDashboard() {
       {needsCloseReason && <label>Close reason<select value={closeReason} disabled={busy} onChange={(event) => setCloseReason(event.target.value)}>
         <option value="">Choose a reason</option><option value="spam">Spam</option><option value="duplicate">Duplicate</option><option value="out_of_scope">Out of scope</option><option value="resolved">Resolved</option>
       </select></label>}
-      <label>Internal note<textarea value={note} disabled={busy} onChange={(event) => setNote(event.target.value)} maxLength={5000} /></label>
+      {!selected.inquiry.anonymized_at && <label>Internal note<textarea value={note} disabled={busy} onChange={(event) => setNote(event.target.value)} maxLength={5000} /></label>}
       <button type="button" disabled={busy || !canSave} onClick={update}>Save update</button>
       <h3>Audit history</h3>
       <ol>{selected.audit.map((event, index) => <li key={`${event.happened_at}-${index}`}>{event.action}{event.from_status ? `: ${event.from_status} → ${event.to_status}` : ""}{event.note ? ` — ${event.note}` : ""}</li>)}</ol>

@@ -37,6 +37,22 @@ databaseTest("Wave 2 exposes published provincial series, comparable GRDP source
   expect(layers.infrastructure?.dataset.source.license).toBe("Public Domain");
 });
 
+databaseTest("targeted profiles and map use the same selected provincial cohort", async () => {
+  const layers = await loadMapLayers();
+  const complete = await loadDatabaseCatalog();
+  const hanoi = complete.geographies.find((geo) => geo.code === "01")!;
+  const targeted = await loadDatabaseCatalog([hanoi.id]);
+  expect(targeted.geographies.map((geo) => geo.id)).toEqual([hanoi.id]);
+  for (const layer of layers.indicators.filter((item, index, all) =>
+    all.findIndex((other) => other.indicator === item.indicator) === index)) {
+    const observation = targeted.observations.find((row) => row.indicator === layer.indicator);
+    expect(observation?.dataset?.id).toBe(layer.dataset.id);
+    expect(observation?.value).toBe(layer.values[hanoi.id] ?? null);
+    expect(layer.valueDetails?.[hanoi.id]?.quality).toBe(observation?.quality);
+  }
+  expect((await loadDatabaseCatalog(undefined, false)).observations).toHaveLength(0);
+});
+
 databaseTest("serves only the published province boundary snapshot with its attribution", async () => {
   const map = await loadProvinceMap();
   expect(map.features).toHaveLength(34);

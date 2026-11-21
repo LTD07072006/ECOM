@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { INQUIRY_NOTICE_VERSION } from "./privacy";
 
 export const inquiryStatuses = ["new", "contacted", "qualified", "closed"] as const;
 export type InquiryStatus = typeof inquiryStatuses[number];
@@ -16,8 +17,10 @@ export const inquirySubmissionSchema = z.strictObject({
   country: optionalText(100),
   sector: optionalText(160),
   geographyIds: z.array(z.string().uuid()).max(20).default([]).transform((ids) => [...new Set(ids)]),
+  consent: z.literal(true),
+  noticeVersion: z.literal(INQUIRY_NOTICE_VERSION),
   honeypot: z.literal("").optional(),
-}).transform(({ honeypot: _honeypot, ...submission }) => submission);
+}).transform(({ honeypot: _honeypot, consent: _consent, ...submission }) => submission);
 
 export function nextInquiryStatus(current: InquiryStatus, next: InquiryStatus, reason?: InquiryCloseReason) {
   if (next === "closed" && !reason) return { ok: false as const, error: "A close reason is required." };

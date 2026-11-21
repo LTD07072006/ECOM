@@ -48,3 +48,6 @@ python scripts/prepare-sprint1-data.py admin.xls boundaries.zip population.json 
 | Excel đối chiếu hành chính | `1949b5d80303d8f59c79333a63a8339defc215bb68f62d660f3ef10882308b39` |
 | ZIP COD-AB | `0a74e8ee18eb84b21f980fa4bd2a3135d2bc42fbd6e31450472368ff48abe41b` |
 | JSON-stat PX-Web | `c485955249f6dd005516e1f0c5ddde06cc240e6a9eda32b1b279ea953a6ab18c` |
+# Kiểm tra hình học của bản phát hành hiện tại
+
+Các đa giác của bộ ranh giới được ghim đều hợp lệ theo PostGIS và có đủ 34 mã tỉnh. Phép kiểm tra phần bên trong giao nhau phát hiện 57 cặp chồng lấn với tổng diện tích khoảng 8,92 km² khi tính theo geography. Đây là giới hạn của tập hình học đã giản lược hiện có và cần đối chiếu với chủ sở hữu dữ liệu trước khi sử dụng cho quyết định ranh giới chính xác. Kiểm thử tích hợp ghi nhận mức nền này để phát hiện chồng lấn gia tăng. Ranh giới có nguồn và giấy phép hiển thị trên bản đồ.

@@ -1,12 +1,19 @@
+import { createHmac, timingSafeEqual } from "node:crypto";
+import { isIP } from "node:net";
 import { databasePool } from "../db/pool";
+import { releaseRole } from "../features/releases/authorization";
 import { error } from "./http";
 
 const limits = { search: 180, profile: 180, compare: 60, export: 30, internal: 120, inquiries: 10 } as const;
+const ceilings = { search: 1800, profile: 1800, compare: 600, export: 300, internal: 1200, inquiries: 100 } as const;
 type QuotaRoute = keyof typeof limits;
 type Route = QuotaRoute | "boundaries" | "layers" | "health";
 const minute = 60_000;
-const localQuotas = new Map<QuotaRoute, { window: number; count: number }>();
+const localQuotas = new Map<string, number>();
 const quotaRoutes = new Set<string>(Object.keys(limits));
+const tokenPattern = /^[A-Za-z0-9_-]{43,128}$/;
+let localWindow = -1;
+let nextQuotaCleanup = 0;
 
 export const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -21,47 +28,116 @@ export function boundedQuery(request: Request, ...allowed: string[]) {
   return url.searchParams;
 }
 
-async function takeQuota(route: QuotaRoute) {
+function canonicalClientIp(address: string) {
+  if (isIP(address) === 4) return address;
+  if (address.includes("%") || isIP(address) !== 6) return null;
+  const host = new URL(`http://[${address}]/`).hostname.slice(1, -1);
+  const [head, tail] = host.split("::");
+  const left = head ? head.split(":") : [];
+  const right = tail ? tail.split(":") : [];
+  const parts = tail === undefined ? left : [...left, ...Array<string>(8 - left.length - right.length).fill("0"), ...right];
+  if (parts.slice(0, 6).join(":") === "0:0:0:0:0:ffff") {
+    return parts.slice(6).flatMap((part) => {
+      const value = Number.parseInt(part, 16);
+      return [value >> 8, value & 255];
+    }).join(".");
+  }
+  return parts.slice(0, 4).join(":") + "::/64";
+}
+
+function trustedClient(request: Request, scope: string) {
+  const secret = process.env.ECOM_TRUSTED_PROXY_TOKEN;
+  if (!secret) return "direct";
+  const proof = request.headers.get("x-ecom-ingress-token") ?? "";
+  if (!tokenPattern.test(secret) || !tokenPattern.test(proof) || secret.length !== proof.length ||
+    !timingSafeEqual(Buffer.from(secret), Buffer.from(proof))) return null;
+  const address = canonicalClientIp(request.headers.get("x-ecom-client-ip") ?? "");
+  return address && createHmac("sha256", secret).update(`quota:${scope}:${address}`).digest("hex");
+}
+
+async function takeQuota(route: QuotaRoute, request: Request) {
   const limit = limits[route];
+  const ceiling = ceilings[route];
+  const scope = route === "internal" ? `internal:${releaseRole(request) ?? "anonymous"}` : route;
+  const client = trustedClient(request, scope);
+  if (client === null) return { untrusted: true, wait: 0 };
   if (process.env.NODE_ENV === "production") {
     const sql = databasePool();
-    const [bucket] = await sql<{ requests: number; retry_after: number }[]>`
-      insert into market_entry.api_quotas (route, window_start, requests)
-      values (${route}, date_trunc('minute', statement_timestamp()), 1)
-      on conflict (route) do update set
-        requests = case when api_quotas.window_start < excluded.window_start then 1
-          else least(api_quotas.requests + 1, ${limit + 1}) end,
-        window_start = greatest(api_quotas.window_start, excluded.window_start)
-      returning requests,
-        greatest(1, ceil(extract(epoch from (window_start + interval '1 minute' - clock_timestamp()))))::int as retry_after
+    const now = Date.now();
+    if (now >= nextQuotaCleanup) {
+      nextQuotaCleanup = now + minute;
+      await sql`delete from market_entry.api_client_quotas
+        where (route, client_key) in (
+          select route, client_key from market_entry.api_client_quotas
+          where window_start < statement_timestamp() - interval '1 hour'
+          order by window_start limit 5000
+        ) and window_start < statement_timestamp() - interval '1 hour'`;
+    }
+    const [bucket] = await sql<{ limited: boolean; retry_after: number }[]>`
+      with client_quota as (
+        insert into market_entry.api_client_quotas (route, client_key, window_start, requests)
+        select ${scope}, ${client}, date_trunc('minute', statement_timestamp()), 1
+        where not exists (
+          select 1 from market_entry.api_quotas
+          where route = ${scope} and window_start = date_trunc('minute', statement_timestamp()) and requests >= ${ceiling}
+        )
+        on conflict (route, client_key) do update set
+          requests = case when api_client_quotas.window_start < excluded.window_start then 1
+            else least(api_client_quotas.requests + 1, ${limit + 1}) end,
+          window_start = greatest(api_client_quotas.window_start, excluded.window_start)
+        returning requests
+      ), global_quota as (
+        insert into market_entry.api_quotas (route, window_start, requests)
+        select ${scope}, date_trunc('minute', statement_timestamp()), 1 from client_quota where requests <= ${limit}
+        on conflict (route) do update set
+          requests = case when api_quotas.window_start < excluded.window_start then 1
+            else least(api_quotas.requests + 1, ${ceiling + 1}) end,
+          window_start = greatest(api_quotas.window_start, excluded.window_start)
+        returning requests
+      )
+      select coalesce((select requests > ${ceiling} from global_quota), true) as limited,
+        greatest(1, ceil(extract(epoch from (date_trunc('minute', statement_timestamp()) +
+          interval '1 minute' - clock_timestamp()))))::int as retry_after
     `;
-    return bucket.requests > limit ? bucket.retry_after : 0;
+    return { untrusted: false, wait: bucket.limited ? bucket.retry_after : 0 };
   }
 
   const now = Date.now();
   const window = Math.floor(now / minute);
-  const current = localQuotas.get(route);
-  const count = current?.window === window ? Math.min(current.count + 1, limit + 1) : 1;
-  localQuotas.set(route, { window, count });
-  return count > limit ? Math.ceil((minute - now % minute) / 1000) : 0;
+  if (localWindow !== window) {
+    localQuotas.clear();
+    localWindow = window;
+  }
+  const key = `${scope}:${client}`;
+  const count = (localQuotas.get(key) ?? 0) + 1;
+  const total = (localQuotas.get(scope) ?? 0) + 1;
+  const limited = count > limit || total > ceiling;
+  if (!limited) {
+    localQuotas.set(key, count);
+    localQuotas.set(scope, total);
+  }
+  return { untrusted: false, wait: limited ? Math.ceil((minute - now % minute) / 1000) : 0 };
 }
 
-export async function observeApi(route: Route, handler: () => Promise<Response>) {
+export async function observeApi(route: Route, request: Request, handler: () => Promise<Response>, privateResponse = false) {
   const started = performance.now();
   let response: Response;
   try {
-    const wait = quotaRoutes.has(route) ? await takeQuota(route as QuotaRoute) : 0;
-    if (wait) {
+    const quota = quotaRoutes.has(route) ? await takeQuota(route as QuotaRoute, request) : null;
+    if (quota?.untrusted) {
+      response = error("The service is temporarily unavailable.", 503);
+    } else if (quota?.wait) {
       response = error("Too many requests. Try again shortly.", 429);
-      response.headers.set("Retry-After", String(wait));
+      response.headers.set("Retry-After", String(quota.wait));
     } else {
       response = await handler();
     }
   } catch {
     response = error("The service is temporarily unavailable.", 503);
   }
-  response.headers.set("Cache-Control", "no-store");
+  response.headers.set("Cache-Control", privateResponse ? "private, no-store" : "no-store");
   response.headers.set("X-Content-Type-Options", "nosniff");
+  if (privateResponse) response.headers.set("Vary", "Authorization");
   if (process.env.NODE_ENV !== "test") {
     console.info(JSON.stringify({ event: "api_request", route, status: response.status, durationMs: Math.round(performance.now() - started) }));
   }

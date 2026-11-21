@@ -101,10 +101,18 @@ Lệnh thực hiện lần lượt các bước sau.
 | `RELEASE_REVIEWER_TOKEN` | Mở dashboard phát hành với quyền reviewer để duyệt dataset. |
 | `RELEASE_STEWARD_TOKEN` | Xử lý inquiry và báo cáo nội bộ, công bố hoặc ngừng công bố release theo quyền steward. |
 | `REQUIRE_RELEASE_APPROVAL` | Setup local tạo giá trị `0`. Đặt `1` cho trình import ở staging và production để yêu cầu quy trình duyệt release. |
+| `INQUIRY_PRIVACY_CONTROLLER`, `INQUIRY_PRIVACY_EMAIL` | Tên đơn vị phụ trách và địa chỉ nhận yêu cầu về dữ liệu. Bắt buộc để nhận inquiry trong bản chạy production. |
+| `ECOM_TRUSTED_PROXY_TOKEN` | Secret riêng của reverse proxy và ứng dụng. Cấu hình khi mở dịch vụ ra Internet để áp dụng hạn mức theo client. Chế độ local dùng một hạn mức chung. |
+| `ECOM_OPERATORS` | JSON lưu trong secret manager, chứa danh sách operator với `id`, `role` và token riêng. Không ghi giá trị thật vào Git. |
+| `ECOM_REQUIRE_NAMED_OPERATORS` | Đặt `1` trong staging và production để yêu cầu operator định danh. |
 
 - Git theo dõi [`.env.example`](.env.example) với các giá trị trống. Cất secret thật trong `.env` cục bộ hoặc secret manager. Khi gửi ảnh chụp hay log lỗi, che mật khẩu, token và toàn bộ chuỗi kết nối.
 - Web local và cổng PostgreSQL mặc định đều bind vào loopback. Token steward dùng chung ghi nhận vai trò steward trong audit. Quy trình cấp quyền cho pilot và production nằm trong [release runbook](docs/sprint4-release-runbook.md).
 - Nếu chạy hai bản checkout trên cùng máy, chọn bộ giá trị riêng cho `COMPOSE_PROJECT_NAME`, `ECOM_DB_CONTAINER`, `ECOM_DB_PORT` và cổng web `PORT`. Giữ cùng bộ giá trị khi chạy lại bản checkout đó.
+
+Trong môi trường dùng chung, cấp cho mỗi người một token ngẫu nhiên riêng và đặt `ECOM_OPERATORS` từ secret manager. Danh sách JSON có dạng `[{"id":"operator-id","role":"steward","token":"<token-rieng>"}]`. Vai trò hỗ trợ `steward` và `reviewer`. ID và token phải duy nhất, token phải là chuỗi base64url ngẫu nhiên dài 43–128 ký tự. Thu hồi bằng cách xóa operator hoặc thay token trong secret manager và cập nhật cấu hình ứng dụng. Chế độ production yêu cầu operator định danh. Token chung chỉ được hỗ trợ ở chế độ phát triển local.
+
+Tài liệu API nằm tại [OpenAPI](docs/openapi.yaml). Trạng thái từng yêu cầu T01–T06 và bằng chứng kiểm thử nằm trong [ma trận nghiệm thu](docs/acceptance-matrix.md).
 
 ## Thử các luồng trên giao diện
 
@@ -118,11 +126,17 @@ Lệnh thực hiện lần lượt các bước sau.
 
 Danh sách địa bàn, ranh giới và chỉ tiêu là dữ liệu bối cảnh. Đọc kỳ, nguồn và phương pháp trước khi diễn giải. [Nguồn hành chính và ranh giới](docs/sprint1-data-foundation.md) · [Chỉ tiêu Wave 2](docs/sprint3-wave2.md)
 
+### Khảo sát ngành bán lẻ
+
+Chọn **Explore a retail scenario** trên trang chính, chọn ngành **Retail**, rồi nhập ngưỡng doanh thu bán lẻ hoặc lực lượng lao động nếu cần. Chọn hai hoặc ba tỉnh để xem số liệu, kỳ, chất lượng và nguồn. Phần đánh giá cho nhập trọng số tổng 100% và nêu các điều kiện còn thiếu. Dữ liệu hiện tại chưa có khảo sát nhu cầu khách hàng theo phân khúc và địa bàn, đồng thời các chỉ tiêu hiện tại chưa được phê duyệt cho scoring, nên hệ thống chưa trả điểm. Checklist giúp theo dõi các việc cần xác minh với cơ quan có thẩm quyền và chuyên gia.
+
+Với từng chỉ tiêu và cấp địa bàn, hồ sơ chọn một tập số liệu công bố theo kỳ kết thúc mới nhất, tiếp theo là độ phủ và thời điểm công bố. Bản đồ mặc định dùng cùng thứ tự. Nếu tập được chọn thiếu một địa bàn, địa bàn đó hiển thị thiếu dữ liệu. Bộ điều khiển bản đồ cho phép chọn rõ một nguồn khác và xem chất lượng, kỳ, phương pháp và giấy phép của giá trị tại tỉnh đã chọn. So sánh giữ các chỉ tiêu tương thích và giải thích lý do từng chỉ tiêu còn lại không so sánh được.
+
 ### 2. Gửi inquiry và xử lý bằng quyền steward
 
 1. Trong hồ sơ địa bàn, chọn **Request investment support**. Từ shortlist, chọn **Request support for these places**.
 2. Nhập email và nội dung. Khi thử local, dùng dữ liệu giả như `pilot@example.test` và `Tôi muốn tìm hiểu hạ tầng logistics tại Hà Nội.`
-3. Bấm **Send inquiry** và ghi lại mã `INQ-…`.
+3. Mở **inquiry privacy notice**, đọc thông báo và chọn ô đồng ý. Bấm **Send inquiry** rồi ghi lại mã `INQ-…`.
 4. Mở `/internal/inquiries` trên cùng máy chủ. Nhập `RELEASE_STEWARD_TOKEN` lấy từ `.env` vào **Steward token**, rồi bấm **Load inquiries**.
 5. Tìm inquiry vừa gửi, mở chi tiết và kiểm tra địa bàn, trạng thái và nhật ký. Dùng bộ lọc để thu hẹp danh sách theo trạng thái, quốc gia, lĩnh vực, ngày hoặc địa bàn.
 6. Chọn trạng thái hoặc nhập ghi chú, rồi bấm **Save update**. Khi chọn **Closed**, chọn thêm lý do đóng. Mở nhật ký để đối chiếu thao tác vừa lưu.
@@ -133,9 +147,11 @@ Danh sách địa bàn, ranh giới và chỉ tiêu là dữ liệu bối cảnh
 2. Chọn bộ lọc chung. Nếu lọc theo địa bàn, nhập tên trong ô tìm kiếm, bấm **Find geography** và chọn kết quả.
 3. Bấm **Xem trước**. Đối chiếu kỳ, bộ lọc và tổng inquiry. Xem trước lại sau khi đổi điều kiện.
 4. Bấm **Lưu báo cáo** để lưu snapshot. Trong **Lịch sử theo kỳ**, mở một kỳ để xem số liệu đã lưu, phiên bản công thức và nhật ký.
-5. Bấm **Export stored snapshot** để tải CSV tổng hợp của bản đã lưu. Dữ liệu tải dùng các chỉ số của snapshot tại thời điểm tạo.
+5. Bấm **Export stored snapshot** để tải CSV tổng hợp của bản đã lưu. Snapshot lưu tổng và phân nhóm theo địa bàn, trạng thái, lý do đóng và tuần. Giá trị quốc gia, lĩnh vực và mã inquiry dùng để lọc được ẩn trong lịch sử. Phân nhóm quốc gia và lĩnh vực dạng văn bản tự khai chỉ xuất hiện ở báo cáo trực tiếp có quyền steward.
 6. Trong chi tiết, chọn **So sánh với báo cáo** và bấm **So sánh**. Bảng hiển thị số liệu của từng kỳ và chênh lệch theo trạng thái. Giao diện chỉ rõ điều kiện khác nhau nếu hai báo cáo dùng bộ lọc, múi giờ hoặc công thức khác.
 7. Khi cần sửa báo cáo, chọn **Tạo bản đính chính**, kiểm tra kỳ và bộ lọc, rồi xem trước và lưu. Lịch sử liên kết bản mới với bản được đính chính.
+
+File CSV tải về dùng UTF-8 có BOM để Excel mở được tiếng Việt. Trình đọc CSV tự động cần hỗ trợ dấu BOM ở đầu file.
 
 ## Kiểm thử
 
@@ -147,7 +163,7 @@ bun run test
 bun run build
 ~~~
 
-Chạy `bun run build` trong cùng thư mục dự án. Với một bản đã build và có cấu hình database phù hợp, `bun run start` khởi động Next.js ở chế độ production. Dùng hướng dẫn triển khai trong [release runbook](docs/sprint4-release-runbook.md) khi đưa lên staging hoặc production.
+Chạy `bun run build` trong cùng thư mục dự án. Với một bản đã build và có cấu hình database phù hợp, `bun run start` khởi động Next.js ở chế độ production. Dashboard nội bộ ở chế độ này yêu cầu `ECOM_OPERATORS` như phần cấu hình ở trên. Dùng hướng dẫn triển khai trong [release runbook](docs/sprint4-release-runbook.md) khi đưa lên staging hoặc production.
 
 ### Test với PostgreSQL thật
 
@@ -184,6 +200,18 @@ Trên Bash, dùng `RUN_DB_TESTS=1 bun run test:db`. Các bài test inquiry và p
 
 Các bài test có xác thực được bỏ qua khi chưa cấu hình token tương ứng. Có thể đặt `E2E_CHROMIUM_PATH` để dùng Chromium tương thích đã cài. Khi phối hợp với người tham gia pilot, dùng [biểu mẫu UAT](docs/sprint4-pilot-uat.md).
 
+### Kiểm thử bắt buộc trước khi phát hành
+
+Workflow **Release checks** chạy khi mở PR và khi cập nhật `main`. Nó tạo PostGIS riêng, áp dụng migration từ đầu, nạp dữ liệu công bố, kiểm thử steward và reviewer, build bản production rồi chạy Chromium. Các lệnh bên dưới trả lỗi nếu nhóm test bắt buộc bị bỏ qua.
+
+| Lệnh | Môi trường thử cần chuẩn bị |
+| --- | --- |
+| `bun run test:release db` | Database tại `127.0.0.1` có tên bắt đầu bằng `ecom_inquiry_it_`. Chạy migration, import foundation và Wave 2 với `--publish`, dùng hai token thử riêng theo vai trò. |
+| `bun run test:release workflow` | Database mới tại `127.0.0.1` có tên bắt đầu bằng `ecom_sprint4_workflow_`. Chạy migration rồi `bun run db:import --stage` với `REQUIRE_RELEASE_APPROVAL=1`. |
+| `bun run test:release e2e` | Chromium và bản production local dùng database thử. Đặt `E2E_BASE_URL` tại `http://127.0.0.1:<port>`, hai biến `E2E_RELEASE_…_TOKEN` và cấu hình privacy thử tương ứng của server. |
+
+Sau khi job **Required release checks** xuất hiện trên GitHub, repo admin có thể đặt nó làm check bắt buộc trước khi merge vào `main`. [Workflow kiểm thử](.github/workflows/release-checks.yml) · [GitHub branch protection](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-protected-branches/about-protected-branches)
+
 ## Migration và phát hành dữ liệu
 
 ### Cập nhật schema local
@@ -208,7 +236,11 @@ Khi phát triển một thay đổi schema mới, cập nhật [`src/db/schema.t
 
 ### Retention
 
-`bun run db:cleanup:inquiries` và `bun run db:cleanup:reports` gọi cùng một CLI kiểm tra inquiry và snapshot đến hạn. Chạy trước ở chế độ xem số lượng. Khi người phụ trách dữ liệu đã duyệt và có bản sao lưu, truyền `--apply` để áp dụng retention. Lệnh sẽ ẩn danh inquiry đủ điều kiện và dọn snapshot cùng các bản ghi audit đã hết hạn theo triển khai hiện tại.
+`bun run db:cleanup:inquiries` và `bun run db:cleanup:reports` gọi cùng một CLI kiểm tra inquiry và snapshot đến hạn. Chạy trước ở chế độ xem số lượng. Khi người phụ trách dữ liệu đã duyệt và có bản sao lưu, truyền `--apply`. Lệnh xóa dữ liệu nhận diện và nội dung ghi chú đã hết hạn, giữ sự kiện xử lý và phiên bản thông báo đã xác nhận. Snapshot tổng hợp hết hạn được dọn cùng nhật ký. Bản gốc của đính chính còn hiệu lực được giữ đến khi cả chuỗi hết hạn.
+
+Để bật tác vụ tự động cho database Docker local sau khi đã chạy migration, dùng `docker compose --profile retention up -d --build retention`. Tác vụ chạy ngay khi khởi động, lặp lại sau 24 giờ và thử lại sau một giờ khi gặp lỗi. Kiểm tra `docker compose --profile retention ps` và `bun run db:retention:monitor`. Lệnh monitor trả mã lỗi nếu lần chạy gần nhất thất bại, đang chạy hoặc thành công quá 30 giờ trước. Kết quả và số bản ghi đã xử lý được ghi vào bảng `market_entry.inquiry_retention_runs`. Khi triển khai trên môi trường khác, chạy cùng scheduler như một dịch vụ riêng và giám sát mã thoát của lệnh monitor.
+
+Báo cáo mới dùng công thức `inquiry-funnel-v4`. Tỷ lệ và thời gian liên hệ hoặc đủ điều kiện dựa trên lần đầu xuất hiện sự kiện chuyển sang trạng thái tương ứng. Tuần được tính theo lịch Việt Nam. Snapshot đã lưu giữ phiên bản và số liệu tại thời điểm tạo, các bản dùng công thức khác nhau được đánh dấu không tương thích khi so sánh.
 
 ## Xử lý lỗi thường gặp
 

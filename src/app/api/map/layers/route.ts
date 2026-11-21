@@ -5,7 +5,7 @@ import { boundedQuery, observeApi, reportUnavailable } from "../../../../lib/api
 export const dynamic = "force-dynamic";
 
 export function GET(request: Request) {
-  return observeApi("layers", () => layers(request));
+  return observeApi("layers", request, () => layers(request));
 }
 
 async function layers(request: Request) {

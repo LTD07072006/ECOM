@@ -25,6 +25,28 @@ export const apiQuotas = marketEntry.table("api_quotas", {
   requests: integer("requests").notNull(),
 });
 
+export const inquiryRetentionRuns = marketEntry.table("inquiry_retention_runs", {
+  runId: uuid("run_id").defaultRandom().primaryKey(),
+  startedAt: timestamp("started_at", { withTimezone: true }).defaultNow().notNull(),
+  finishedAt: timestamp("finished_at", { withTimezone: true }),
+  status: text("status").notNull(),
+  inquiriesProcessed: integer("inquiries_processed"),
+  snapshotsProcessed: integer("snapshots_processed"),
+}, (table) => [
+  index("inquiry_retention_runs_started_idx").on(table.startedAt),
+  check("inquiry_retention_runs_status_check", sql`${table.status} in ('running', 'succeeded', 'failed')`),
+]);
+
+export const apiClientQuotas = marketEntry.table("api_client_quotas", {
+  route: text("route").notNull(),
+  clientKey: text("client_key").notNull(),
+  windowStart: timestamp("window_start", { withTimezone: true }).notNull(),
+  requests: integer("requests").notNull(),
+}, (table) => [
+  primaryKey({ columns: [table.route, table.clientKey] }),
+  index("api_client_quotas_window_idx").on(table.windowStart),
+]);
+
 export const investorInquiries = marketEntry.table("investor_inquiries", {
   inquiryId: uuid("inquiry_id").defaultRandom().primaryKey(),
   referenceCode: text("reference_code").notNull().unique(),
@@ -60,6 +82,7 @@ export const inquiryAudit = marketEntry.table("inquiry_audit", {
   fromStatus: text("from_status"),
   toStatus: text("to_status"),
   note: text("note"),
+  noticeVersion: text("notice_version"),
   happenedAt: timestamp("happened_at", { withTimezone: true }).defaultNow().notNull(),
 }, (table) => [
   index("inquiry_audit_inquiry_happened_idx").on(table.inquiryId, table.happenedAt),
@@ -73,6 +96,13 @@ const geometry = customType<{ data: string; driverData: string }>({
   },
 });
 
+const bytea = customType<{ data: Buffer }>({ dataType: () => "bytea" });
+
+export const inquirySnapshotPrivacyKey = marketEntry.table("inquiry_snapshot_privacy_key", {
+  id: boolean("id").primaryKey().default(true),
+  key: bytea("key").notNull(),
+}, (table) => [check("inquiry_snapshot_privacy_key_id_check", sql`${table.id}`)]);
+
 export const inquiryReportSnapshots = marketEntry.table("inquiry_report_snapshots", {
   snapshotId: uuid("snapshot_id").defaultRandom().primaryKey(),
   periodStart: timestamp("period_start", { withTimezone: true }).notNull(),
@@ -80,12 +110,15 @@ export const inquiryReportSnapshots = marketEntry.table("inquiry_report_snapshot
   filters: jsonb("filters").notNull(),
   metrics: jsonb("metrics").notNull(),
   timeZone: text("time_zone").notNull().default("UTC"),
-  formulaVersion: text("formula_version").notNull(),
+  formulaVersion: text("formula_version").notNull().default("inquiry-funnel-v3"),
   correctsSnapshotId: uuid("corrects_snapshot_id"),
-  retentionAt: timestamp("retention_at", { withTimezone: true }).notNull(),
+  retentionAt: timestamp("retention_at", { withTimezone: true }).notNull().default(sql`now() + interval '2 years'`),
   createdBy: text("created_by").notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-}, (table) => [index("inquiry_report_snapshots_period_idx").on(table.periodStart, table.periodEnd)]);
+}, (table) => [
+  index("inquiry_report_snapshots_period_idx").on(table.periodStart, table.periodEnd),
+  foreignKey({ name: "inquiry_report_snapshots_corrects_fk", columns: [table.correctsSnapshotId], foreignColumns: [table.snapshotId] }),
+]);
 
 export const inquiryReportSnapshotAudit = marketEntry.table("inquiry_report_snapshot_audit", {
   eventId: uuid("event_id").defaultRandom().primaryKey(),

@@ -37,8 +37,9 @@ export function ProvinceMap({ selectedId, onSelect, layer, infrastructure }: {
         return;
       }
 
-      const { LngLatBounds, Map, NavigationControl, Popup } = await import("maplibre-gl");
+      const { LngLatBounds, Map, NavigationControl, Popup, setWorkerUrl } = await import("maplibre-gl");
       if (request.signal.aborted || !container.current) return;
+      setWorkerUrl(new URL("maplibre-gl/dist/maplibre-gl-worker.mjs", import.meta.url).toString());
       const bounds = new LngLatBounds();
       for (const feature of result.data.features) {
         const polygons = feature.geometry.type === "MultiPolygon" ? feature.geometry.coordinates : [feature.geometry.coordinates];

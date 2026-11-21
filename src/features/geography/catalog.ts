@@ -2,9 +2,9 @@ import { loadDatabaseCatalog } from "./database-repository";
 import type { Catalog } from "./types";
 import { reportUnavailable } from "../../lib/api-operations";
 
-export async function loadPublicCatalog(): Promise<Catalog> {
+export async function loadPublicCatalog(geoIds?: string[], includeObservations = true): Promise<Catalog> {
   try {
-    const catalog = await loadDatabaseCatalog();
+    const catalog = await loadDatabaseCatalog(geoIds, includeObservations);
     if (catalog.publicationStatus !== "published") reportUnavailable("catalog");
     return catalog;
   } catch {

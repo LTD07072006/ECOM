@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { releaseRole } from "../../../../features/releases/authorization";
+import { releaseIdentity, releaseRole } from "../../../../features/releases/authorization";
 import { applyReleaseAction, releaseOverview } from "../../../../features/releases/operations";
 import { boundedQuery, observeApi } from "../../../../lib/api-operations";
 import { error, json } from "../../../../lib/http";
@@ -13,16 +13,16 @@ const actionSchema = z.strictObject({
 });
 
 export function GET(request: Request) {
-  return observeApi("internal", async () => {
+  return observeApi("internal", request, async () => {
     const role = releaseRole(request);
     if (!role) return error("A valid release access token is required.", 401);
     if (!boundedQuery(request)) return error("Unexpected release parameters.", 400);
-    return json({ role, data: await releaseOverview() });
+    return json({ role, actor: releaseIdentity(request)!.actor, data: await releaseOverview() });
   });
 }
 
 export function POST(request: Request) {
-  return observeApi("internal", async () => {
+  return observeApi("internal", request, async () => {
     const role = releaseRole(request);
     if (!role) return error("A valid release access token is required.", 401);
     if (!boundedQuery(request)) return error("Unexpected release parameters.", 400);
@@ -57,7 +57,7 @@ export function POST(request: Request) {
     if ((action === "approve" && role !== "reviewer") || (action !== "approve" && role !== "steward")) {
       return error("This release role cannot perform the requested action.", 403);
     }
-    const result = await applyReleaseAction(batchId, action, role, note);
+    const result = await applyReleaseAction(batchId, action, role, note, releaseIdentity(request)!.actor);
     return result.message ? error(result.message, result.status) : json({ data: { batchId, action } });
   });
 }

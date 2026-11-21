@@ -27,6 +27,7 @@ export type StatisticalLayer = {
   method: string;
   dataset: DatasetMetadata;
   values: Record<string, number | null>;
+  valueDetails?: Record<string, { quality: string; missingReason: string | null; method: string | null; limitations: string | null }>;
 };
 
 export type InfrastructureLayer = {

@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useId, useState, type FormEvent } from "react";
+import { INQUIRY_NOTICE_VERSION } from "./privacy";
 
 export type InquiryFormProps = {
   geographyIds: string[];
@@ -9,6 +10,7 @@ export type InquiryFormProps = {
 };
 
 export function InquiryForm({ geographyIds, geographyLabels = [], onSubmitted }: InquiryFormProps) {
+  const privacySummary = useId();
   const [error, setError] = useState<string | null>(null);
   const [referenceCode, setReferenceCode] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
@@ -26,7 +28,7 @@ export function InquiryForm({ geographyIds, geographyLabels = [], onSubmitted }:
         body: JSON.stringify({
           email: form.get("email"), message: form.get("message"), name: form.get("name"),
           organization: form.get("organization"), country: form.get("country"), sector: form.get("sector"),
-          geographyIds, honeypot: form.get("website"),
+          geographyIds, honeypot: form.get("website"), consent: form.has("consent"), noticeVersion: INQUIRY_NOTICE_VERSION,
         }),
       });
       const body = await response.json().catch(() => ({})) as { referenceCode?: string; error?: string };
@@ -54,6 +56,8 @@ export function InquiryForm({ geographyIds, geographyLabels = [], onSubmitted }:
     <label>Country<input name="country" maxLength={100} autoComplete="country-name" /></label>
     <label>Sector<input name="sector" maxLength={160} /></label>
     <label className="inquiry-honeypot" aria-hidden="true">Website<input name="website" tabIndex={-1} autoComplete="off" /></label>
+    <p id={privacySummary}>Stewards use your details to review and respond to this inquiry. It is due for anonymization 12 months after the last update. See the <a href="/privacy/inquiries" target="_blank" rel="noopener noreferrer">inquiry privacy notice (opens in a new tab)</a> for the privacy contact and your options.</p>
+    <label className="inquiry-consent"><input type="checkbox" name="consent" required aria-describedby={privacySummary} /> I consent to the use of my data to handle this inquiry.</label>
     {error && <p role="alert">{error}</p>}
     <button type="submit" disabled={pending}>{pending ? "Sending…" : "Send inquiry"}</button>
   </form>;

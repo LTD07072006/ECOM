@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test";
+import { INQUIRY_NOTICE_VERSION } from "../../src/features/inquiries/privacy";
 import {
   closeReasons,
   inquirySubmissionSchema,
@@ -20,6 +21,8 @@ test("validates the minimal public inquiry and strips the honeypot", () => {
       "22222222-2222-4222-8222-222222222222",
     ],
     honeypot: "",
+    consent: true,
+    noticeVersion: INQUIRY_NOTICE_VERSION,
   });
 
   expect(result.email).toBe("investor@example.com");
@@ -31,9 +34,10 @@ test("validates the minimal public inquiry and strips the honeypot", () => {
 });
 
 test("requires a valid email, message, and empty honeypot", () => {
-  expect(inquirySubmissionSchema.safeParse({ email: "bad", message: "Hello" }).success).toBe(false);
-  expect(inquirySubmissionSchema.safeParse({ email: "a@example.com", message: "" }).success).toBe(false);
-  expect(inquirySubmissionSchema.safeParse({ email: "a@example.com", message: "Hello", honeypot: "filled" }).success).toBe(false);
+  const consent = { consent: true, noticeVersion: INQUIRY_NOTICE_VERSION };
+  expect(inquirySubmissionSchema.safeParse({ ...consent, email: "bad", message: "Hello" }).success).toBe(false);
+  expect(inquirySubmissionSchema.safeParse({ ...consent, email: "a@example.com", message: "" }).success).toBe(false);
+  expect(inquirySubmissionSchema.safeParse({ ...consent, email: "a@example.com", message: "An ordinary inquiry", honeypot: "filled" }).success).toBe(false);
 });
 
 test("allows only forward inquiry transitions and requires a close reason", () => {

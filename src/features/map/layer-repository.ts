@@ -18,6 +18,8 @@ type StatisticalRow = DatasetRow & {
   value_numeric: string | null;
   method_note: string | null;
   limitations: string | null;
+  quality_status: string;
+  missing_reason: string | null;
 };
 
 export async function loadMapLayers(): Promise<MapLayers> {
@@ -26,11 +28,11 @@ export async function loadMapLayers(): Promise<MapLayers> {
       if (!geography) return { indicators: [], infrastructure: null };
 
       const stats = await sql<StatisticalRow[]>`
-        select dataset.dataset_version_id as dataset_id, indicator.code as indicator, indicator.label,
+        select indicator.code as indicator, indicator.label,
           indicator.description as definition, geo.geo_id, observation.period_label,
           observation.period_start::text, observation.period_end::text, observation.unit, observation.scope,
           case when observation.quality_status <> 'unavailable' then observation.value_numeric end as value_numeric,
-          observation.method_note, observation.limitations, ${publishedDatasetColumns(sql)}
+          observation.method_note, observation.limitations, observation.quality_status, observation.missing_reason, ${publishedDatasetColumns(sql)}
         from market_entry.observations observation
         join market_entry.geo_units geo on geo.geo_id = observation.geo_id
         join market_entry.indicator_definitions indicator on indicator.indicator_id = observation.indicator_id
@@ -45,18 +47,19 @@ export async function loadMapLayers(): Promise<MapLayers> {
 
       const grouped = new Map<string, StatisticalLayer>();
       for (const row of stats) {
-        const id = JSON.stringify([row.dataset_id, row.indicator, row.period_start, row.period_end, row.scope]);
+        const id = JSON.stringify([row.dataset_id, row.indicator, row.period_start, row.period_end, row.scope, row.unit]);
         let layer = grouped.get(id);
         if (!layer) {
           layer = {
             id, indicator: row.indicator, label: row.label, definition: row.definition,
             geographyVersion: geography.geography_code, period: row.period_label, periodStart: row.period_start,
             periodEnd: row.period_end, unit: row.unit, scope: row.scope, limitations: row.limitations ?? "",
-            method: row.method_note ?? "", dataset: toDataset(row), values: {},
+            method: row.method_note ?? "", dataset: toDataset(row), values: {}, valueDetails: {},
           };
           grouped.set(id, layer);
         }
         layer.values[row.geo_id] = row.value_numeric === null ? null : Number(row.value_numeric);
+        layer.valueDetails![row.geo_id] = { quality: row.quality_status, missingReason: row.missing_reason, method: row.method_note, limitations: row.limitations };
       }
 
       const pois = await sql<(DatasetRow & { source_key: string; name: string; code: string | null;

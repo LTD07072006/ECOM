@@ -1,28 +1,22 @@
 import { inquirySubmissionSchema } from "../../../features/inquiries/validation";
 import { createInquiry } from "../../../features/inquiries/repository";
+import { inquiryPrivacyContact } from "../../../features/inquiries/privacy";
 import { observeApi } from "../../../lib/api-operations";
-import { error, json } from "../../../lib/http";
+import { error, json, readBoundedJson } from "../../../lib/http";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
-  return observeApi("inquiries", async () => {
-    const contentType = request.headers.get("content-type") ?? "";
-    const contentLength = Number(request.headers.get("content-length") ?? 0);
-    if (!contentType.toLowerCase().startsWith("application/json") || contentLength > 64_000) {
-      return error("A JSON request under 64 KB is required.", 400);
-    }
-
-    let body: unknown;
-    try {
-      body = await request.json();
-    } catch {
-      return error("Invalid JSON request.", 400);
-    }
-    const parsed = inquirySubmissionSchema.safeParse(body);
+  return observeApi("inquiries", request, async () => {
+    const body = await readBoundedJson(request, 64_000);
+    if (!body.ok) return error(body.message, body.status);
+    const parsed = inquirySubmissionSchema.safeParse(body.value);
     if (!parsed.success) {
       const fields = [...new Set(parsed.error.issues.map((issue) => String(issue.path[0] ?? "request")))];
       return json({ error: "Please correct the inquiry form.", fields }, { status: 400 });
+    }
+    if (process.env.NODE_ENV === "production" && !inquiryPrivacyContact()) {
+      return error("Inquiry submission is temporarily unavailable.", 503);
     }
 
     const result = await createInquiry(parsed.data);

@@ -17,6 +17,7 @@ export default async function HomePage() {
           Explore verified context, places, and investment signals across Vietnam —
           starting with the map.
         </p>
+        <a href="/decision" className="decision-link">Explore a retail scenario</a>
         {catalog.dataset && <p className="catalog-release">Administrative catalog effective <time dateTime={catalog.dataset.dataAsOf}>{catalog.dataset.dataAsOf}</time></p>}
         <div className="trust-note">
           <span className="status-dot" aria-hidden="true" />

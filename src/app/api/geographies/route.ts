@@ -10,7 +10,7 @@ const querySchema = z.object({
 });
 
 export function GET(request: Request) {
-  return observeApi("search", () => search(request));
+  return observeApi("search", request, () => search(request));
 }
 
 async function search(request: Request) {
@@ -19,7 +19,7 @@ async function search(request: Request) {
   const parsed = querySchema.safeParse({ q: params.get("q") ?? "", level: params.get("level") ?? undefined });
   if (!parsed.success) return error(parsed.error.issues[0]?.message ?? "Invalid search query.", 400);
 
-  const catalog = await loadPublicCatalog();
+  const catalog = await loadPublicCatalog(undefined, false);
   if (catalog.mode === "unavailable") return error("The geography catalog is temporarily unavailable.", 503);
   return json({
     data: searchGeographies(catalog, parsed.data.q, parsed.data.level),

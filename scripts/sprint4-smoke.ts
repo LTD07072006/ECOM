@@ -4,6 +4,7 @@ type Sample = { duration: number; bytes: number };
 
 const origin = new URL(process.argv[2] ?? "http://127.0.0.1:3000");
 const rounds = Number(process.argv[3] ?? 12);
+const budgets: Record<string, number> = { search: 5000, profile: 5000, compare: 5000, export: 8000, boundaries: 8000, layers: 5000, health: 5000 };
 if (!Number.isInteger(rounds) || rounds < 1 || rounds > 15) {
   throw new Error("Use an integer from 1 through 15 rounds to stay within the export quota.");
 }
@@ -58,3 +59,12 @@ console.log(JSON.stringify({
     name, { p50Ms: percentile(samples, .5), p95Ms: percentile(samples, .95), bytes: samples[0].bytes },
   ])),
 }, null, 2));
+const failures = probes.filter((probe) => percentile(probe.samples, .95) > budgets[probe.name]);
+if (failures.length) {
+  console.error(JSON.stringify({ event: "performance_budget_exceeded", endpoints: failures.map(({ name }) => name) }));
+  process.exitCode = 1;
+}
+if (navigation.duration > 8000) {
+  console.error(JSON.stringify({ event: "performance_budget_exceeded", endpoints: ["home"] }));
+  process.exitCode = 1;
+}

@@ -1,10 +1,5 @@
 import type { Profile } from "../geography/types";
-
-function csvCell(value: string | number | null): string {
-  const text = value === null ? "" : String(value);
-  const safe = typeof value === "string" && /^[=+\-@]/.test(text) ? `'${text}` : text;
-  return `"${safe.replaceAll('"', '""')}"`;
-}
+import { spreadsheetCsvCell } from "../../lib/csv";
 
 export function profilesToCsv(profiles: Profile[]): string {
   const header = ["geo_id", "display_name", "level", "geography_version", "dataset_version", "indicator", "label", "value", "unit", "period", "period_start", "period_end", "quality", "missing_reason", "publisher", "citation", "license", "access", "updated_at", "method", "limitations"];
@@ -30,6 +25,6 @@ export function profilesToCsv(profiles: Profile[]): string {
     observation.source.updatedAt,
     observation.method,
     observation.limitations,
-  ].map(csvCell).join(",")));
-  return [header.map(csvCell).join(","), ...rows].join("\n");
+  ].map((value) => spreadsheetCsvCell(value, true)).join(",")));
+  return [header.map((value) => spreadsheetCsvCell(value, true)).join(","), ...rows].join("\n");
 }

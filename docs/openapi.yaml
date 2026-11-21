@@ -1,0 +1,226 @@
+openapi: 3.1.0
+info:
+  title: ECOM API
+  version: 1.0.0
+  description: >-
+    Public geographic context and inquiry collection, plus steward and reviewer operations.
+    Reference values describe the currently published administrative release.
+servers:
+  - url: http://127.0.0.1:3000
+components:
+  securitySchemes:
+    operatorToken:
+      type: http
+      scheme: bearer
+  responses:
+    Unauthorized:
+      description: A token with the required role is required.
+    Unavailable:
+      description: The published catalog or database is unavailable.
+paths:
+  /api/health:
+    get:
+      summary: Published catalog and database status
+      responses:
+        '200':
+          description: Status, database and publication status.
+  /api/geographies:
+    get:
+      summary: Search published places
+      parameters:
+        - {name: q, in: query, required: true, schema: {type: string, minLength: 2, maxLength: 120}}
+        - {name: level, in: query, schema: {type: string, enum: [country, province, commune]}}
+      responses:
+        '200': {description: Matching places and dataset provenance.}
+        '400': {description: Invalid search parameters.}
+        '503': {$ref: '#/components/responses/Unavailable'}
+  /api/geographies/{geoId}:
+    get:
+      summary: Published place profile and observations
+      parameters:
+        - {name: geoId, in: path, required: true, schema: {type: string, format: uuid}}
+      responses:
+        '200': {description: Profile with indicator provenance and quality.}
+        '404': {description: Place not found.}
+  /api/geographies/compare:
+    get:
+      summary: Compare two or three published places
+      parameters:
+        - {name: ids, in: query, required: true, schema: {type: string}, description: Comma-separated unique UUIDs.}
+      responses:
+        '200': {description: Profiles and comparison with row-level compatibility.}
+        '400': {description: Invalid selection.}
+  /api/geographies/export:
+    get:
+      summary: Export up to twenty places
+      parameters:
+        - {name: ids, in: query, required: true, schema: {type: string}}
+        - {name: format, in: query, required: true, schema: {type: string, enum: [json, csv]}}
+      responses:
+        '200': {description: JSON or UTF-8 CSV including provenance.}
+  /api/map/provinces:
+    get:
+      summary: Published provincial boundaries
+      responses:
+        '200': {description: GeoJSON feature collection and dataset metadata.}
+  /api/map/layers:
+    get:
+      summary: Published indicator and airport layers
+      responses:
+        '200': {description: Layers with source, version, value quality and provenance.}
+  /api/inquiries:
+    post:
+      summary: Submit a public inquiry
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, message, consent, noticeVersion]
+              properties:
+                email: {type: string, format: email, maxLength: 254}
+                message: {type: string, minLength: 10, maxLength: 5000}
+                name: {type: string, maxLength: 160}
+                organization: {type: string, maxLength: 200}
+                country: {type: string, maxLength: 100}
+                sector: {type: string, maxLength: 160}
+                geographyIds: {type: array, maxItems: 20, items: {type: string, format: uuid}}
+                consent: {const: true}
+                noticeVersion: {const: inquiry-privacy-v1}
+                honeypot: {const: ''}
+      responses:
+        '201': {description: Inquiry reference code returned.}
+        '400': {description: Validation failed.}
+        '413': {description: Request exceeds the byte limit.}
+        '429': {description: Request quota exceeded.}
+  /api/internal/inquiries:
+    get:
+      summary: Steward inquiry list, filters, metrics or CSV export
+      security: [{operatorToken: []}]
+      parameters:
+        - {name: status, in: query, schema: {type: string, enum: [new, contacted, qualified, closed]}}
+        - {name: country, in: query, schema: {type: string}}
+        - {name: sector, in: query, schema: {type: string}}
+        - {name: from, in: query, schema: {type: string, format: date-time}}
+        - {name: to, in: query, schema: {type: string, format: date-time}}
+        - {name: geographyIds, in: query, schema: {type: string}}
+        - {name: page, in: query, schema: {type: integer, minimum: 1}}
+        - {name: pageSize, in: query, schema: {type: integer, minimum: 1, maximum: 100}}
+        - {name: format, in: query, schema: {type: string, enum: [csv]}}
+      responses:
+        '200': {description: Filtered inquiry list and metrics, or safe CSV.}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+  /api/internal/inquiries/{referenceCode}:
+    parameters:
+      - {name: referenceCode, in: path, required: true, schema: {type: string}}
+    get:
+      summary: Steward inquiry detail and audit
+      security: [{operatorToken: []}]
+      responses:
+        '200': {description: Inquiry, provenance and audit events.}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+    patch:
+      summary: Record status change or internal note
+      security: [{operatorToken: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status: {type: string, enum: [new, contacted, qualified, closed]}
+                closeReason: {type: string, enum: [spam, duplicate, out_of_scope, resolved]}
+                note: {type: string, minLength: 1, maxLength: 5000}
+      responses:
+        '200': {description: Updated and audited.}
+        '409': {description: Invalid status transition.}
+  /api/internal/inquiries/snapshots:
+    get:
+      summary: List stored report snapshots
+      security: [{operatorToken: []}]
+      responses:
+        '200': {description: Snapshot list.}
+    post:
+      summary: Preview or create a report snapshot
+      security: [{operatorToken: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [periodStart, periodEnd, filters]
+              properties:
+                periodStart: {type: string, format: date-time}
+                periodEnd: {type: string, format: date-time}
+                timeZone: {type: string}
+                correctsSnapshotId: {type: string, format: uuid}
+                preview: {type: boolean}
+                filters:
+                  type: object
+                  properties:
+                    status: {type: string, enum: [new, contacted, qualified, closed]}
+                    country: {type: string}
+                    sector: {type: string}
+                    referenceCode: {type: string}
+                    geographyIds: {type: array, items: {type: string, format: uuid}}
+      responses:
+        '200': {description: Preview count.}
+        '201': {description: Stored snapshot.}
+  /api/internal/inquiries/snapshots/{snapshotId}:
+    get:
+      summary: Get snapshot and audit
+      security: [{operatorToken: []}]
+      parameters:
+        - {name: snapshotId, in: path, required: true, schema: {type: string, format: uuid}}
+      responses:
+        '200': {description: Stored snapshot.}
+        '404': {description: Snapshot not found.}
+  /api/internal/inquiries/snapshots/export:
+    post:
+      summary: Download and audit a stored snapshot
+      security: [{operatorToken: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {type: object, required: [id], properties: {id: {type: string, format: uuid}}}
+      responses:
+        '200': {description: Snapshot CSV.}
+  /api/internal/inquiries/snapshots/compare:
+    post:
+      summary: Compare and audit compatible snapshots
+      security: [{operatorToken: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {type: object, required: [left, right], properties: {left: {type: string, format: uuid}, right: {type: string, format: uuid}}}
+      responses:
+        '200': {description: Side-by-side totals and differences.}
+        '409': {description: Incompatible report conditions.}
+  /api/internal/releases:
+    get:
+      summary: Reviewer or steward release overview
+      security: [{operatorToken: []}]
+      responses:
+        '200': {description: Dataset batches and audit.}
+    post:
+      summary: Approve, publish or retire a release batch
+      security: [{operatorToken: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [batchId, action, note]
+              properties:
+                batchId: {type: string, format: uuid}
+                action: {type: string, enum: [approve, publish, retire]}
+                note: {type: string, minLength: 10, maxLength: 500}
+      responses:
+        '200': {description: Action recorded.}
+        '403': {description: Operator role cannot perform this action.}

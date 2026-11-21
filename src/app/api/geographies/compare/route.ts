@@ -4,7 +4,7 @@ import { compareProfiles, getProfile } from "../../../../features/geography/doma
 import { boundedQuery, observeApi, uuidPattern } from "../../../../lib/api-operations";
 
 export function GET(request: Request) {
-  return observeApi("compare", () => compare(request));
+  return observeApi("compare", request, () => compare(request));
 }
 
 async function compare(request: Request) {
@@ -15,7 +15,7 @@ async function compare(request: Request) {
   if (new Set(ids).size !== ids.length) return error("A place can only appear once in a comparison.", 400);
   if (ids.some((id) => !uuidPattern.test(id))) return error("Comparison IDs must be valid geography IDs.", 400);
 
-  const catalog = await loadPublicCatalog();
+  const catalog = await loadPublicCatalog(ids);
   if (catalog.mode === "unavailable") return error("The geography catalog is temporarily unavailable.", 503);
   const profiles = ids.map((id) => getProfile(catalog, id));
   if (profiles.some((profile) => !profile)) return error("One or more geography units were not found.", 404);

@@ -1,11 +1,11 @@
-import { error, json } from "../../../../lib/http";
+import { csvDownload, error, json } from "../../../../lib/http";
 import { loadPublicCatalog } from "../../../../features/geography/catalog";
 import { getProfile } from "../../../../features/geography/domain";
 import { profilesToCsv } from "../../../../features/shortlist/export";
 import { boundedQuery, observeApi, uuidPattern } from "../../../../lib/api-operations";
 
 export function GET(request: Request) {
-  return observeApi("export", () => exportProfiles(request));
+  return observeApi("export", request, () => exportProfiles(request));
 }
 
 async function exportProfiles(request: Request) {
@@ -17,7 +17,7 @@ async function exportProfiles(request: Request) {
   if (ids.some((id) => !uuidPattern.test(id))) return error("Export IDs must be valid geography IDs.", 400);
   if (format !== "json" && format !== "csv") return error("Export format must be json or csv.", 400);
 
-  const catalog = await loadPublicCatalog();
+  const catalog = await loadPublicCatalog(ids);
   if (catalog.mode === "unavailable") return error("The geography catalog is temporarily unavailable.", 503);
   const profiles = ids.map((id) => getProfile(catalog, id));
   if (profiles.some((profile) => !profile)) return error("One or more geography units were not found.", 404);
@@ -27,10 +27,7 @@ async function exportProfiles(request: Request) {
   const headers = { "Content-Disposition": `attachment; filename="${filename}"` };
 
   if (format === "csv") {
-    return new Response(profilesToCsv(resolvedProfiles), {
-      status: 200,
-      headers: { ...headers, "Content-Type": "text/csv; charset=utf-8" },
-    });
+    return csvDownload(profilesToCsv(resolvedProfiles), filename);
   }
 
   return json({

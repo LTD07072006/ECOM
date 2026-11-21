@@ -1,10 +1,12 @@
 import { z } from "zod";
-import { releaseRole } from "../../../../../features/releases/authorization";
-import { countInquiryReportRows, inquiryReportRows } from "../../../../../features/inquiries/repository";
-import { buildInquiryAnalytics } from "../../../../../features/inquiries/reporting";
-import { createInquiryReportSnapshot, getInquiryReportSnapshot, listInquiryReportSnapshots } from "../../../../../features/inquiries/snapshots";
+import { countInquiryReportRows, inquiryAnalytics } from "../../../../../features/inquiries/repository";
+import { createInquiryReportSnapshot, getInquiryReportSnapshot, listInquiryReportSnapshots, visibleSnapshot } from "../../../../../features/inquiries/snapshots";
 import { canonicalSnapshotInput, validateSnapshotMetrics } from "../../../../../features/inquiries/snapshots";
-import { error, json } from "../../../../../lib/http";
+import { snapshotMethodNotAllowed, withStewardSnapshot } from "../../../../../features/inquiries/snapshot-http";
+import { error, json, readBoundedJson } from "../../../../../lib/http";
+import { releaseIdentity } from "../../../../../features/releases/authorization";
+
+export const dynamic = "force-dynamic";
 
 const snapshotSchema = z.object({
   periodStart: z.coerce.date(),
@@ -23,45 +25,41 @@ const snapshotSchema = z.object({
   }),
 });
 
-function authorized(request: Request) {
-  return releaseRole(request) === "steward";
+export function GET(request: Request) {
+  return withStewardSnapshot(request, async () => json({ data: (await listInquiryReportSnapshots()).map(visibleSnapshot) }));
 }
 
-export async function GET(request: Request) {
-  if (!authorized(request)) return error("A valid steward access token is required.", 401);
-  return json({ data: await listInquiryReportSnapshots() });
+export function PATCH(request: Request) {
+  return snapshotMethodNotAllowed(request, "GET, POST", "Report snapshots are immutable. Create a correction snapshot.");
 }
 
-export async function PATCH() {
-  return error("Report snapshots are immutable; create a correction snapshot instead.", 405);
+export function DELETE(request: Request) {
+  return snapshotMethodNotAllowed(request, "GET, POST", "Report snapshots can only be deleted by retention cleanup.");
 }
 
-export async function DELETE() {
-  return error("Report snapshots are immutable; retention cleanup is the only deletion path.", 405);
-}
-
-export async function POST(request: Request) {
-  if (!authorized(request)) return error("A valid steward access token is required.", 401);
-  const parsed = snapshotSchema.safeParse(await request.json().catch(() => null));
-  if (!parsed.success || parsed.data.periodEnd <= parsed.data.periodStart) return error("Invalid report snapshot.", 400);
-  try {
-    new Intl.DateTimeFormat("en", { timeZone: parsed.data.timeZone });
-  } catch {
-    return error("Invalid report timezone.", 400);
-  }
-  const canonical = canonicalSnapshotInput(parsed.data);
-  const filters = { ...canonical.filters, from: canonical.periodStart, to: canonical.periodEnd };
-  if (parsed.data.preview) return json({ data: { ...canonical, total: await countInquiryReportRows(filters) } },
-    { headers: { "Cache-Control": "no-store" } });
-  const rows = await inquiryReportRows(filters);
-  const metrics = buildInquiryAnalytics(rows);
-  if (!validateSnapshotMetrics(metrics).ok) return error("Report metrics failed consistency checks.", 500);
-  if (parsed.data.correctsSnapshotId && !await getInquiryReportSnapshot(parsed.data.correctsSnapshotId)) return error("Correction source snapshot not found.", 400);
-  const snapshot = await createInquiryReportSnapshot({
-    ...canonical,
-    metrics,
-    correctsSnapshotId: parsed.data.correctsSnapshotId,
-    createdBy: "steward",
+export function POST(request: Request) {
+  return withStewardSnapshot(request, async () => {
+    const body = await readBoundedJson(request, 16_000);
+    if (!body.ok) return error(body.message, body.status);
+    const parsed = snapshotSchema.safeParse(body.value);
+    if (!parsed.success || parsed.data.periodEnd <= parsed.data.periodStart) return error("Invalid report snapshot.", 400);
+    try {
+      new Intl.DateTimeFormat("en", { timeZone: parsed.data.timeZone });
+    } catch {
+      return error("Invalid report timezone.", 400);
+    }
+    const canonical = canonicalSnapshotInput(parsed.data);
+    const filters = { ...canonical.filters, from: canonical.periodStart, to: canonical.periodEnd };
+    if (parsed.data.preview) return json({ data: { total: await countInquiryReportRows(filters) } });
+    const metrics = await inquiryAnalytics(filters);
+    if (!validateSnapshotMetrics(metrics).ok) return error("Report metrics failed consistency checks.", 500);
+    if (parsed.data.correctsSnapshotId && !await getInquiryReportSnapshot(parsed.data.correctsSnapshotId)) return error("Correction source snapshot not found.", 400);
+    const snapshot = await createInquiryReportSnapshot({
+      ...canonical,
+      metrics,
+      correctsSnapshotId: parsed.data.correctsSnapshotId,
+      createdBy: releaseIdentity(request)!.actor,
+    });
+    return json({ data: visibleSnapshot(snapshot) }, { status: 201 });
   });
-  return json({ data: snapshot }, { status: 201 });
 }

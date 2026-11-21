@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { releaseRole } from "../../../../../features/releases/authorization";
+import { releaseIdentity, releaseRole } from "../../../../../features/releases/authorization";
 import { getInquiry, updateInquiry } from "../../../../../features/inquiries/repository";
 import { closeReasons, inquiryStatuses } from "../../../../../features/inquiries/validation";
 import { observeApi } from "../../../../../lib/api-operations";
@@ -14,7 +14,7 @@ const updateSchema = z.strictObject({
 }).refine((value) => value.status || value.note, "An inquiry update is required.");
 
 export async function GET(request: Request, context: { params: Promise<{ referenceCode: string }> }) {
-  return observeApi("internal", async () => {
+  return observeApi("internal", request, async () => {
     if (releaseRole(request) !== "steward") return error("A valid steward access token is required.", 401);
     const { referenceCode } = await context.params;
     const result = await getInquiry(referenceCode);
@@ -23,7 +23,7 @@ export async function GET(request: Request, context: { params: Promise<{ referen
 }
 
 export async function PATCH(request: Request, context: { params: Promise<{ referenceCode: string }> }) {
-  return observeApi("internal", async () => {
+  return observeApi("internal", request, async () => {
     if (releaseRole(request) !== "steward") return error("A valid steward access token is required.", 401);
     if (request.headers.get("content-type")?.split(";")[0].trim() !== "application/json") return error("A JSON request is required.", 415);
     let body: unknown;
@@ -32,7 +32,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ refer
     if (!parsed.success) return error("Provide a valid status, close reason, or note.", 400);
     const { referenceCode } = await context.params;
     try {
-      await updateInquiry(referenceCode, parsed.data, "steward");
+      await updateInquiry(referenceCode, parsed.data, releaseIdentity(request)!.actor);
       return json({ updated: true, referenceCode });
     } catch (cause) {
       const message = cause instanceof Error ? cause.message : "Unable to update inquiry.";

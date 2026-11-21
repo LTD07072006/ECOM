@@ -9,12 +9,18 @@ const workflowTest = process.env.RUN_RELEASE_WORKFLOW_TESTS === "1" ? test : tes
 const url = "http://localhost/api/internal/releases";
 
 workflowTest("separates roles, publishes staged data atomically and retires Wave 2 with an audit trail", async () => {
-  const databaseName = new URL(process.env.DATABASE_URL ?? "").pathname;
-  expect(databaseName).toMatch(/^\/ecom_sprint4_workflow_[a-z0-9_]+$/);
+  const database = new URL(process.env.DATABASE_URL ?? "");
+  expect(database.hostname).toBe("127.0.0.1");
+  expect(database.pathname).toMatch(/^\/ecom_sprint4_workflow_[a-z0-9_]+$/);
   const reviewer = randomBytes(32).toString("base64url");
   const steward = randomBytes(32).toString("base64url");
   process.env.RELEASE_REVIEWER_TOKEN = reviewer;
   process.env.RELEASE_STEWARD_TOKEN = steward;
+  const previousOperators = process.env.ECOM_OPERATORS;
+  process.env.ECOM_OPERATORS = JSON.stringify([
+    { id: "workflow-reviewer", role: "reviewer", token: reviewer },
+    { id: "workflow-steward", role: "steward", token: steward },
+  ]);
   async function overview(token: string) {
     const response = await GET(new Request(url, { headers: { Authorization: "Bearer " + token } }));
     expect(response.status).toBe(200);
@@ -50,6 +56,8 @@ workflowTest("separates roles, publishes staged data atomically and retires Wave
     expect((await loadProvinceMap()).features).toHaveLength(34);
     expect((await change(steward, foundation.id, "retire")).status).toBe(409);
     expect((await overview(reviewer)).batches[0].audit.map((event) => event.action)).toEqual(["import", "approve", "publish"]);
+    expect((await overview(reviewer)).batches[0].audit.filter((event) => event.action === "approve" || event.action === "publish").map((event) => event.actor))
+      .toEqual(["workflow-reviewer", "workflow-steward"]);
 
     const stage = Bun.spawnSync([process.execPath, "run", "db:import:wave2", "--stage"]);
     expect(stage.exitCode).toBe(0);
@@ -66,5 +74,7 @@ workflowTest("separates roles, publishes staged data atomically and retires Wave
   } finally {
     delete process.env.RELEASE_REVIEWER_TOKEN;
     delete process.env.RELEASE_STEWARD_TOKEN;
+    if (previousOperators === undefined) delete process.env.ECOM_OPERATORS;
+    else process.env.ECOM_OPERATORS = previousOperators;
   }
 }, 60_000);

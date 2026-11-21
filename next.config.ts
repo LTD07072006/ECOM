@@ -2,6 +2,7 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  output: "standalone",
   // Keep the dev compiler cache isolated from production servers. Sharing
   // `.next` lets a running `next start` serve an old HTML manifest with a
   // newer dev asset graph, which produces 400s for every client bundle.

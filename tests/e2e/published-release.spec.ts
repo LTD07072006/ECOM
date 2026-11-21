@@ -31,6 +31,10 @@ test("Wave 2 layer controls and comparison use published sources", async ({ page
   await page.getByLabel("Find a place").fill("ha noi");
   await page.getByRole("button", { name: "Hà Nội province · Việt Nam", exact: true }).click();
   await expect(page.getByTestId("geo-profile")).toContainText("Hà Nội");
+  const legend = page.getByLabel("Indicator legend");
+  await expect(legend).toContainText("Hà Nội");
+  await expect(legend).toContainText("Quality: supported");
+  await expect(legend).toContainText("Source:");
   await page.getByText("Compare sources", { exact: true }).click();
   await expect(page.getByText("Second minus first:", { exact: false })).toBeVisible();
   await page.getByRole("combobox", { name: "Second source" }).selectOption({ label: "Licensed FDI registered capital · 2025 · PL.V04.02-2025" });

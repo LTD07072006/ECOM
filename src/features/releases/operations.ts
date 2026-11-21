@@ -202,7 +202,7 @@ export async function releaseOverview() {
 
 export type ReleaseOverview = Awaited<ReturnType<typeof releaseOverview>>;
 
-export async function applyReleaseAction(id: string, action: ReleaseAction, role: ReleaseRole, note: string) {
+export async function applyReleaseAction(id: string, action: ReleaseAction, role: ReleaseRole, note: string, actor = role as string) {
   return databasePool().begin(async (tx) => {
     await lockReleases(tx);
     const [batch] = await readBatches(tx, id);
@@ -263,7 +263,7 @@ export async function applyReleaseAction(id: string, action: ReleaseAction, role
       }
     }
     await tx`insert into market_entry.release_audit (batch_id, action, actor, note, happened_at)
-      values (${id}, ${action}, ${role}, ${note}, clock_timestamp())`;
+      values (${id}, ${action}, ${actor}, ${note}, clock_timestamp())`;
     return { status: 200 };
   });
 }

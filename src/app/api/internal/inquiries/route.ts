@@ -1,10 +1,10 @@
 import { z } from "zod";
 import { releaseRole } from "../../../../features/releases/authorization";
-import { countInquiryReportRows, inquiryReportRows, listInquiries } from "../../../../features/inquiries/repository";
-import { buildInquiryAnalytics, inquiryRowsCsv } from "../../../../features/inquiries/reporting";
+import { countInquiryReportRows, inquiryReportRows, inquiryAnalytics, listInquiries } from "../../../../features/inquiries/repository";
+import { inquiryRowsCsv } from "../../../../features/inquiries/reporting";
 import { inquiryStatuses } from "../../../../features/inquiries/validation";
 import { boundedQuery, observeApi } from "../../../../lib/api-operations";
-import { error, json } from "../../../../lib/http";
+import { csvDownload, error, json } from "../../../../lib/http";
 
 export const dynamic = "force-dynamic";
 
@@ -22,7 +22,7 @@ const querySchema = z.object({
 });
 
 export function GET(request: Request) {
-  return observeApi("internal", async () => {
+  return observeApi("internal", request, async () => {
     if (releaseRole(request) !== "steward") return error("A valid steward access token is required.", 401);
     const params = boundedQuery(request, "status", "country", "sector", "reference", "limit", "from", "to", "format", "page", "pageSize", "geographyIds");
     if (!params) return error("Unexpected inquiry parameters.", 400);
@@ -47,12 +47,12 @@ export function GET(request: Request) {
     ]);
     if (new URL(request.url).searchParams.get("format") === "csv") {
       const reportRows = await inquiryReportRows({ ...filters, page: undefined, pageSize: undefined });
-      return new Response(inquiryRowsCsv(reportRows), { status: 200, headers: { "Content-Type": "text/csv; charset=utf-8", "Content-Disposition": "attachment; filename=investor-inquiries.csv" } });
+      return csvDownload(inquiryRowsCsv(reportRows), "investor-inquiries.csv");
     }
     const page = filters.page ?? 1;
     const pageSize = filters.pageSize ?? 50;
     const totalPages = Math.max(Math.ceil(total / pageSize), 1);
-    const reportRows = await inquiryReportRows({ ...filters, page: undefined, pageSize: undefined });
-    return json({ data: rows, pagination: { page, pageSize, total, totalPages, hasNext: page < totalPages, hasPrevious: page > 1 }, metrics: buildInquiryAnalytics(reportRows) });
+    const metrics = await inquiryAnalytics(filters);
+    return json({ data: rows, pagination: { page, pageSize, total, totalPages, hasNext: page < totalPages, hasPrevious: page > 1 }, metrics });
   });
 }

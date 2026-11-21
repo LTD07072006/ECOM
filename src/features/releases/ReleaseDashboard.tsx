@@ -35,7 +35,7 @@ function DatasetEvidence({ dataset }: { dataset: ReleaseOverview["datasets"][num
 
 export function ReleaseDashboard() {
   const [token, setToken] = useState("");
-  const [result, setResult] = useState<{ role: ReleaseRole; data: ReleaseOverview }>();
+  const [result, setResult] = useState<{ role: ReleaseRole; actor?: string; data: ReleaseOverview }>();
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState("");
   const [problem, setProblem] = useState("");
@@ -77,7 +77,7 @@ export function ReleaseDashboard() {
     <a href="/">← Market workspace</a>
     <h1>Release operations</h1>
     {result ? <div className="release-toolbar">
-      <p>Signed in as <strong>{result.role}</strong></p>
+      <p>Signed in as <strong>{result.actor ?? result.role}</strong> · {result.role}</p>
       <button disabled={busy} onClick={() => void request()}>Refresh overview</button>
       <button disabled={busy} onClick={() => {
         setResult(undefined);

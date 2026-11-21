@@ -1,4 +1,6 @@
-# Schema PostgreSQL `market_entry`
+# Prototype schema PostgreSQL `market_entry`
+
+Các tệp SQL trong thư mục này là thiết kế và bộ kiểm thử prototype độc lập. Schema ứng dụng ECOM hiện hành được định nghĩa tại [schema Drizzle](../../src/db/schema.ts) và triển khai bằng [các migration](../../drizzle/). Khởi tạo và nâng cấp database ứng dụng theo [README chính](../../README.md), dùng `bun run db:migrate`.
 
 Schema triển khai mô hình dữ liệu B-Lite dựa trên [đặc tả Market Entry](../../docs/market-entry-intelligence-build-spec.md), đặc biệt là danh mục dữ liệu, từ điển dữ liệu và các luồng nghiên cứu thị trường. Bản mở rộng giữ nguyên dữ liệu trong sáu bảng ban đầu và bổ sung hai migration.
 

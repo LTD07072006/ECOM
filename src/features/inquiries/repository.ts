@@ -56,27 +56,29 @@ async function resolveProvenance(tx: postgres.TransactionSql, geographyIds: stri
   return provenance;
 }
 
-export async function createInquiry(submission: InquirySubmission, now = new Date()) {
+export async function createInquiry(submission: InquirySubmission, now = new Date(), referenceFor = makeInquiryReference) {
   return databasePool().begin(async (tx) => {
     const provenance = await resolveProvenance(tx, submission.geographyIds);
-    const referenceCode = makeInquiryReference(now);
-    const retentionAt = new Date(now);
-    retentionAt.setUTCFullYear(retentionAt.getUTCFullYear() + 1);
-    const [inquiry] = await tx<{ inquiry_id: string; reference_code: string }[]>`
-      insert into market_entry.investor_inquiries
-        (reference_code, email, message, name, organization, country, sector,
-         geography_ids, provenance, status, retention_at, created_at, updated_at)
-      values (${referenceCode}, ${submission.email}, ${submission.message}, ${submission.name ?? null},
-        ${submission.organization ?? null}, ${submission.country ?? null}, ${submission.sector ?? null},
-        ${submission.geographyIds}::uuid[], ${tx.json(provenance)}, 'new',
-        ${retentionAt}, ${now}, ${now})
-      returning inquiry_id, reference_code
-    `;
-    await tx`
-      insert into market_entry.inquiry_audit (inquiry_id, actor, action, to_status, happened_at)
-      values (${inquiry.inquiry_id}, 'public', 'submitted', 'new', ${now})
-    `;
-    return { referenceCode: inquiry.reference_code };
+    for (let attempt = 0; attempt < 5; attempt++) {
+      const [inquiry] = await tx<{ inquiry_id: string; reference_code: string }[]>`
+        insert into market_entry.investor_inquiries
+          (reference_code, email, message, name, organization, country, sector,
+           geography_ids, provenance, status, retention_at, created_at, updated_at)
+        values (${referenceFor(now)}, ${submission.email}, ${submission.message}, ${submission.name ?? null},
+          ${submission.organization ?? null}, ${submission.country ?? null}, ${submission.sector ?? null},
+          ${submission.geographyIds}::uuid[], ${tx.json(provenance)}, 'new',
+          (${now}::timestamptz at time zone 'UTC' + interval '1 year') at time zone 'UTC', ${now}, ${now})
+        on conflict (reference_code) do nothing
+        returning inquiry_id, reference_code
+      `;
+      if (!inquiry) continue;
+      await tx`
+        insert into market_entry.inquiry_audit (inquiry_id, actor, action, to_status, happened_at, notice_version)
+        values (${inquiry.inquiry_id}, 'public', 'submitted', 'new', ${now}, ${submission.noticeVersion})
+      `;
+      return { referenceCode: inquiry.reference_code };
+    }
+    throw new Error("Unable to allocate an inquiry reference.");
   });
 }
 
@@ -86,20 +88,20 @@ export async function updateInquiry(
   actor = "steward",
 ) {
   return databasePool().begin(async (tx) => {
-    const [current] = await tx<{ inquiry_id: string; status: InquiryStatus; close_reason: InquiryCloseReason | null }[]>`
-      select inquiry_id, status, close_reason from market_entry.investor_inquiries
+    const [current] = await tx<{ inquiry_id: string; status: InquiryStatus; anonymized_at: Date | null }[]>`
+      select inquiry_id, status, anonymized_at from market_entry.investor_inquiries
       where reference_code = ${referenceCode} for update
     `;
     if (!current) throw new Error("Inquiry not found.");
+    if (update.note && current.anonymized_at) throw new Error("Cannot add notes to an anonymized inquiry.");
     if (update.status) {
       const transition = nextInquiryStatus(current.status, update.status, update.closeReason);
       if (!transition.ok) throw new Error(transition.error);
-      const [changed] = await tx`
+      await tx`
         update market_entry.investor_inquiries
-        set status = ${update.status}, close_reason = ${update.closeReason ?? null}, updated_at = clock_timestamp()
+        set status = ${update.status}, close_reason = ${update.closeReason ?? null}
         where inquiry_id = ${current.inquiry_id}
       `;
-      void changed;
       await tx`
         insert into market_entry.inquiry_audit (inquiry_id, actor, action, from_status, to_status, happened_at)
         values (${current.inquiry_id}, ${actor}, 'status_changed', ${current.status}, ${update.status}, clock_timestamp())
@@ -110,7 +112,13 @@ export async function updateInquiry(
         insert into market_entry.inquiry_audit (inquiry_id, actor, action, note, happened_at)
         values (${current.inquiry_id}, ${actor}, 'note_added', ${update.note}, clock_timestamp())
       `;
-      await tx`update market_entry.investor_inquiries set updated_at = clock_timestamp() where inquiry_id = ${current.inquiry_id}`;
+    }
+    if (update.status || update.note) {
+      await tx`update market_entry.investor_inquiries set updated_at = statement_timestamp(),
+        retention_at = case when anonymized_at is null
+          then (statement_timestamp() at time zone 'UTC' + interval '1 year') at time zone 'UTC'
+          else retention_at end
+        where inquiry_id = ${current.inquiry_id}`;
     }
     return { ok: true };
   });
@@ -161,6 +169,48 @@ export async function inquiryReportRows(filters: InquiryReportFilters): Promise<
   `;
 }
 
+export async function inquiryAnalytics(filters: InquiryReportFilters) {
+  const [result] = await databasePool()<[{ metrics: import("./reporting").InquiryAnalytics }]>`
+    with filtered as (
+      select i.*,
+        (select min(a.happened_at) from market_entry.inquiry_audit a
+          where a.inquiry_id = i.inquiry_id and a.action = 'status_changed' and a.to_status = 'contacted') as contacted_at,
+        (select min(a.happened_at) from market_entry.inquiry_audit a
+          where a.inquiry_id = i.inquiry_id and a.action = 'status_changed' and a.to_status = 'qualified') as qualified_at
+      from market_entry.investor_inquiries i
+      where (${filters.status ?? null}::text is null or i.status = ${filters.status ?? null})
+        and (${filters.country ?? null}::text is null or i.country ilike ${filters.country ? `%${filters.country}%` : null})
+        and (${filters.sector ?? null}::text is null or i.sector ilike ${filters.sector ? `%${filters.sector}%` : null})
+        and (${filters.referenceCode ?? null}::text is null or i.reference_code = ${filters.referenceCode ?? null})
+        and (${filters.from ?? null}::timestamptz is null or i.created_at >= ${filters.from ?? null})
+        and (${filters.to ?? null}::timestamptz is null or i.created_at < ${filters.to ?? null})
+        and (${filters.geographyIds ?? null}::uuid[] is null or i.geography_ids && ${filters.geographyIds ?? null}::uuid[])
+    ), totals as (
+      select count(*)::int total,
+        count(*) filter (where status='new')::int new_count,
+        count(*) filter (where status='contacted')::int contacted_count,
+        count(*) filter (where status='qualified')::int qualified_count,
+        count(*) filter (where status='closed')::int closed_count,
+        count(contacted_at)::float / nullif(count(*), 0) contacted_rate,
+        count(qualified_at)::float / nullif(count(*), 0) qualified_rate,
+        avg(extract(epoch from (contacted_at-created_at))/3600)::float contacted_hours,
+        avg(extract(epoch from (qualified_at-created_at))/3600)::float qualified_hours
+      from filtered
+    )
+    select jsonb_build_object(
+      'total', total, 'byStatus', jsonb_build_object('new',new_count,'contacted',contacted_count,'qualified',qualified_count,'closed',closed_count),
+      'byCloseReason', coalesce((select jsonb_object_agg(k,n) from (select close_reason k,count(*) n from filtered where close_reason is not null group by 1) x), '{}'::jsonb),
+      'contactedRate',coalesce(contacted_rate,0), 'qualifiedRate',coalesce(qualified_rate,0),
+      'averageHoursToContacted',contacted_hours, 'averageHoursToQualified',qualified_hours,
+      'weeklyTrend',coalesce((select jsonb_object_agg(k,n) from (select to_char(created_at at time zone 'Asia/Ho_Chi_Minh','IYYY-"W"IW') k,count(*) n from filtered group by 1) x),'{}'::jsonb),
+      'byGeography',coalesce((select jsonb_object_agg(k,n) from (select geo::text k,count(*) n from filtered cross join lateral (select distinct unnest(geography_ids) geo) g group by 1) x),'{}'::jsonb),
+      'byCountry',coalesce((select jsonb_object_agg(k,n) from (select lower(regexp_replace(btrim(normalize(country, NFKC)), '\\s+', ' ', 'g')) k,count(*) n from filtered where country is not null and btrim(country) <> '' group by 1) x),'{}'::jsonb),
+      'bySector',coalesce((select jsonb_object_agg(k,n) from (select lower(regexp_replace(btrim(normalize(sector, NFKC)), '\\s+', ' ', 'g')) k,count(*) n from filtered where sector is not null and btrim(sector) <> '' group by 1) x),'{}'::jsonb)
+    ) metrics from totals
+  `;
+  return result.metrics;
+}
+
 export async function countInquiryReportRows(filters: InquiryReportFilters) {
   const [row] = await databasePool()<[{ count: string }]>`
     select count(*)::text as count
@@ -206,9 +256,10 @@ export async function getInquiry(referenceCode: string) {
     from_status: string | null;
     to_status: string | null;
     note: string | null;
+    notice_version: string | null;
     happened_at: Date;
   }[]>`
-    select actor, action, from_status, to_status, note, happened_at
+    select actor, action, from_status, to_status, note, happened_at, notice_version
     from market_entry.inquiry_audit where inquiry_id = ${inquiry.inquiry_id}
     order by happened_at desc
   `;
@@ -219,24 +270,34 @@ export async function cleanupExpiredInquiries(apply = false, now = new Date()) {
   if (!apply) {
     const [row] = await databasePool()<[{ count: string }]>`
       select count(*)::text as count from market_entry.investor_inquiries
-      where retention_at <= ${now} and anonymized_at is null
+      where (retention_at <= ${now} and anonymized_at is null)
+        or (anonymized_at is not null and exists (
+          select 1 from market_entry.inquiry_audit as event
+          where event.inquiry_id = investor_inquiries.inquiry_id and event.note is not null))
     `;
     return { count: Number(row?.count ?? 0), applied: false };
   }
   return databasePool().begin(async (tx) => {
-    const rows = await tx<{ inquiry_id: string; reference_code: string }[]>`
+    const rows = await tx<{ inquiry_id: string }[]>`
       update market_entry.investor_inquiries
       set email = null, message = null, name = null, organization = null,
           country = null, sector = null, anonymized_at = ${now}, updated_at = ${now}
       where retention_at <= ${now} and anonymized_at is null
-      returning inquiry_id, reference_code
+      returning inquiry_id
     `;
-    for (const row of rows) {
+    if (rows.length) {
       await tx`
         insert into market_entry.inquiry_audit (inquiry_id, actor, action, happened_at)
-        values (${row.inquiry_id}, 'retention_job', 'anonymized', ${now})
+        select inquiry_id, 'retention_job', 'anonymized', ${now}
+        from unnest(${rows.map(({ inquiry_id }) => inquiry_id)}::uuid[]) as target(inquiry_id)
       `;
     }
-    return { count: rows.length, applied: true };
+    const redacted = await tx<{ inquiry_id: string }[]>`
+      update market_entry.inquiry_audit as event set note = null
+      from market_entry.investor_inquiries as inquiry
+      where inquiry.inquiry_id = event.inquiry_id and inquiry.anonymized_at is not null and event.note is not null
+      returning event.inquiry_id
+    `;
+    return { count: new Set([...rows, ...redacted].map(({ inquiry_id }) => inquiry_id)).size, applied: true };
   });
 }

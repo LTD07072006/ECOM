@@ -57,26 +57,30 @@ export function compareProfiles(profiles: Profile[]) {
 
   const rows = indicatorOrder.map((indicator) => {
     const observations = observationsByProfile.map((map) => map.get(indicator));
-    const reference = observations[0];
-    const metadataMatches = Boolean(reference) && observations.every((observation) => Boolean(observation)
-      && observation!.periodStart === reference!.periodStart
-      && observation!.periodEnd === reference!.periodEnd
-      && observation!.unit === reference!.unit
-      && observation!.definition === reference!.definition
-      && observation!.scope === reference!.scope
-      && observation!.datasetVersion === reference!.datasetVersion);
+    const reference = observations.find(Boolean);
+    const mismatch = !reference || observations.some((observation) => !observation) ? "Missing indicator for at least one place."
+      : observations.some((o) => o!.source.id !== reference.source.id
+        || o!.datasetVersion !== reference.datasetVersion
+        || o!.dataset?.code !== reference.dataset?.code
+        || o!.dataset?.id !== reference.dataset?.id) ? "Different source or dataset snapshot."
+      : observations.some((o) => o!.periodStart !== reference.periodStart || o!.periodEnd !== reference.periodEnd) ? "Different observation periods."
+      : observations.some((o) => o!.unit !== reference.unit) ? "Different units."
+      : observations.some((o) => o!.definition !== reference.definition || o!.scope !== reference.scope) ? "Different definitions or scope."
+      : null;
+    const metadataMatches = mismatch === null;
     return {
       indicator,
       label: reference?.label ?? indicator,
       unit: reference?.unit ?? "",
       metadataMatches,
+      reason: mismatch,
       values: observations.map((observation) => metadataMatches && observation?.quality !== "unavailable" ? observation?.value ?? null : null),
     };
   });
   const compatible = rows.length > 0 && rows.every((row) => row.metadataMatches);
   return {
     compatible,
-    reason: compatible ? null : "Different dataset snapshots, periods, scopes, units, definitions, or missing indicators. Direct comparison is not available.",
-    rows: compatible ? rows : rows.map((row) => ({ ...row, values: row.values.map(() => null) })),
+    reason: compatible ? null : "Some indicators have different dataset snapshots, periods, scopes, units or definitions, or are missing. See each row for details.",
+    rows,
   };
 }

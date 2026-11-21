@@ -1,3 +1,4 @@
+import { spreadsheetCsvCell } from "../../lib/csv";
 import type { InquiryStatus } from "./validation";
 
 export const VIETNAM_REPORT_TIME_ZONE = "Asia/Ho_Chi_Minh";
@@ -36,6 +37,8 @@ export type InquiryReportRow = {
   created_at: Date;
   updated_at: Date;
   anonymized_at: Date | null;
+  contacted_at?: Date | null;
+  qualified_at?: Date | null;
 };
 
 export type InquiryMetrics = {
@@ -61,7 +64,8 @@ export function normalizeSelfReported(value: string | null | undefined) {
 }
 
 function isoWeekKey(date: Date) {
-  const day = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
+  const vietnam = new Date(date.getTime() + 7 * 3_600_000);
+  const day = new Date(Date.UTC(vietnam.getUTCFullYear(), vietnam.getUTCMonth(), vietnam.getUTCDate()));
   const weekday = day.getUTCDay() || 7;
   day.setUTCDate(day.getUTCDate() + 4 - weekday);
   const yearStart = new Date(Date.UTC(day.getUTCFullYear(), 0, 1));
@@ -113,12 +117,12 @@ export function buildInquiryMetrics(rows: InquiryReportRow[]): InquiryMetrics {
   for (const row of rows) {
     byStatus[row.status] += 1;
     if (row.close_reason) byCloseReason[row.close_reason] = (byCloseReason[row.close_reason] ?? 0) + 1;
-    if (row.status !== "new") {
-      contactedHours += (row.updated_at.getTime() - row.created_at.getTime()) / 3_600_000;
+    if (row.contacted_at) {
+      contactedHours += (row.contacted_at.getTime() - row.created_at.getTime()) / 3_600_000;
       contactedCount += 1;
     }
-    if (row.status === "qualified" || row.status === "closed") {
-      qualifiedHours += (row.updated_at.getTime() - row.created_at.getTime()) / 3_600_000;
+    if (row.qualified_at) {
+      qualifiedHours += (row.qualified_at.getTime() - row.created_at.getTime()) / 3_600_000;
       qualifiedCount += 1;
     }
   }
@@ -127,20 +131,15 @@ export function buildInquiryMetrics(rows: InquiryReportRow[]): InquiryMetrics {
     total,
     byStatus,
     byCloseReason,
-    contactedRate: total ? (total - byStatus.new) / total : 0,
-    qualifiedRate: total ? (byStatus.qualified + byStatus.closed) / total : 0,
+    contactedRate: total ? contactedCount / total : 0,
+    qualifiedRate: total ? qualifiedCount / total : 0,
     averageHoursToContacted: contactedCount ? contactedHours / contactedCount : null,
     averageHoursToQualified: qualifiedCount ? qualifiedHours / qualifiedCount : null,
   };
 }
 
-function csvCell(value: unknown) {
-  const text = value === null || value === undefined ? "" : String(value);
-  return /[",\r\n]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
-}
-
 export function inquiryRowsCsv(rows: InquiryReportRow[]) {
   const header = ["reference_code", "status", "close_reason", "country_self_reported", "sector_self_reported", "geography_ids", "created_at", "updated_at", "anonymized_at"];
-  const lines = rows.map((row) => [row.reference_code, row.status, row.close_reason, row.country, row.sector, row.geography_ids.join("|"), row.created_at.toISOString(), row.updated_at.toISOString(), row.anonymized_at?.toISOString() ?? null].map(csvCell).join(","));
+  const lines = rows.map((row) => [row.reference_code, row.status, row.close_reason, row.country, row.sector, row.geography_ids.join("|"), row.created_at.toISOString(), row.updated_at.toISOString(), row.anonymized_at?.toISOString() ?? null].map((value) => spreadsheetCsvCell(value)).join(","));
   return [header.join(","), ...lines].join("\r\n") + "\r\n";
 }

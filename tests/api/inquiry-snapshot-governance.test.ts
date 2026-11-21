@@ -12,5 +12,9 @@ test("snapshot detail, compare, and export endpoints require steward authorizati
   expect(detail.status).toBe(401);
   expect(compare.status).toBe(401);
   expect(exported.status).toBe(401);
-  expect((await patchSnapshot(new Request("http://localhost/api/internal/inquiries/snapshots/00000000-0000-4000-8000-000000000001", { method: "PATCH" }), context)).status).toBe(405);
+  expect((await patchSnapshot(new Request("http://localhost/api/internal/inquiries/snapshots/00000000-0000-4000-8000-000000000001", { method: "PATCH" }))).status).toBe(401);
+  for (const response of [detail, compare, exported]) {
+    expect(response.headers.get("Cache-Control")).toBe("private, no-store");
+    expect(response.headers.get("X-Content-Type-Options")).toBe("nosniff");
+  }
 });

@@ -27,7 +27,7 @@ test("canonicalizes one reporting period, timezone, filters, and formula version
     periodStart: new Date("2026-01-05T00:00:00.000Z"),
     periodEnd: new Date("2026-01-12T00:00:00.000Z"),
     timeZone: "Asia/Ho_Chi_Minh",
-    filters: { country: " Vietnam ", page: 4, pageSize: 25 },
+    filters: { country: " Vietnam ", sector: "  ", page: 4, pageSize: 25 },
   });
   expect(input).toMatchObject({ timeZone: "Asia/Ho_Chi_Minh", formulaVersion: FORMULA_VERSION });
   expect(input.filters).toEqual({ country: "Vietnam" });
@@ -66,13 +66,13 @@ test("includes the full end date in Vietnam using an exclusive next-midnight bou
 
 test("returns status deltas and compatibility diagnostics", () => {
   const left = { snapshotId: "one", periodStart: "2026-01-05", periodEnd: "2026-01-12", timeZone: "UTC", formulaVersion: FORMULA_VERSION, filters: { country: "Vietnam", from: "period-one" }, metrics };
-  const right = { snapshotId: "two", periodStart: "2026-01-12", periodEnd: "2026-01-19", timeZone: "UTC", formulaVersion: "inquiry-funnel-v4", filters: { country: "Thailand", to: "period-two" }, metrics: { ...metrics, byStatus: { ...metrics.byStatus, contacted: 3 }, total: 5 } };
+  const right = { snapshotId: "two", periodStart: "2026-01-12", periodEnd: "2026-01-19", timeZone: "UTC", formulaVersion: "inquiry-funnel-v5", filters: { country: "Thailand", to: "period-two" }, metrics: { ...metrics, byStatus: { ...metrics.byStatus, contacted: 3 }, total: 5 } };
   const comparison = buildSnapshotComparison(left, right);
   expect(comparison.compatible).toBe(false);
   expect(comparison.diagnostics).toEqual({ filters: true, timeZone: false, formulaVersion: true });
   expect(comparison.differences).toEqual([
     { field: "country", left: "vietnam", right: "thailand" },
-    { field: "formulaVersion", left: FORMULA_VERSION, right: "inquiry-funnel-v4" },
+    { field: "formulaVersion", left: FORMULA_VERSION, right: "inquiry-funnel-v5" },
   ]);
   expect(comparison.delta.byStatus.contacted).toBe(2);
 });

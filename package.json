@@ -8,9 +8,12 @@
     "dev": "bun --bun next dev",
     "build": "bun --bun next build",
     "start": "bun --bun next start",
-    "lint": "tsc --noEmit",
+    "lint": "tsc --noEmit && biome lint src/features/releases/authorization.ts src/features/decision/model.ts src/lib",
+    "format:check": "biome format src/features/releases/authorization.ts src/features/decision/model.ts tests/features/operator-identity.test.ts",
+    "format": "biome format --write src/features/releases/authorization.ts src/features/decision/model.ts tests/features/operator-identity.test.ts",
     "test": "bun test tests/api tests/db tests/features tests/smoke",
     "test:e2e": "playwright test tests/e2e",
+    "test:release": "bun run scripts/test-release.ts",
     "test:pilot": "bun run scripts/sprint4-smoke.ts",
     "test:db": "bun test tests/db/database.integration.test.ts tests/features/geography/database-repository.test.ts tests/features/geography/database-integrity.test.ts",
     "db:generate": "bun --bun drizzle-kit generate",
@@ -20,12 +23,14 @@
     "db:import:wave2": "bun run src/db/import-wave2.ts",
     "db:check": "bun run src/db/check.ts",
     "db:cleanup:inquiries": "bun run src/db/cleanup-inquiries.ts",
-    "db:cleanup:reports": "bun run src/db/cleanup-inquiries.ts"
+    "db:cleanup:reports": "bun run src/db/cleanup-inquiries.ts",
+    "db:retention:monitor": "bun run src/db/cleanup-inquiries.ts --monitor",
+    "db:retention:scheduler": "bun run src/db/retention-scheduler.ts"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.0.2",
-    "drizzle-orm": "^0.44.7",
-    "maplibre-gl": "^5.7.0",
+    "drizzle-orm": "^0.45.4",
+    "maplibre-gl": "^6.4.1",
     "next": "^15.5.6",
     "postgres": "4.1.1",
     "react": "^19.1.1",
@@ -33,14 +38,18 @@
     "server-only": "0.0.1",
     "zod": "^4.1.12"
   },
+  "overrides": {
+    "postcss": "8.5.33"
+  },
   "devDependencies": {
+    "@biomejs/biome": "2.3.8",
     "@playwright/test": "1.65.1",
     "@types/bun": "1.4.5",
     "@types/node": "^22.15.33",
     "@types/react": "^19.1.13",
     "@types/react-dom": "^19.1.9",
-    "drizzle-kit": "^0.31.4",
     "dotenv": "^16.6.1",
+    "drizzle-kit": "^0.31.4",
     "typescript": "^5.9.2"
   }
 }

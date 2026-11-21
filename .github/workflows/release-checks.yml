@@ -1,0 +1,84 @@
+name: Release checks
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  required:
+    name: Required release checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      NEXT_TELEMETRY_DISABLED: "1"
+      REQUIRE_RELEASE_APPROVAL: "0"
+      E2E_BASE_URL: http://127.0.0.1:3000
+      INQUIRY_PRIVACY_CONTROLLER: ECOM test operator
+      INQUIRY_PRIVACY_EMAIL: privacy@example.test
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
+        with:
+          bun-version: "1.4.5"
+      - run: bun install --frozen-lockfile
+      - run: bun audit --audit-level=high
+      - run: bun run lint
+      - run: bun run format:check
+      - name: Start disposable PostgreSQL and generate test tokens
+        run: |
+          export POSTGRES_PASSWORD="$(openssl rand -hex 32)"
+          steward="$(openssl rand -hex 32)"
+          reviewer="$(openssl rand -hex 32)"
+          echo "::add-mask::$POSTGRES_PASSWORD"
+          echo "::add-mask::$steward"
+          echo "::add-mask::$reviewer"
+          docker run -d --name ecom-release-db -p 127.0.0.1::5432 -e POSTGRES_PASSWORD \
+            -e POSTGRES_USER=market_entry -e POSTGRES_DB=ecom_inquiry_it_ci postgis/postgis:16-3.4
+          timeout 90 bash -c 'until docker exec ecom-release-db pg_isready -h 127.0.0.1 -U market_entry -d ecom_inquiry_it_ci; do sleep 1; done'
+          docker exec ecom-release-db createdb -U market_entry ecom_sprint4_workflow_ci
+          port="$(docker port ecom-release-db 5432/tcp)"
+          base="postgresql://market_entry:$POSTGRES_PASSWORD@$port"
+          {
+            echo "DATABASE_URL=$base/ecom_inquiry_it_ci"
+            echo "WORKFLOW_DATABASE_URL=$base/ecom_sprint4_workflow_ci"
+            echo "RELEASE_STEWARD_TOKEN=$steward"
+            echo "RELEASE_REVIEWER_TOKEN=$reviewer"
+            echo "E2E_RELEASE_STEWARD_TOKEN=$steward"
+            echo "E2E_RELEASE_REVIEWER_TOKEN=$reviewer"
+            echo "ECOM_OPERATORS=[{\"id\":\"ci-steward\",\"role\":\"steward\",\"token\":\"$steward\"},{\"id\":\"ci-reviewer\",\"role\":\"reviewer\",\"token\":\"$reviewer\"}]"
+          } >> "$GITHUB_ENV"
+      - name: Apply migrations and load published data
+        run: |
+          bun run db:migrate
+          bun run db:import --publish
+          bun run db:import:wave2 --publish
+          bun run db:check
+      - name: Run unit tests and required PostGIS integration
+        run: ECOM_OPERATORS= bun run test:release db
+      - name: Test publish and retire on a separate database
+        run: |
+          export DATABASE_URL="$WORKFLOW_DATABASE_URL" REQUIRE_RELEASE_APPROVAL=1 ECOM_OPERATORS=
+          bun run db:migrate
+          bun run db:import --stage
+          bun run test:release workflow
+      - name: Compile production
+        run: bun run build
+      - name: Install Chromium
+        run: bun x --no-install playwright install --with-deps chromium
+      - name: Run all required browser tests against production
+        run: |
+          bun run start --hostname 127.0.0.1 > "$RUNNER_TEMP/ecom-server.log" 2>&1 &
+          app=$!
+          trap 'kill "$app" 2>/dev/null || true' EXIT
+          timeout 60 bash -c 'until curl --silent --fail "$E2E_BASE_URL/api/health" | jq -e ".status == \"ok\" and .publicationStatus == \"published\"" >/dev/null; do sleep 1; done'
+          bun run test:pilot "$E2E_BASE_URL" 5
+          bun run test:release e2e
+      - name: Stop disposable PostgreSQL
+        if: always()
+        run: docker rm -f ecom-release-db || true

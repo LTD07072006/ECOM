@@ -100,6 +100,15 @@ export function LayerControls({ data, layer, setLayer, airports, setAirports, pr
         <li><span style={{ background: missingColor }} aria-hidden="true" /> Data unavailable</li>
       </ul>
       <a href={layer.dataset.source.url ?? undefined}>{layer.dataset.source.title}</a>
+      {province && <div className="layer-comparison-result" aria-live="polite">
+        <strong>{province.name}</strong>
+        <p>{layer.values[province.id] == null ? "Data unavailable" : `${number.format(layer.values[province.id]!)} ${layer.unit}`} · {layer.period}</p>
+        <p>Quality: {layer.valueDetails?.[province.id]?.quality ?? "unavailable"}</p>
+        {layer.valueDetails?.[province.id]?.missingReason && <p>{layer.valueDetails[province.id].missingReason}</p>}
+        <p>Source: {layer.dataset.source.publisher} · {layer.dataset.source.title} · {layer.dataset.source.license}</p>
+        {layer.valueDetails?.[province.id]?.method && <p>{layer.valueDetails[province.id].method}</p>}
+        {layer.valueDetails?.[province.id]?.limitations && <p>{layer.valueDetails[province.id].limitations}</p>}
+      </div>}
     </div>}
     {data.infrastructure && <div className="poi-control">
       <label><input type="checkbox" checked={airports} onChange={(event) => setAirports(event.target.checked)} /> Civil airports</label>

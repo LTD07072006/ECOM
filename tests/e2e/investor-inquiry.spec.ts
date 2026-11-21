@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { expect, test, type Response } from "@playwright/test";
 import { VIETNAM_REPORT_TIME_ZONE, vietnamCalendarDay, vietnamDateRange } from "../../src/features/inquiries/reporting";
+import { INQUIRY_NOTICE_VERSION } from "../../src/features/inquiries/privacy";
 
 const baseUrl = process.env.E2E_BASE_URL ?? "http://127.0.0.1:3000";
 const stewardToken = process.env.E2E_RELEASE_STEWARD_TOKEN;
@@ -23,6 +24,18 @@ test("visitor can open Hanoi inquiry form and receive a reference code", async (
   await profile.getByText("Request investment support", { exact: true }).click();
   await profile.getByRole("textbox", { name: "Email *" }).fill("pilot-e2e@example.test");
   await profile.getByRole("textbox", { name: "Message *" }).fill("E2E inquiry for logistics context in Hanoi.");
+  const [notice] = await Promise.all([
+    page.waitForEvent("popup"),
+    profile.getByRole("link", { name: /inquiry privacy notice/ }).click(),
+  ]);
+  await expect(notice.getByRole("heading", { name: "Inquiry privacy notice" })).toBeVisible();
+  await expect(notice.getByText(/12 months/)).toBeVisible();
+  await notice.close();
+  const consentBox = profile.getByRole("checkbox", { name: /I consent/ });
+  await expect(consentBox).not.toBeChecked();
+  await profile.getByRole("button", { name: "Send inquiry" }).click();
+  await expect(consentBox).toBeFocused();
+  await consentBox.check();
   const [response] = await Promise.all([
     page.waitForResponse((result) => new URL(result.url()).pathname === "/api/inquiries" && result.request().method() === "POST"),
     profile.getByRole("button", { name: "Send inquiry" }).click(),
@@ -48,7 +61,7 @@ test("reports preview the selected week, download stored CSV, and compare compat
   expect(hanoi).toBeDefined();
   const country = `Report E2E ${randomUUID()}`;
   const submission = await request.post(`${baseUrl}/api/inquiries`, {
-    data: { email: "reports-e2e@example.test", message: "Synthetic inquiry for the weekly report.", country, geographyIds: [hanoi!.id] },
+    data: { email: "reports-e2e@example.test", message: "Synthetic inquiry for the weekly report.", country, geographyIds: [hanoi!.id], consent: true, noticeVersion: INQUIRY_NOTICE_VERSION },
   });
   expect(submission.status()).toBe(201);
 
@@ -134,7 +147,7 @@ test("reports preview the selected week, download stored CSV, and compare compat
   expect(csv).toContain(",total,1");
   expect(csv).not.toContain("reports-e2e@example.test");
   await openSavedReport();
-  await expect(detail.getByText(/^exported · steward/)).toBeVisible();
+  await expect(detail.getByText(/^exported · (steward|[a-zA-Z0-9._-]+-steward)/)).toBeVisible();
 
   const comparison = detail.getByRole("combobox", { name: "So sánh với báo cáo", exact: true });
   await comparison.selectOption(earlier);
@@ -169,7 +182,7 @@ test("steward dashboard refreshes the inquiry list, detail, and audit after savi
   const sector = `E2E logistics ${randomUUID()}`;
   const message = "Steward E2E inquiry fixture for logistics.";
   const submitted = await request.post(`${baseUrl}/api/inquiries`, {
-    data: { email: "steward-e2e@example.test", message, sector, geographyIds: [hanoi!.id] },
+    data: { email: "steward-e2e@example.test", message, country: "+1", sector, geographyIds: [hanoi!.id], consent: true, noticeVersion: INQUIRY_NOTICE_VERSION },
   });
   expect(submitted.status()).toBe(201);
   const { referenceCode } = await submitted.json();
@@ -188,6 +201,15 @@ test("steward dashboard refreshes the inquiry list, detail, and audit after savi
   const reference = list.getByRole("button", { name: referenceCode, exact: true });
   const row = list.getByRole("listitem").filter({ hasText: referenceCode });
   await expect(row).toContainText(" · new · ");
+  const [download] = await Promise.all([
+    page.waitForEvent("download"),
+    page.getByRole("button", { name: "Export safe CSV" }).click(),
+  ]);
+  const csv = await readFile(await download.path());
+  expect(Array.from(csv.subarray(0, 3))).toEqual([0xef, 0xbb, 0xbf]);
+  expect(csv.toString("utf8")).toContain(`,"'+1",${sector},`);
+  expect(csv.toString("utf8")).not.toContain("steward-e2e@example.test");
+  await expect(reference).toBeEnabled();
   await reference.click();
   const detail = page.getByRole("article").filter({ has: page.getByRole("heading", { name: referenceCode, exact: true }) });
   await expect(detail).toContainText(message);

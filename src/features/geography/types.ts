@@ -30,6 +30,7 @@ export type Source = {
 };
 
 export type DatasetMetadata = {
+  id?: string;
   code: string;
   version: string;
   owner: string;
@@ -54,6 +55,7 @@ export type Observation = {
   periodEnd: string;
   scope: string;
   quality: "verified" | "supported" | "unavailable";
+  scoreEligible?: boolean;
   missingReason: string | null;
   method: string;
   limitations: string;
