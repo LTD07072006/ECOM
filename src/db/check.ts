@@ -1,9 +1,8 @@
 import "dotenv/config";
-import postgres from "postgres";
-import { env } from "../lib/env";
+import { databasePool } from "./pool";
 import { loadDatabaseCatalog, loadProvinceMap } from "../features/geography/database-repository";
 
-const sql = postgres(env.DATABASE_URL, { max: 1 });
+const sql = databasePool();
 
 try {
   const [[postgis], catalog, map] = await Promise.all([

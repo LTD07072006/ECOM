@@ -4,6 +4,7 @@
   "private": true,
   "packageManager": "bun@1.4.5",
   "scripts": {
+    "setup:local": "bun run scripts/setup-local.ts",
     "dev": "bun --bun next dev",
     "build": "bun --bun next build",
     "start": "bun --bun next start",
@@ -17,7 +18,9 @@
     "db:seed": "bun run src/db/import-release.ts --publish",
     "db:import": "bun run src/db/import-release.ts",
     "db:import:wave2": "bun run src/db/import-wave2.ts",
-    "db:check": "bun run src/db/check.ts"
+    "db:check": "bun run src/db/check.ts",
+    "db:cleanup:inquiries": "bun run src/db/cleanup-inquiries.ts",
+    "db:cleanup:reports": "bun run src/db/cleanup-inquiries.ts"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.0.2",

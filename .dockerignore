@@ -9,6 +9,13 @@
 **/.netrc
 **/.git-credentials
 **/.pgpass
+**/*.dump
+**/*.backup
+**/*.bak
+**/*.sql.gz
+**/*.sqlite
+**/*.sqlite3
+**/*.pgdump
 node_modules
 .next*
 test-results

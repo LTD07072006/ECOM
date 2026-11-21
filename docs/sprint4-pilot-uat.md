@@ -34,6 +34,15 @@ Mark each task **pass**, **blocked** or **needs help**.
 | Download CSV and JSON and trace one row back to its source | | |
 | Identify a missing value and explain how it differs from zero | | |
 | Trace boundary attribution and geography version | | |
+| Search Hà Nội, open the profile, submit an inquiry and record the `INQ-…` reference | | |
+| Open `/internal/inquiries` with the steward token and load the inquiry list | | |
+| Open an inquiry detail, verify provenance, add a note and change its status | | |
+| Close an inquiry with an explicit reason and verify the audit timeline | | |
+| Review funnel metrics and export the filtered safe CSV without email/message/notes | | |
+| Apply date range and geography filters, verify pagination, and confirm metrics/CSV cover all matching inquiries rather than only the visible page | | |
+| Review weekly trend and normalized country/sector/geography breakdowns; save a weekly report snapshot | | |
+| Reopen a stored snapshot after changing an inquiry, verify its period/timezone/formula and unchanged total, then export the stored aggregate CSV | | |
+| Compare two snapshots with the same filters/formula, verify incompatible comparison is rejected, and create a correction snapshot without editing the original | | |
 | Complete the workflow using keyboard or your usual assistive technology | | |
 
 1. Explain what the population estimate can tell you about a place.

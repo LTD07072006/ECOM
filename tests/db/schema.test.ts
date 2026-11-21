@@ -5,6 +5,8 @@ import {
   geoUnits,
   geographyVersions,
   indicatorDefinitions,
+  inquiryAudit,
+  investorInquiries,
   observations,
   sourceRegistry,
 } from "../../src/db/schema";
@@ -16,6 +18,8 @@ test("Release 1 Drizzle schema exposes provenance-aware market data tables", () 
   expect(geoUnits).toBeDefined();
   expect(indicatorDefinitions).toBeDefined();
   expect(observations).toBeDefined();
+  expect(investorInquiries).toBeDefined();
+  expect(inquiryAudit).toBeDefined();
 });
 
 test("initial migration enables PostGIS and creates the market_entry schema", () => {
@@ -27,4 +31,7 @@ test("initial migration enables PostGIS and creates the market_entry schema", ()
   expect(migration).toContain('observations_value_check');
   expect(migration).toContain('observations_dataset_source_fkey');
   expect(migration).toContain('geo_units_parent_fkey');
+  expect(migration).toContain('CREATE TABLE "market_entry"."investor_inquiries"');
+  expect(migration).toContain('inquiry_status_check');
+  expect(migration).toContain('inquiry_audit');
 });

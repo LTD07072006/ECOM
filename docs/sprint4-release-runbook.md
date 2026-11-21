@@ -15,6 +15,18 @@ Migration `0003_sprint4_release_operations` adds four operations tables. The pub
 - [x] API query validation rejects unexpected or duplicate parameters and enforces query size and ID limits.
 - [x] Browser checks cover keyboard search, visible focus, search announcements, mobile viewport, reduced motion, reload recovery and larger boundary payloads.
 - [ ] Complete device and screen-reader UAT with the pilot participants.
+- [x] Public inquiry can be submitted from a profile or shortlist, returns a reference code, and stores published geography/dataset provenance.
+- [x] Steward inquiry dashboard is protected by `RELEASE_STEWARD_TOKEN`, supports filtering, detail review, notes, status transitions, close reasons and audit history.
+- [x] Steward reporting exposes aggregate funnel metrics and a filtered CSV containing no email, inquiry message or internal notes.
+- [x] Phase 3 reporting uses shared date/geography/status/country/sector filters; rows paginate while metrics and CSV use the complete filtered set.
+- [x] Weekly trend and geography/country/sector breakdowns are derived without duplicating multi-geography inquiries in totals.
+- [x] Weekly snapshots store only period, filters and non-sensitive computed metrics.
+- [x] Phase 4 snapshots are immutable and store period, timezone, filters, formula version, creation time, retention time and optional correction lineage.
+- [x] Snapshot compare/export reads stored metrics; create/export/compare actions are steward-only and audited.
+- [x] Snapshot consistency requires status counts to reconcile to total; corrections create new snapshots and retain the original for traceability.
+- [x] Snapshot cleanup is dry-run by default and can be applied with `bun run db:cleanup:reports -- --apply`; expired snapshot audit rows are removed with their snapshot rows.
+- [x] Phase 3 verification: TypeScript, 64 unit/API/DB/feature/smoke tests passed with 8 guarded skips; production build passed; inquiry E2E passed 2/2; metrics/CSV/snapshot API consistency smoke passed.
+- [ ] Run the inquiry E2E suite against the pilot build with a disposable or approved test record.
 
 ### 2. Data release
 
@@ -30,6 +42,7 @@ Migration `0003_sprint4_release_operations` adds four operations tables. The pub
 - [x] Application pools have bounded size and server-side timeouts. API counters are shared across production replicas using PostgreSQL. Application telemetry records route labels, status and latency.
 - [ ] Provision the managed PostgreSQL/PostGIS service, TLS, restricted ingress, secret store and alert collector.
 - [ ] Run load and accessibility checks against pilot infrastructure. Attach the sign-off and rollback owner to the pilot ticket.
+- [x] Inquiry retention defaults to a dry-run and requires `--apply` for anonymization; email, message and notes are excluded from operational logs.
 
 ## Dataset release workflow
 

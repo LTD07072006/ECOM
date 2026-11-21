@@ -1,4 +1,5 @@
 import type { DatasetMetadata, Profile } from "../geography/types";
+import { InquiryForm } from "../inquiries/InquiryForm";
 
 function DatasetDetails({ dataset }: { dataset: DatasetMetadata }) {
   return <dl className="dataset-details">
@@ -14,6 +15,10 @@ export function GeoProfilePanel({ profile }: { profile: Profile }) {
   return <article className="profile-panel" data-testid="geo-profile">
     <div className="profile-heading"><div><span className="map-label">{profile.level}</span><h2>{profile.displayName}</h2><p>{profile.parentName ?? "Vietnam"} · {profile.geographyVersion}</p></div><span className="profile-code">{profile.code}</span></div>
     <p className="muted">Context only. These figures do not establish demand, returns, or eligibility.</p>
+    <details className="inquiry-entry">
+      <summary>Request investment support</summary>
+      <InquiryForm geographyIds={[profile.id]} geographyLabels={[profile.displayName]} />
+    </details>
     {profile.observations.length === 0 && <p className="muted">No published context observations for this place.</p>}
     {profile.observations.map((observation) => <div className="observation" key={observation.id}>
       <div className="observation-title"><strong>{observation.label}</strong><span>{observation.quality}</span></div>

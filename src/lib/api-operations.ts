@@ -1,7 +1,7 @@
 import { databasePool } from "../db/pool";
 import { error } from "./http";
 
-const limits = { search: 180, profile: 180, compare: 60, export: 30, internal: 120 } as const;
+const limits = { search: 180, profile: 180, compare: 60, export: 30, internal: 120, inquiries: 10 } as const;
 type QuotaRoute = keyof typeof limits;
 type Route = QuotaRoute | "boundaries" | "layers" | "health";
 const minute = 60_000;

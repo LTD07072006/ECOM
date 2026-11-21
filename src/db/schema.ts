@@ -6,6 +6,7 @@ import {
   foreignKey,
   index,
   integer,
+  jsonb,
   numeric,
   pgSchema,
   primaryKey,
@@ -24,11 +25,78 @@ export const apiQuotas = marketEntry.table("api_quotas", {
   requests: integer("requests").notNull(),
 });
 
+export const investorInquiries = marketEntry.table("investor_inquiries", {
+  inquiryId: uuid("inquiry_id").defaultRandom().primaryKey(),
+  referenceCode: text("reference_code").notNull().unique(),
+  email: text("email"),
+  message: text("message"),
+  name: text("name"),
+  organization: text("organization"),
+  country: text("country"),
+  sector: text("sector"),
+  geographyIds: uuid("geography_ids").array().notNull().default(sql`ARRAY[]::uuid[]`),
+  provenance: jsonb("provenance").notNull(),
+  status: text("status").notNull().default("new"),
+  closeReason: text("close_reason"),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  retentionAt: timestamp("retention_at", { withTimezone: true }).notNull(),
+  anonymizedAt: timestamp("anonymized_at", { withTimezone: true }),
+}, (table) => [
+  index("investor_inquiries_status_updated_idx").on(table.status, table.updatedAt),
+  index("investor_inquiries_geography_ids_idx").using("gin", table.geographyIds),
+  check("inquiry_status_check", sql`${table.status} in ('new', 'contacted', 'qualified', 'closed')`),
+  check("inquiry_close_reason_check", sql`${table.closeReason} is null or ${table.closeReason} in ('spam', 'duplicate', 'out_of_scope', 'resolved')`),
+  check("inquiry_closed_reason_required_check", sql`(${table.status} = 'closed') = (${table.closeReason} is not null)`),
+  check("inquiry_email_length_check", sql`${table.email} is null or length(${table.email}) between 3 and 254`),
+  check("inquiry_message_length_check", sql`${table.message} is null or length(${table.message}) between 10 and 5000`),
+]);
+
+export const inquiryAudit = marketEntry.table("inquiry_audit", {
+  eventId: uuid("event_id").defaultRandom().primaryKey(),
+  inquiryId: uuid("inquiry_id").notNull().references(() => investorInquiries.inquiryId),
+  actor: text("actor").notNull(),
+  action: text("action").notNull(),
+  fromStatus: text("from_status"),
+  toStatus: text("to_status"),
+  note: text("note"),
+  happenedAt: timestamp("happened_at", { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [
+  index("inquiry_audit_inquiry_happened_idx").on(table.inquiryId, table.happenedAt),
+  check("inquiry_audit_action_check", sql`${table.action} in ('submitted', 'status_changed', 'note_added', 'anonymized')`),
+  check("inquiry_audit_note_length_check", sql`${table.note} is null or length(${table.note}) between 1 and 5000`),
+]);
+
 const geometry = customType<{ data: string; driverData: string }>({
   dataType() {
     return "geometry";
   },
 });
+
+export const inquiryReportSnapshots = marketEntry.table("inquiry_report_snapshots", {
+  snapshotId: uuid("snapshot_id").defaultRandom().primaryKey(),
+  periodStart: timestamp("period_start", { withTimezone: true }).notNull(),
+  periodEnd: timestamp("period_end", { withTimezone: true }).notNull(),
+  filters: jsonb("filters").notNull(),
+  metrics: jsonb("metrics").notNull(),
+  timeZone: text("time_zone").notNull().default("UTC"),
+  formulaVersion: text("formula_version").notNull(),
+  correctsSnapshotId: uuid("corrects_snapshot_id"),
+  retentionAt: timestamp("retention_at", { withTimezone: true }).notNull(),
+  createdBy: text("created_by").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [index("inquiry_report_snapshots_period_idx").on(table.periodStart, table.periodEnd)]);
+
+export const inquiryReportSnapshotAudit = marketEntry.table("inquiry_report_snapshot_audit", {
+  eventId: uuid("event_id").defaultRandom().primaryKey(),
+  snapshotId: uuid("snapshot_id").notNull().references(() => inquiryReportSnapshots.snapshotId),
+  actor: text("actor").notNull(),
+  action: text("action").notNull(),
+  happenedAt: timestamp("happened_at", { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [
+  index("inquiry_report_snapshot_audit_snapshot_idx").on(table.snapshotId, table.happenedAt),
+  check("inquiry_report_snapshot_audit_action_check", sql`${table.action} in ('created', 'exported', 'compared')`),
+]);
 
 export const sourceRegistry = marketEntry.table("source_registry", {
   sourceId: uuid("source_id").defaultRandom().primaryKey(),

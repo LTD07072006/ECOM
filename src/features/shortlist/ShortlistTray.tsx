@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import type { Geography } from "../geography/types";
 import { removeFromShortlist, readShortlist, selectForComparison } from "./store";
 import { ComparisonPanel } from "../comparison/ComparisonPanel";
+import { InquiryForm } from "../inquiries/InquiryForm";
 
 export function ShortlistTray() {
   const [ids, setIds] = useState<string[]>([]);
@@ -79,11 +80,15 @@ export function ShortlistTray() {
 
   if (!ids.length) return null;
   return <>
-    <section className="shortlist-tray" aria-label="Saved places">
+      <section className="shortlist-tray" aria-label="Saved places">
       <div className="shortlist-heading"><div><span className="map-label">SAVED PLACES</span><strong>{places.length} saved</strong></div><div className="shortlist-actions">{ids.length >= 2 ? <button className="text-button" onClick={() => setComparisonIds(selectForComparison(ids))}>Compare {Math.min(ids.length, 3)}</button> : null}<button className="text-button" onClick={() => download("json")}>Download JSON</button><button className="text-button" onClick={() => download("csv")}>Download CSV</button></div></div>
       {error ? <p className="state-message">{error}</p> : null}
-      <ul>{ids.map((id) => { const place = placesById.get(id); return <li key={id}><span>{place?.displayName ?? "Unavailable saved place"}</span><button className="remove-button" onClick={() => remove(id)} aria-label={`Remove ${place?.displayName ?? "unavailable place"}`}>Remove</button></li>; })}</ul>
-    </section>
+       <ul>{ids.map((id) => { const place = placesById.get(id); return <li key={id}><span>{place?.displayName ?? "Unavailable saved place"}</span><button className="remove-button" onClick={() => remove(id)} aria-label={`Remove ${place?.displayName ?? "unavailable place"}`}>Remove</button></li>; })}</ul>
+       <details className="inquiry-entry">
+         <summary>Request support for these places</summary>
+         <InquiryForm geographyIds={ids} geographyLabels={places.map((place) => place.displayName)} />
+       </details>
+     </section>
     {comparisonIds ? <ComparisonPanel ids={comparisonIds} onClose={() => setComparisonIds(null)} /> : null}
   </>;
 }

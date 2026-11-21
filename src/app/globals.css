@@ -286,3 +286,55 @@ h1 {
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; transition: none !important; animation: none !important; }
 }
+
+.inquiry-page { width: min(72rem, 100%); margin: 0 auto; padding: clamp(1rem, 4vw, 3rem); }
+.inquiry-page h1 { max-width: none; font-size: clamp(2rem, 5vw, 4rem); }
+.inquiry-dashboard { overflow-wrap: anywhere; }
+.inquiry-dashboard-tabs, .inquiry-report-actions {
+  display: flex; flex-wrap: wrap; align-items: center; gap: .65rem;
+}
+.inquiry-dashboard-tabs { margin: 1rem 0; padding-bottom: .6rem; border-bottom: 1px solid var(--line); }
+.inquiry-dashboard :where(input, select, textarea, button) {
+  min-height: 2.6rem; max-width: 100%; padding: .4rem .65rem; font: inherit;
+  color: var(--ink); background: var(--panel); border: 1px solid var(--line); border-radius: .25rem;
+}
+.inquiry-dashboard button:enabled { cursor: pointer; }
+.inquiry-dashboard button:disabled { opacity: .6; }
+.inquiry-dashboard button[aria-pressed="true"], .inquiry-dashboard .inquiry-primary { background: var(--teal); color: white; }
+.inquiry-dashboard label { display: grid; gap: .3rem; max-width: 100%; }
+.inquiry-dashboard-filters {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 9rem), 1fr)); gap: .8rem;
+  padding: .9rem; margin: 1rem 0 0; min-width: 0; border: 1px solid var(--line);
+}
+.inquiry-dashboard-filters legend { font-weight: 700; }
+.inquiry-dashboard-filters label { min-width: 0; }
+.inquiry-dashboard-filters input, .inquiry-dashboard-filters select { width: 100%; }
+.inquiry-geography-picker { grid-column: 1 / -1; display: flex; align-items: flex-end; flex-wrap: wrap; gap: .5rem; }
+.inquiry-geography-picker > label { flex: 0 1 18rem; }
+.inquiry-geography-picker ul {
+  flex-basis: 100%; display: flex; flex-wrap: wrap; gap: .5rem; list-style: none; margin: 0; padding: 0;
+}
+.inquiry-geography-selected button { border-color: var(--teal); color: var(--teal); }
+.inquiry-reports > :where(section, article) { padding: 1rem 0; border-top: 1px solid var(--line); min-width: 0; }
+.inquiry-reports h2 { margin: 0 0 .65rem; font-family: Georgia, serif; font-weight: 400; }
+.inquiry-report-actions h2 { margin: 0 auto 0 0; }
+.inquiry-reports .inquiry-report-actions label {
+  flex: 0 1 27rem; min-width: 0; grid-template-columns: minmax(0, 1fr);
+}
+.inquiry-reports .inquiry-report-actions select { width: 100%; min-width: 0; }
+.inquiry-report-meta {
+  display: grid; grid-template-columns: minmax(0, 12rem) minmax(0, 1fr); gap: .5rem 1rem; margin: .5rem 0 1rem;
+}
+.inquiry-report-meta dt { color: var(--muted); }
+.inquiry-report-meta dd { margin: 0; font-weight: 600; }
+.inquiry-report-scroll { overflow-x: auto; width: 100%; margin-top: .75rem; }
+.inquiry-report-scroll table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+.inquiry-report-scroll :where(th, td) {
+  padding: .6rem .7rem; border-bottom: 1px solid var(--line); text-align: left; vertical-align: middle;
+}
+.inquiry-report-scroll thead th { color: var(--muted); background: var(--panel); }
+.inquiry-dashboard [role="alert"] { color: #9e2d25; }
+@media (max-width: 38rem) {
+  .inquiry-report-meta { grid-template-columns: minmax(0, 1fr); }
+  .inquiry-report-meta dd { margin-bottom: .3rem; }
+}

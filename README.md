@@ -12,45 +12,21 @@ Map-first investor attraction platform for exploring Vietnam with transparent ma
 
 ## Local setup
 
-1. Install [Bun](https://bun.sh) and Docker Desktop.
-2. Install dependencies:
+Install Git and [Bun](https://bun.sh) with both on your PATH. Start [Docker Desktop](https://docs.docker.com/desktop/) in Linux container mode, or run Docker Engine with the Compose plugin on Linux.
 
-   ```powershell
-   bun install
-   ```
+```sh
+git clone https://github.com/LTD07072006/ECOM.git
+cd ECOM
+bun run setup:local
+```
 
-3. For a new database, create `.env` once with a generated password, then start PostgreSQL/PostGIS on port `55432`.
+The setup command installs pinned dependencies, generates a local database password and separate reviewer and steward tokens in `.env`, starts PostgreSQL/PostGIS, applies all migrations, imports the official catalog and Wave 2 data, then starts the app. Open the URL printed by Next.js, normally `http://127.0.0.1:3000`. The first run downloads dependencies and the PostGIS image.
 
-   ```powershell
-   if (-not (Test-Path -LiteralPath '.env')) {
-       $devDbPassword = [Convert]::ToHexString([Security.Cryptography.RandomNumberGenerator]::GetBytes(32))
-       @(
-           "POSTGRES_PASSWORD=$devDbPassword"
-           "DATABASE_URL=postgresql://market_entry:${devDbPassword}@127.0.0.1:55432/market_entry"
-       ) | Set-Content -LiteralPath '.env' -Encoding utf8NoBOM
-       Remove-Variable devDbPassword
-   }
-   docker compose up -d db
-   ```
+Use `bun run setup:local --setup-only` to prepare the database without starting the web server. Once the database is running, `bun run dev --hostname 127.0.0.1` restarts the web app on the loopback interface.
 
-4. Apply migrations and load the official data snapshot:
+### Investor inquiry pilot
 
-   ```powershell
-   bun run db:migrate
-   bun run db:import --validate
-   bun run db:import --publish
-   bun run db:import:wave2 --validate
-   bun run db:import:wave2 --publish
-   bun run db:check
-   ```
-
-5. Start Next.js:
-
-   ```powershell
-   bun run dev
-   ```
-
-Open `http://localhost:3000`.
+Visitors can submit an inquiry from a geography profile or saved shortlist. Steward access is at `/internal/inquiries`, and dataset review is at `/internal/releases`. Copy your locally generated role token from `.env` into the corresponding form on your machine. The shared steward token identifies the role. Inquiry status changes and notes are audited transactionally. Review the retention cleanup count with `bun run db:cleanup:inquiries`.
 
 Sprint 4 adds internal dataset review at `/internal/releases`. See the
 [release runbook and acceptance checklist](docs/sprint4-release-runbook.md) for
@@ -59,7 +35,9 @@ The direct `--publish` commands above are for local bootstrap.
 
 ## Environment
 
-Keep real credentials in the ignored `.env` file or inject them at runtime. `.env.example` lists the variable names with blank values. `DATABASE_URL` stays server-side. For an existing Docker volume, use the database role's existing password in `.env`. `POSTGRES_PASSWORD` initializes the role on a new volume.
+Each clone generates its own secrets. Keep them in the ignored `.env` file or a secret manager. `.env.example` documents the variable names. The database and development server bind to loopback.
+
+Setup reuses an existing `.env`. For a database volume initialized previously, keep the password that PostgreSQL already uses in both `POSTGRES_PASSWORD` and `DATABASE_URL`. If you see `28P01`, restore the matching local credentials and keep the volume. For a second checkout on the same machine, choose a different `ECOM_DB_PORT`, `ECOM_DB_CONTAINER` and `COMPOSE_PROJECT_NAME` before its first setup.
 
 ## Verification
 
