@@ -1,69 +1,237 @@
-# Vietnam Market Intelligence
+# Vietnam Market Intelligence · ECOM
 
-Map-first investor attraction platform for exploring Vietnam with transparent market context.
+ECOM là hệ thống tra cứu bối cảnh đầu tư theo địa bàn tại Việt Nam. Người dùng có thể xem bản đồ, kiểm tra nguồn số liệu, lưu và so sánh địa bàn, rồi gửi yêu cầu hỗ trợ đầu tư. Steward xử lý inquiry và lưu báo cáo theo kỳ. Reviewer và steward phụ trách duyệt và công bố các bộ dữ liệu.
 
-## Stack
+## Mục lục
 
-- Bun runtime and package manager
-- Next.js App Router for frontend and backend Route Handlers
-- Drizzle ORM schema and migrations
-- PostgreSQL 16 + PostGIS 3.4 in Docker Compose
-- MapLibre with provincial boundaries stored in PostGIS
+- [Chạy lần đầu](#chạy-lần-đầu)
+- [Chạy lại và dừng ứng dụng](#chạy-lại-và-dừng-ứng-dụng)
+- [Cấu hình và bảo mật](#cấu-hình-và-bảo-mật)
+- [Thử các luồng trên giao diện](#thử-các-luồng-trên-giao-diện)
+- [Kiểm thử](#kiểm-thử)
+- [Migration và phát hành dữ liệu](#migration-và-phát-hành-dữ-liệu)
+- [Xử lý lỗi thường gặp](#xử-lý-lỗi-thường-gặp)
+- [Cấu trúc dự án](#cấu-trúc-dự-án)
 
-## Local setup
+## Chạy lần đầu
 
-Install Git and [Bun](https://bun.sh) with both on your PATH. Start [Docker Desktop](https://docs.docker.com/desktop/) in Linux container mode, or run Docker Engine with the Compose plugin on Linux.
+### 1. Chuẩn bị công cụ
 
-```sh
+- Cài [Git](https://git-scm.com/install/) để tải mã nguồn.
+- Cài [Bun](https://bun.sh/docs/installation). Phiên bản dự án ghim là `1.4.5`.
+- Trên Windows hoặc macOS, mở [Docker Desktop](https://docs.docker.com/desktop/) và chờ Docker Engine chạy. Trên Linux, bật Docker Engine và cài Docker Compose plugin. Dự án dùng image Linux `postgis/postgis:16-3.4`.
+
+Mở terminal mới rồi kiểm tra. Trên Windows, dùng PowerShell.
+
+~~~sh
+git --version
+bun --version
+docker compose version
+docker info --format "{{.OSType}}"
+~~~
+
+Lệnh cuối cần trả về `linux`. Lần đầu cần kết nối mạng để tải dependencies và image PostGIS nếu máy chưa có.
+
+### 2. Clone repository
+
+~~~sh
 git clone https://github.com/LTD07072006/ECOM.git
 cd ECOM
+~~~
+
+Chạy các lệnh tiếp theo từ thư mục có `package.json`, `docker-compose.yml` và `bun.lock`.
+
+### 3. Khởi tạo và mở ứng dụng
+
+~~~sh
 bun run setup:local
-```
+~~~
 
-The setup command installs pinned dependencies, generates a local database password and separate reviewer and steward tokens in `.env`, starts PostgreSQL/PostGIS, applies all migrations, imports the official catalog and Wave 2 data, then starts the app. Open the URL printed by Next.js, normally `http://127.0.0.1:3000`. The first run downloads dependencies and the PostGIS image.
+Lệnh thực hiện lần lượt các bước sau.
 
-Use `bun run setup:local --setup-only` to prepare the database without starting the web server. Once the database is running, `bun run dev --hostname 127.0.0.1` restarts the web app on the loopback interface.
+1. Kiểm tra Docker Engine và cài dependencies theo `bun.lock`.
+2. Tạo `.env` trên máy nếu chưa có. Script sinh mật khẩu PostgreSQL, reviewer token và steward token riêng cho bản cài.
+3. Khởi động PostGIS bằng Docker Compose và chờ dịch vụ sẵn sàng.
+4. Áp dụng các migration trong `drizzle/`.
+5. Kiểm tra và nạp manifest hành chính, ranh giới và dữ liệu Wave 2 đi cùng repository.
+6. Kiểm tra catalog đã công bố rồi chạy Next.js.
 
-### Investor inquiry pilot
+### 4. Xác nhận hệ thống sẵn sàng
 
-Visitors can submit an inquiry from a geography profile or saved shortlist. Steward access is at `/internal/inquiries`, and dataset review is at `/internal/releases`. Copy your locally generated role token from `.env` into the corresponding form on your machine. The shared steward token identifies the role. Inquiry status changes and notes are audited transactionally. Review the retention cleanup count with `bun run db:cleanup:inquiries`.
+1. Giữ terminal chạy web. Mở URL Next.js in ra, thường là [http://127.0.0.1:3000](http://127.0.0.1:3000). Dùng cổng Next.js thông báo nếu máy đang bận cổng mặc định.
+2. Thấy tiêu đề **Vietnam Market Intelligence**, tìm **Hà Nội** để thử tải hồ sơ và xem bản đồ.
+3. Mở [http://127.0.0.1:3000/api/health](http://127.0.0.1:3000/api/health). Kết quả sẵn sàng có các trường sau.
 
-Sprint 4 adds internal dataset review at `/internal/releases`. See the
-[release runbook and acceptance checklist](docs/sprint4-release-runbook.md) for
-pilot setup, role tokens, staged publication, monitoring, backups and rollback.
-The direct `--publish` commands above are for local bootstrap.
+   ~~~json
+   {
+     "status": "ok",
+     "database": "ready",
+     "mode": "database",
+     "publicationStatus": "published"
+   }
+   ~~~
 
-## Environment
+4. Để kiểm tra database từ terminal thứ hai, vào lại thư mục `ECOM` và chạy hai lệnh sau.
 
-Each clone generates its own secrets. Keep them in the ignored `.env` file or a secret manager. `.env.example` documents the variable names. The database and development server bind to loopback.
+   ~~~sh
+   docker compose ps db
+   bun run db:check
+   ~~~
 
-Setup reuses an existing `.env`. For a database volume initialized previously, keep the password that PostgreSQL already uses in both `POSTGRES_PASSWORD` and `DATABASE_URL`. If you see `28P01`, restore the matching local credentials and keep the volume. For a second checkout on the same machine, choose a different `ECOM_DB_PORT`, `ECOM_DB_CONTAINER` and `COMPOSE_PROJECT_NAME` before its first setup.
+   Container nên hiện `healthy`. Lệnh `db:check` hiển thị phiên bản PostGIS, phiên bản địa giới và số bản ghi đang phục vụ.
 
-## Verification
+## Chạy lại và dừng ứng dụng
 
-```powershell
+| Tình huống | Lệnh |
+| --- | --- |
+| Chạy lại sau khi khởi động máy hoặc sau khi pull thay đổi | `bun run setup:local` |
+| Chuẩn bị database, chạy migration và nạp dữ liệu trước | `bun run setup:local --setup-only` |
+| Chỉ chạy web khi database đã sẵn sàng | `bun run dev --hostname 127.0.0.1` |
+| Kiểm tra database riêng | `bun run db:check` |
+| Dừng PostgreSQL và giữ dữ liệu trong volume | `docker compose stop db` |
+
+Để dừng web, nhấn **Ctrl+C** ở terminal đang chạy Next.js. Khi đã có `.env`, setup dùng lại các credential trong file này và làm việc với volume hiện có.
+
+## Cấu hình và bảo mật
+
+| Biến | Công dụng |
+| --- | --- |
+| `POSTGRES_PASSWORD` | Mật khẩu dùng khi khởi tạo PostgreSQL. Với volume cũ, giá trị phải khớp mật khẩu hiện hành của role. |
+| `DATABASE_URL` | Kết nối server-side. Mặc định user và database là `market_entry`, địa chỉ `127.0.0.1:55432`. |
+| `RELEASE_REVIEWER_TOKEN` | Mở dashboard phát hành với quyền reviewer để duyệt dataset. |
+| `RELEASE_STEWARD_TOKEN` | Xử lý inquiry và báo cáo nội bộ, công bố hoặc ngừng công bố release theo quyền steward. |
+| `REQUIRE_RELEASE_APPROVAL` | Setup local tạo giá trị `0`. Đặt `1` cho trình import ở staging và production để yêu cầu quy trình duyệt release. |
+
+- Git theo dõi [`.env.example`](.env.example) với các giá trị trống. Cất secret thật trong `.env` cục bộ hoặc secret manager. Khi gửi ảnh chụp hay log lỗi, che mật khẩu, token và toàn bộ chuỗi kết nối.
+- Web local và cổng PostgreSQL mặc định đều bind vào loopback. Token steward dùng chung ghi nhận vai trò steward trong audit. Quy trình cấp quyền cho pilot và production nằm trong [release runbook](docs/sprint4-release-runbook.md).
+- Nếu chạy hai bản checkout trên cùng máy, chọn bộ giá trị riêng cho `COMPOSE_PROJECT_NAME`, `ECOM_DB_CONTAINER`, `ECOM_DB_PORT` và cổng web `PORT`. Giữ cùng bộ giá trị khi chạy lại bản checkout đó.
+
+## Thử các luồng trên giao diện
+
+### 1. Tìm, so sánh và export địa bàn
+
+1. Vào trang chính và tìm **Hà Nội** theo tên hoặc mã hành chính.
+2. Mở hồ sơ. Kiểm tra chỉ tiêu, kỳ số liệu, tên nguồn và mục **Source and limitations**.
+3. Dùng bộ điều khiển lớp bản đồ để xem chỉ tiêu cấp tỉnh và lớp sân bay.
+4. Lưu thêm một hoặc hai địa bàn cùng cấp. Bấm **Compare** trong danh sách **Saved places**.
+5. Chọn **Download JSON** hoặc **Download CSV** để tải dữ liệu kèm nguồn. So sánh cần 2–3 địa bàn tương thích về địa giới, kỳ, đơn vị và phạm vi chỉ tiêu. Giá trị thiếu được biểu diễn bằng `null` hoặc **Unavailable**.
+
+Danh sách địa bàn, ranh giới và chỉ tiêu là dữ liệu bối cảnh. Đọc kỳ, nguồn và phương pháp trước khi diễn giải. [Nguồn hành chính và ranh giới](docs/sprint1-data-foundation.md) · [Chỉ tiêu Wave 2](docs/sprint3-wave2.md)
+
+### 2. Gửi inquiry và xử lý bằng quyền steward
+
+1. Trong hồ sơ địa bàn, chọn **Request investment support**. Từ shortlist, chọn **Request support for these places**.
+2. Nhập email và nội dung. Khi thử local, dùng dữ liệu giả như `pilot@example.test` và `Tôi muốn tìm hiểu hạ tầng logistics tại Hà Nội.`
+3. Bấm **Send inquiry** và ghi lại mã `INQ-…`.
+4. Mở `/internal/inquiries` trên cùng máy chủ. Nhập `RELEASE_STEWARD_TOKEN` lấy từ `.env` vào **Steward token**, rồi bấm **Load inquiries**.
+5. Tìm inquiry vừa gửi, mở chi tiết và kiểm tra địa bàn, trạng thái và nhật ký. Dùng bộ lọc để thu hẹp danh sách theo trạng thái, quốc gia, lĩnh vực, ngày hoặc địa bàn.
+6. Chọn trạng thái hoặc nhập ghi chú, rồi bấm **Save update**. Khi chọn **Closed**, chọn thêm lý do đóng. Mở nhật ký để đối chiếu thao tác vừa lưu.
+
+### 3. Lưu, tải và so sánh báo cáo
+
+1. Trong dashboard steward, mở tab **Báo cáo**. Chọn ngày **From** và **To** theo giờ Việt Nam. Để trống cả hai ngày để dùng 7 ngày lịch gồm hôm nay.
+2. Chọn bộ lọc chung. Nếu lọc theo địa bàn, nhập tên trong ô tìm kiếm, bấm **Find geography** và chọn kết quả.
+3. Bấm **Xem trước**. Đối chiếu kỳ, bộ lọc và tổng inquiry. Xem trước lại sau khi đổi điều kiện.
+4. Bấm **Lưu báo cáo** để lưu snapshot. Trong **Lịch sử theo kỳ**, mở một kỳ để xem số liệu đã lưu, phiên bản công thức và nhật ký.
+5. Bấm **Export stored snapshot** để tải CSV tổng hợp của bản đã lưu. Dữ liệu tải dùng các chỉ số của snapshot tại thời điểm tạo.
+6. Trong chi tiết, chọn **So sánh với báo cáo** và bấm **So sánh**. Bảng hiển thị số liệu của từng kỳ và chênh lệch theo trạng thái. Giao diện chỉ rõ điều kiện khác nhau nếu hai báo cáo dùng bộ lọc, múi giờ hoặc công thức khác.
+7. Khi cần sửa báo cáo, chọn **Tạo bản đính chính**, kiểm tra kỳ và bộ lọc, rồi xem trước và lưu. Lịch sử liên kết bản mới với bản được đính chính.
+
+## Kiểm thử
+
+### Kiểm tra mã, test mặc định và build
+
+~~~sh
+bun run lint
 bun run test
 bun run build
-```
+~~~
 
-Run `bun run test:e2e` against a running app. Set `E2E_BASE_URL` when it uses a port other than 3000.
-Install Chromium with `bunx playwright install chromium` or specify `E2E_CHROMIUM_PATH` for an existing compatible installation.
+Chạy `bun run build` trong cùng thư mục dự án. Với một bản đã build và có cấu hình database phù hợp, `bun run start` khởi động Next.js ở chế độ production. Dùng hướng dẫn triển khai trong [release runbook](docs/sprint4-release-runbook.md) khi đưa lên staging hoặc production.
 
-The PostGIS integration test is opt-in because it requires a running local database:
+### Test với PostgreSQL thật
 
-```powershell
-$env:RUN_DB_TESTS = "1"
+Chạy setup trước và giữ PostgreSQL hoạt động. Trong PowerShell, bật nhóm test PostGIS rồi dọn biến của phiên hiện tại.
+
+~~~powershell
+$env:RUN_DB_TESTS = '1'
 bun run test:db
-```
+Remove-Item Env:RUN_DB_TESTS
+~~~
 
-## Release 1 boundaries
+Trên Bash, dùng `RUN_DB_TESTS=1 bun run test:db`. Các bài test inquiry và phát hành có thay đổi trạng thái dữ liệu dùng database thử nghiệm riêng và cờ opt-in. Xem [quy trình kiểm thử release](docs/sprint4-release-runbook.md#dataset-release-workflow) và [bài test tích hợp inquiry](tests/db/inquiry.integration.test.ts) để biết tên database được chấp nhận.
 
-Wave 2 adds thematic province layers, civil airports and source comparison. [Sprint 3 sources, coverage and import workflow](docs/sprint3-wave2.md).
+### Test trình duyệt
 
-The current vertical slice includes country/province/commune search, provincial boundaries, place profiles, source metadata, unavailable-data states, local shortlist comparison, and JSON/CSV context export.
+1. Dùng một bản chạy local với database thử nghiệm, vì các kịch bản inquiry tạo và cập nhật bản ghi thử.
+2. Trong terminal thứ nhất, chạy web và đợi `/api/health` có `publicationStatus=published`.
+3. Trong terminal thứ hai, cài Chromium cho Playwright và chạy suite.
 
-The synthetic catalog in `src/db/seed-data.ts` is test/demo data only and must not be interpreted as demand, purchasing power, profitability, ROI, legal eligibility, or an investment ranking. DB connection failure is surfaced as `mode: unavailable`; an unpublished database returns an empty catalog. The application does not silently fall back to synthetic demo data.
+   ~~~sh
+   bunx playwright install chromium
+   bun run test:e2e
+   ~~~
 
-The initial public release covers the administrative snapshot effective 1 July 2025 and average population estimates for all 34 provinces in 2025. `db:seed` aliases `db:import --publish`. Use `--stage` to load and validate before publication. [Sprint 1 sources and import workflow](docs/sprint1-data-foundation.md).
+4. Nếu web dùng cổng khác, đặt `E2E_BASE_URL` trỏ tới URL đang chạy. Để bật test có xác thực, dùng token từ chính bản thử nghiệm. Ví dụ trong PowerShell:
 
-Comparison requires 2–3 unique places with matching geography level/version, period, unit, definition, and scope. Missing values remain `null`/“Unavailable”; no ranking or score is calculated. Exports include provenance, quality, period, geography version, license/access, update date, and limitations, and are context-only.
+   ~~~powershell
+   $env:E2E_BASE_URL = 'http://127.0.0.1:3000'
+   $env:E2E_RELEASE_STEWARD_TOKEN = bun --env-file=.env -e 'process.stdout.write(process.env.RELEASE_STEWARD_TOKEN ?? "")'
+   $env:E2E_RELEASE_REVIEWER_TOKEN = bun --env-file=.env -e 'process.stdout.write(process.env.RELEASE_REVIEWER_TOKEN ?? "")'
+   bun run test:e2e
+   Remove-Item Env:E2E_BASE_URL,Env:E2E_RELEASE_STEWARD_TOKEN,Env:E2E_RELEASE_REVIEWER_TOKEN
+   ~~~
+
+Các bài test có xác thực được bỏ qua khi chưa cấu hình token tương ứng. Có thể đặt `E2E_CHROMIUM_PATH` để dùng Chromium tương thích đã cài. Khi phối hợp với người tham gia pilot, dùng [biểu mẫu UAT](docs/sprint4-pilot-uat.md).
+
+## Migration và phát hành dữ liệu
+
+### Cập nhật schema local
+
+Chạy các migration đã có sau khi pull thay đổi schema.
+
+~~~sh
+bun run db:migrate
+bun run db:check
+~~~
+
+Khi phát triển một thay đổi schema mới, cập nhật [`src/db/schema.ts`](src/db/schema.ts), tạo migration bằng `bun run db:generate --name <ten-thay-doi>`, rồi kiểm tra SQL và metadata trước khi áp dụng. Commit SQL và metadata migration cùng thay đổi schema.
+
+### Validate, stage và duyệt theo vai trò
+
+1. Chạy `bun run db:import --validate` hoặc `bun run db:import:wave2 --validate` tương ứng với manifest. Có thể truyền đường dẫn manifest sau cờ.
+2. Sau khi kiểm tra, dùng `--stage` với lệnh import tương ứng.
+3. Reviewer mở `/internal/releases` bằng reviewer token, đối chiếu nguồn, checksum, kỳ và độ phủ rồi duyệt batch.
+4. Steward mở cùng trang bằng steward token, kiểm tra batch đã duyệt và công bố. Công bố foundation trước khi stage Wave 2. Kiểm tra lại `/api/health`, bản đồ, hồ sơ và export sau khi công bố.
+
+`--publish` trực tiếp phục vụ khởi tạo local và được script setup gọi tự động. Dùng [runbook phát hành](docs/sprint4-release-runbook.md) cho backup, restore, rollback và giám sát trên môi trường dùng chung.
+
+### Retention
+
+`bun run db:cleanup:inquiries` và `bun run db:cleanup:reports` gọi cùng một CLI kiểm tra inquiry và snapshot đến hạn. Chạy trước ở chế độ xem số lượng. Khi người phụ trách dữ liệu đã duyệt và có bản sao lưu, truyền `--apply` để áp dụng retention. Lệnh sẽ ẩn danh inquiry đủ điều kiện và dọn snapshot cùng các bản ghi audit đã hết hạn theo triển khai hiện tại.
+
+## Xử lý lỗi thường gặp
+
+| Triệu chứng | Cách xử lý |
+| --- | --- |
+| PowerShell báo `bun` không tồn tại | Mở terminal mới sau khi cài. Nếu Bun cài ở thư mục mặc định trên Windows, chạy `$env:Path = "$env:USERPROFILE\.bun\bin;$env:Path"` để bổ sung PATH cho phiên hiện tại, rồi kiểm tra `bun --version`. |
+| Docker báo lỗi kết nối daemon hoặc `dockerDesktopLinuxEngine` | Mở Docker Desktop, chờ Engine chạy ở chế độ Linux và kiểm tra `docker info --format "{{.OSType}}"`. |
+| Chạy lệnh nhưng không tìm thấy Compose hoặc `.env` | Chạy lệnh từ thư mục `ECOM` chứa `docker-compose.yml` và `package.json`. Lần đầu, dùng `bun run setup:local` để sinh `.env`. |
+| PostgreSQL báo `28P01` hoặc `password authentication failed` | Dùng mật khẩu đã khởi tạo role trong volume hiện có cho cả `POSTGRES_PASSWORD` và `DATABASE_URL`. Giữ volume. Nếu có ký tự đặc biệt, mã hóa phần mật khẩu trong URL. |
+| Bun dùng nhầm database khi chạy lệnh thủ công | Kiểm tra đích kết nối trong `.env` tại máy. Một biến `DATABASE_URL` cũ trong terminal có thể được ưu tiên. Trong PowerShell, có thể xóa biến phiên hiện tại bằng `Remove-Item Env:DATABASE_URL -ErrorAction SilentlyContinue` rồi thử lại từ thư mục gốc. |
+| Cổng PostgreSQL hoặc tên container đã được dùng | Nếu đó là PostGIS của dự án hiện tại, dùng lại đúng Compose project và `.env`. Với checkout riêng, dùng một bộ tên project, tên container và cổng riêng. |
+| Bản đồ hoặc kết quả tìm kiếm trống | Kiểm tra `/api/health` và `bun run db:check`. Catalog local cần có `publicationStatus=published`. Nếu thiếu nguồn dữ liệu từ lần setup đầu, chạy lại `bun run setup:local`. |
+| Dashboard trả `401` | Lấy token đúng vai trò từ `.env` của bản app đang chạy. Với Playwright, kiểm tra token E2E và `E2E_BASE_URL` thuộc cùng bản chạy. |
+| Không mở được cổng 3000 | Đọc dòng **Local** trong terminal Next.js để biết cổng thực tế. Dùng cùng cổng khi mở dashboard, health và chạy E2E. |
+
+## Cấu trúc dự án
+
+| Đường dẫn | Nội dung |
+| --- | --- |
+| [`src/app/`](src/app/) | Trang Next.js và Route Handlers cho API. |
+| [`src/features/`](src/features/) | Bản đồ, tìm kiếm, hồ sơ, shortlist, inquiry, báo cáo và quản trị release. |
+| [`src/db/`](src/db/) và [`drizzle/`](drizzle/) | Schema Drizzle, kết nối PostgreSQL, migration và CLI import. |
+| [`data/sprint1/`](data/sprint1/) và [`data/sprint3/`](data/sprint3/) | Manifest và dữ liệu nguồn đi kèm cho setup local. |
+| [`database/market-entry/`](database/market-entry/) | SQL tham chiếu, sơ đồ schema và tài liệu database. |
+| [`tests/`](tests/) | Unit, API, integration và E2E. |
+| [`docs/`](docs/) | Nguồn dữ liệu, runbook và checklist pilot. |
