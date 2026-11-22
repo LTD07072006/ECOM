@@ -2,41 +2,78 @@ import { expect, test } from "@playwright/test";
 
 const baseUrl = process.env.E2E_BASE_URL ?? "http://127.0.0.1:3000";
 
-test("retail scenario filters and compares provinces before explaining why scoring is unavailable", async ({ page }) => {
-  await page.goto(baseUrl);
-  await page.getByRole("link", { name: "Explore a retail scenario" }).click();
-  await expect(page.getByRole("heading", { name: "Explore a retail market" })).toBeVisible();
-  await page.waitForLoadState("networkidle");
-  const sector = page.getByRole("combobox", { name: "Sector", exact: true });
-  await sector.focus();
-  await sector.selectOption("retail");
-  await expect(page.getByText("34 provinces match.")).toBeVisible();
-  await page.getByLabel("Minimum retail sales and consumer services (billion VND)").fill("999999999");
-  await expect(page.getByText("0 provinces match.")).toBeVisible();
-  await page.getByText("Why 34 provinces were excluded").click();
-  await expect(page.getByText("below 999,999,999").first()).toBeVisible();
-  await page.getByLabel("Minimum retail sales and consumer services (billion VND)").clear();
-  const places = page.getByRole("group", { name: "Provinces" });
-  const hanoi = places.getByLabel("Hà Nội", { exact: true });
-  await hanoi.focus();
-  await hanoi.press("Space");
-  await expect(hanoi).toBeChecked();
-  const other = places.locator('input[type="checkbox"]:not(:checked)').first();
-  await other.check();
-  const comparison = page.getByRole("heading", { name: "Compare published context" });
-  await expect(comparison).toBeVisible();
-  await expect(page.getByRole("table")).toContainText("2025");
-  await expect(page.getByRole("table")).toContainText("Cục Thống kê");
-  await page.getByLabel("Comparison baseline").selectOption({ label: "Hà Nội" });
-  await expect(page.getByRole("table").getByText("Difference from Hà Nội", { exact: false }).first()).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Ask about selected provinces" })).toBeVisible();
-  await expect(page.getByRole("textbox", { name: "Sector" })).toHaveValue("Retail");
-  await expect(page.getByText("No customer needs study is available", { exact: false })).toBeVisible();
-  await page.getByRole("button", { name: "Assess evidence and calculate" }).click();
-  await expect(page.getByText("Assessment unavailable")).toBeVisible();
-  await expect(page.getByText("Customer needs evidence with a segment", { exact: false })).toBeVisible();
-  await expect(page.getByText("this indicator is not approved for scoring", { exact: false }).first()).toBeVisible();
-  await page.getByRole("checkbox", { name: "Define the retail activity, customer segment and operating model." }).check();
-  await page.setViewportSize({ width: 390, height: 844 });
-  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
+test("retail scenario filters and compares provinces before explaining why scoring is unavailable", async ({
+	page,
+}) => {
+	await page.goto(baseUrl);
+	await page.getByRole("link", { name: "Explore a retail scenario" }).click();
+	await expect(
+		page.getByRole("heading", { name: "Explore a retail market" }),
+	).toBeVisible();
+	await page.waitForLoadState("networkidle");
+	const sector = page.getByRole("combobox", { name: "Sector", exact: true });
+	await sector.focus();
+	await sector.selectOption("retail");
+	await expect(page.getByText("34 provinces match.")).toBeVisible();
+	await page
+		.getByLabel("Minimum retail sales and consumer services (billion VND)")
+		.fill("999999999");
+	await expect(page.getByText("0 provinces match.")).toBeVisible();
+	await page.getByText("Why 34 provinces were excluded").click();
+	await expect(page.getByText("below 999,999,999").first()).toBeVisible();
+	await page
+		.getByLabel("Minimum retail sales and consumer services (billion VND)")
+		.clear();
+	const places = page.getByRole("group", { name: "Provinces" });
+	const hanoi = places.getByLabel("Hà Nội", { exact: true });
+	await hanoi.focus();
+	await hanoi.press("Space");
+	await expect(hanoi).toBeChecked();
+	const other = places.locator('input[type="checkbox"]:not(:checked)').first();
+	await other.check();
+	const comparison = page.getByRole("heading", {
+		name: "Compare published context",
+	});
+	await expect(comparison).toBeVisible();
+	await expect(page.getByRole("table")).toContainText("2025");
+	await expect(page.getByRole("table")).toContainText("Cục Thống kê");
+	await page
+		.getByLabel("Comparison baseline")
+		.selectOption({ label: "Hà Nội" });
+	await expect(
+		page
+			.getByRole("table")
+			.getByText("Difference from Hà Nội", { exact: false })
+			.first(),
+	).toBeVisible();
+	await expect(
+		page.getByRole("heading", { name: "Ask about selected provinces" }),
+	).toBeVisible();
+	await expect(page.getByRole("textbox", { name: "Sector" })).toHaveValue(
+		"Retail",
+	);
+	await expect(
+		page.getByText("No customer needs study is available", { exact: false }),
+	).toBeVisible();
+	await page
+		.getByRole("button", { name: "Assess evidence and calculate" })
+		.click();
+	await expect(page.getByText("Assessment unavailable")).toBeVisible();
+	await expect(
+		page.getByText("Customer needs evidence with a segment", { exact: false }),
+	).toBeVisible();
+	await expect(
+		page
+			.getByText("this indicator is not approved for scoring", { exact: false })
+			.first(),
+	).toBeVisible();
+	await page
+		.getByRole("checkbox", {
+			name: "Define the retail activity, customer segment and operating model.",
+		})
+		.check();
+	await page.setViewportSize({ width: 390, height: 844 });
+	expect(
+		await page.evaluate(() => document.documentElement.scrollWidth),
+	).toBeLessThanOrEqual(390);
 });

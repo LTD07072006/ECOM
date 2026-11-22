@@ -7,57 +7,60 @@ export type ReleaseRole = "reviewer" | "steward";
 export type ReleaseAction = "approve" | "publish" | "retire";
 
 type DatasetReview = {
-  dataset_version_id: string;
-  source_id: string;
-  batch_id: string | null;
-  code: string;
-  version: string;
-  status: string;
-  owner: string | null;
-  checksum: string | null;
-  as_of: string | null;
-  reviewed: string | null;
-  due: string | null;
-  stale: boolean;
-  publisher: string;
-  citation: string;
-  license: string;
-  access: string;
-  source_status: string;
-  url: string | null;
-  units: number;
-  provinces: number;
-  communes: number;
-  expected_provinces: number;
-  covered_provinces: number;
-  boundaries: number;
-  observations: number;
-  missing: number;
-  points: number;
-  invalid_geometry: number;
-  invalid_observations: number;
-  geographies: string[];
-  periods: string[];
-  methods: string[];
-  limitations: string[];
+	dataset_version_id: string;
+	source_id: string;
+	batch_id: string | null;
+	code: string;
+	version: string;
+	status: string;
+	owner: string | null;
+	checksum: string | null;
+	as_of: string | null;
+	reviewed: string | null;
+	due: string | null;
+	stale: boolean;
+	publisher: string;
+	citation: string;
+	license: string;
+	access: string;
+	source_status: string;
+	url: string | null;
+	units: number;
+	provinces: number;
+	communes: number;
+	expected_provinces: number;
+	covered_provinces: number;
+	boundaries: number;
+	observations: number;
+	missing: number;
+	points: number;
+	invalid_geometry: number;
+	invalid_observations: number;
+	geographies: string[];
+	periods: string[];
+	methods: string[];
+	limitations: string[];
 };
 
 type Batch = {
-  id: string;
-  kind: "foundation" | "wave2";
-  geography: string;
-  fingerprint: string;
-  created: string;
-  approved: boolean;
-  published: boolean;
-  retired: boolean;
-  audit: { action: string; actor: string; at: string; note: string | null }[];
+	id: string;
+	kind: "foundation" | "wave2";
+	geography: string;
+	fingerprint: string;
+	created: string;
+	approved: boolean;
+	published: boolean;
+	retired: boolean;
+	audit: { action: string; actor: string; at: string; note: string | null }[];
 };
 
-async function readDatasets(sql: postgres.TransactionSql, batchId: string | null = null) {
-  // This review query combines small catalog tables with several PostGIS aggregates.
-  await sql`set local jit = off`;
-  const rows = await sql<DatasetReview[]>`
+async function readDatasets(
+	sql: postgres.TransactionSql,
+	batchId: string | null = null,
+) {
+	// This review query combines small catalog tables with several PostGIS aggregates.
+	await sql`set local jit = off`;
+	const rows = await sql<DatasetReview[]>`
     with versions as (
       select dataset.*, member.batch_id
       from market_entry.dataset_versions dataset
@@ -131,11 +134,14 @@ async function readDatasets(sql: postgres.TransactionSql, batchId: string | null
     ) points on true
     order by v.dataset_code, v.data_as_of desc nulls last, v.version_label
   `;
-  return rows.map((row) => ({ ...row, url: safeSourceUrl(row.url) }));
+	return rows.map((row) => ({ ...row, url: safeSourceUrl(row.url) }));
 }
 
-async function readBatches(sql: postgres.TransactionSql, id: string | null = null) {
-  return sql<Batch[]>`
+async function readBatches(
+	sql: postgres.TransactionSql,
+	id: string | null = null,
+) {
+	return sql<Batch[]>`
     select batch.batch_id as id, batch.kind, batch.geography_code as geography, batch.fingerprint,
       batch.created_at::text as created, coalesce(bool_or(event.action = 'approve'), false) as approved,
       coalesce(bool_or(event.action in ('publish', 'local_publish')), false) as published,
@@ -151,64 +157,123 @@ async function readBatches(sql: postgres.TransactionSql, id: string | null = nul
 }
 
 function reviewBlockers(batch: Batch, datasets: DatasetReview[]) {
-  const blockers = datasets.flatMap((dataset) => {
-    const { code } = dataset;
-    const errors = [];
-    if (!dataset.owner || !dataset.citation || !dataset.publisher || !dataset.url || !dataset.license
-      || !dataset.as_of || !dataset.reviewed || !dataset.due || !/^[a-f0-9]{64}$/.test(dataset.checksum ?? "")) {
-      errors.push(`${code} has incomplete provenance.`);
-    }
-    if (dataset.source_status !== "active" || dataset.access !== "public" || dataset.stale) {
-      errors.push(`${code} requires an active public source and a current review.`);
-    }
-    if (dataset.geographies.length !== 1 || dataset.geographies[0] !== batch.geography || !dataset.covered_provinces) {
-      errors.push(`${code} has incompatible geography coverage.`);
-    }
-    if (dataset.invalid_geometry || dataset.invalid_observations
-      || (dataset.boundaries && dataset.boundaries !== dataset.expected_provinces)) {
-      errors.push(`${code} failed geometry, coverage or observation checks.`);
-    }
-    return errors;
-  });
-  if (!datasets.length || (batch.kind === "foundation" && !datasets.some((dataset) => dataset.boundaries > 0))) {
-    blockers.push("The batch is missing required data.");
-  }
-  return blockers;
+	const blockers = datasets.flatMap((dataset) => {
+		const { code } = dataset;
+		const errors = [];
+		if (
+			!dataset.owner ||
+			!dataset.citation ||
+			!dataset.publisher ||
+			!dataset.url ||
+			!dataset.license ||
+			!dataset.as_of ||
+			!dataset.reviewed ||
+			!dataset.due ||
+			!/^[a-f0-9]{64}$/.test(dataset.checksum ?? "")
+		) {
+			errors.push(`${code} has incomplete provenance.`);
+		}
+		if (
+			dataset.source_status !== "active" ||
+			dataset.access !== "public" ||
+			dataset.stale
+		) {
+			errors.push(
+				`${code} requires an active public source and a current review.`,
+			);
+		}
+		if (
+			dataset.geographies.length !== 1 ||
+			dataset.geographies[0] !== batch.geography ||
+			!dataset.covered_provinces
+		) {
+			errors.push(`${code} has incompatible geography coverage.`);
+		}
+		if (
+			dataset.invalid_geometry ||
+			dataset.invalid_observations ||
+			(dataset.boundaries && dataset.boundaries !== dataset.expected_provinces)
+		) {
+			errors.push(`${code} failed geometry, coverage or observation checks.`);
+		}
+		return errors;
+	});
+	if (
+		!datasets.length ||
+		(batch.kind === "foundation" &&
+			!datasets.some((dataset) => dataset.boundaries > 0))
+	) {
+		blockers.push("The batch is missing required data.");
+	}
+	return blockers;
 }
 
 export async function releaseOverview() {
-  return databasePool().begin("isolation level repeatable read read only", async (tx) => {
-    const datasets = await readDatasets(tx);
-    const batches = await readBatches(tx);
-    const visible = datasets.filter((dataset) => dataset.status === "published");
-    return {
-      datasets,
-      batches: batches.map((batch) => {
-        const members = datasets.filter((dataset) => dataset.batch_id === batch.id);
-        return { ...batch, staged: members.length > 0 && members.every((dataset) => dataset.status === "validated"),
-          blockers: reviewBlockers(batch, members) };
-      }),
-      freshness: {
-        publishedDatasets: visible.length,
-        reviewDue: visible.filter((dataset) => dataset.stale).length,
-        staleSources: new Set(visible.filter((dataset) => dataset.stale).map((dataset) => dataset.source_id)).size,
-        revokedSources: new Set(visible.filter((dataset) => dataset.source_status === "revoked").map((dataset) => dataset.source_id)).size,
-        blockedDatasets: visible.filter((dataset) => dataset.source_status !== "active" || dataset.access !== "public").length,
-        invalidGeometry: visible.reduce((total, dataset) => total + dataset.invalid_geometry, 0),
-      },
-    };
-  });
+	return databasePool().begin(
+		"isolation level repeatable read read only",
+		async (tx) => {
+			const datasets = await readDatasets(tx);
+			const batches = await readBatches(tx);
+			const visible = datasets.filter(
+				(dataset) => dataset.status === "published",
+			);
+			return {
+				datasets,
+				batches: batches.map((batch) => {
+					const members = datasets.filter(
+						(dataset) => dataset.batch_id === batch.id,
+					);
+					return {
+						...batch,
+						staged:
+							members.length > 0 &&
+							members.every((dataset) => dataset.status === "validated"),
+						blockers: reviewBlockers(batch, members),
+					};
+				}),
+				freshness: {
+					publishedDatasets: visible.length,
+					reviewDue: visible.filter((dataset) => dataset.stale).length,
+					staleSources: new Set(
+						visible
+							.filter((dataset) => dataset.stale)
+							.map((dataset) => dataset.source_id),
+					).size,
+					revokedSources: new Set(
+						visible
+							.filter((dataset) => dataset.source_status === "revoked")
+							.map((dataset) => dataset.source_id),
+					).size,
+					blockedDatasets: visible.filter(
+						(dataset) =>
+							dataset.source_status !== "active" || dataset.access !== "public",
+					).length,
+					invalidGeometry: visible.reduce(
+						(total, dataset) => total + dataset.invalid_geometry,
+						0,
+					),
+				},
+			};
+		},
+	);
 }
 
 export type ReleaseOverview = Awaited<ReturnType<typeof releaseOverview>>;
 
-export async function applyReleaseAction(id: string, action: ReleaseAction, role: ReleaseRole, note: string, actor = role as string) {
-  return databasePool().begin(async (tx) => {
-    await lockReleases(tx);
-    const [batch] = await readBatches(tx, id);
-    if (!batch) return { status: 404, message: "Release batch not found." };
-    if (batch.audit.some((event) => event.action === action)) return { status: 200 };
-    await tx`
+export async function applyReleaseAction(
+	id: string,
+	action: ReleaseAction,
+	role: ReleaseRole,
+	note: string,
+	actor = role as string,
+) {
+	return databasePool().begin(async (tx) => {
+		await lockReleases(tx);
+		const [batch] = await readBatches(tx, id);
+		if (!batch) return { status: 404, message: "Release batch not found." };
+		if (batch.audit.some((event) => event.action === action))
+			return { status: 200 };
+		await tx`
       select dataset.dataset_version_id from market_entry.release_members member
       join market_entry.dataset_versions dataset using (dataset_version_id)
       join market_entry.source_registry source using (source_id)
@@ -216,23 +281,41 @@ export async function applyReleaseAction(id: string, action: ReleaseAction, role
       order by dataset.dataset_version_id for update of dataset, source
     `;
 
-    const datasets = await readDatasets(tx, id);
-    const datasetIds = datasets.map((dataset) => dataset.dataset_version_id);
-    if (action === "retire") {
-      if (batch.kind !== "wave2" || !batch.published || !datasets.length || datasets.some((dataset) => dataset.status !== "published")) {
-        return { status: 409, message: "Only a published Wave 2 batch can be retired here." };
-      }
-      await tx`update market_entry.dataset_versions set publication_status = 'retired'
+		const datasets = await readDatasets(tx, id);
+		const datasetIds = datasets.map((dataset) => dataset.dataset_version_id);
+		if (action === "retire") {
+			if (
+				batch.kind !== "wave2" ||
+				!batch.published ||
+				!datasets.length ||
+				datasets.some((dataset) => dataset.status !== "published")
+			) {
+				return {
+					status: 409,
+					message: "Only a published Wave 2 batch can be retired here.",
+				};
+			}
+			await tx`update market_entry.dataset_versions set publication_status = 'retired'
         where dataset_version_id = any(${datasetIds}::uuid[])`;
-    } else {
-      if (batch.retired || !datasets.length || datasets.some((dataset) => dataset.status !== "validated")) {
-        return { status: 409, message: "Stage a new validated batch first." };
-      }
-      const blockers = reviewBlockers(batch, datasets);
-      if (blockers.length) return { status: 409, message: blockers.join(" ") };
-      if (action === "publish") {
-        if (!batch.approved) return { status: 409, message: "Reviewer approval is required before publication." };
-        const [geography] = await tx<{ id: string; status: string; ready: boolean }[]>`
+		} else {
+			if (
+				batch.retired ||
+				!datasets.length ||
+				datasets.some((dataset) => dataset.status !== "validated")
+			) {
+				return { status: 409, message: "Stage a new validated batch first." };
+			}
+			const blockers = reviewBlockers(batch, datasets);
+			if (blockers.length) return { status: 409, message: blockers.join(" ") };
+			if (action === "publish") {
+				if (!batch.approved)
+					return {
+						status: 409,
+						message: "Reviewer approval is required before publication.",
+					};
+				const [geography] = await tx<
+					{ id: string; status: string; ready: boolean }[]
+				>`
           select geography_version_id as id, geography.status,
             geography.effective_from <= current_date and (geography.effective_to is null or geography.effective_to >= current_date)
               and source.status = 'active' and source.access_right = 'public'
@@ -242,28 +325,35 @@ export async function applyReleaseAction(id: string, action: ReleaseAction, role
           join market_entry.source_registry source using (source_id)
           where geography.code = ${batch.geography}
         `;
-        if (!geography?.ready || geography.status !== (batch.kind === "foundation" ? "draft" : "active")) {
-          return { status: 409, message: "The target geography is incompatible with this release." };
-        }
-        await tx`update market_entry.dataset_versions set publication_status = 'published', published_at = now()
+				if (
+					!geography?.ready ||
+					geography.status !==
+						(batch.kind === "foundation" ? "draft" : "active")
+				) {
+					return {
+						status: 409,
+						message: "The target geography is incompatible with this release.",
+					};
+				}
+				await tx`update market_entry.dataset_versions set publication_status = 'published', published_at = now()
           where dataset_version_id = any(${datasetIds}::uuid[])`;
-        if (batch.kind === "foundation") {
-          await tx`update market_entry.geography_versions set status = 'active' where geography_version_id = ${geography.id}`;
-          await tx`
+				if (batch.kind === "foundation") {
+					await tx`update market_entry.geography_versions set status = 'active' where geography_version_id = ${geography.id}`;
+					await tx`
             update market_entry.geo_units geo set geometry_status = 'boundary_verified',
               longitude = ST_X(ST_PointOnSurface(boundary.geom)), latitude = ST_Y(ST_PointOnSurface(boundary.geom))
             from market_entry.geo_boundaries boundary
             where geo.geo_id = boundary.geo_id and geo.geography_version_id = ${geography.id}
               and boundary.dataset_version_id = any(${datasetIds}::uuid[])
           `;
-          await tx`update market_entry.geography_versions set status = 'retired' where code = 'demo-context-v1' and dataset_version_id is null`;
-          await tx`update market_entry.dataset_versions set publication_status = 'retired'
+					await tx`update market_entry.geography_versions set status = 'retired' where code = 'demo-context-v1' and dataset_version_id is null`;
+					await tx`update market_entry.dataset_versions set publication_status = 'retired'
             where dataset_code = 'DEMO_CONTEXT' and version_label = 'demo-v1' and owner_name is null`;
-        }
-      }
-    }
-    await tx`insert into market_entry.release_audit (batch_id, action, actor, note, happened_at)
+				}
+			}
+		}
+		await tx`insert into market_entry.release_audit (batch_id, action, actor, note, happened_at)
       values (${id}, ${action}, ${actor}, ${note}, clock_timestamp())`;
-    return { status: 200 };
-  });
+		return { status: 200 };
+	});
 }

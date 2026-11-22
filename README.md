@@ -113,7 +113,7 @@ Lệnh thực hiện lần lượt các bước sau.
 
 Trong môi trường dùng chung, cấp cho mỗi người một token ngẫu nhiên riêng và đặt `ECOM_OPERATORS` từ secret manager. Danh sách JSON có dạng `[{"id":"operator-id","role":"steward","token":"<token-rieng>"}]`. Vai trò hỗ trợ `steward` và `reviewer`. ID và token phải duy nhất, token phải là chuỗi base64url ngẫu nhiên dài 43–128 ký tự. Thu hồi bằng cách xóa operator hoặc thay token trong secret manager và cập nhật cấu hình ứng dụng. Chế độ production yêu cầu operator định danh. Token chung chỉ được hỗ trợ ở chế độ phát triển local.
 
-Tài liệu API nằm tại [OpenAPI](docs/openapi.yaml). Trạng thái từng yêu cầu T01–T06 và bằng chứng kiểm thử nằm trong [ma trận nghiệm thu](docs/acceptance-matrix.md).
+Tài liệu kỹ thuật chuẩn: [OpenAPI 3.1](docs/openapi.yaml) · [Ma trận nghiệm thu F01–F07 / T01–T06](docs/acceptance-matrix.md) · [Từ điển dữ liệu](docs/data-dictionary.md) · [Ma trận thực thể & quy ước migration/lint](docs/entity-feature-matrix.md) · [Báo cáo chồng lấn ranh giới](docs/boundary-overlap-audit.md).
 
 ## Ngôn ngữ giao diện
 
@@ -230,6 +230,8 @@ Sau khi job **Required release checks** xuất hiện trên GitHub, repo admin c
 
 ### Cập nhật schema local
 
+Nguồn sự thật cho schema runtime là [`src/db/schema.ts`](src/db/schema.ts) và thư mục [`drizzle/`](drizzle/) (không chạy trực tiếp SQL tham chiếu trong `database/market-entry/` lên môi trường runtime; xem đối chiếu chi tiết tại [docs/entity-feature-matrix.md](docs/entity-feature-matrix.md)).
+
 Chạy các migration đã có sau khi pull thay đổi schema.
 
 ~~~sh
@@ -237,7 +239,13 @@ bun run db:migrate
 bun run db:check
 ~~~
 
-Khi phát triển một thay đổi schema mới, cập nhật [`src/db/schema.ts`](src/db/schema.ts), tạo migration bằng `bun run db:generate --name <ten-thay-doi>`, rồi kiểm tra SQL và metadata trước khi áp dụng. Commit SQL và metadata migration cùng thay đổi schema.
+Khi phát triển một thay đổi schema mới, cập nhật [`src/db/schema.ts`](src/db/schema.ts), tạo migration bằng `bun run db:generate --name <ten-thay-doi>` (hoặc `bun --bun drizzle-kit generate --custom --name <ten>` cho DDL PostgreSQL đặc thù như extension/GIN index), rồi kiểm tra bằng `bun --bun drizzle-kit check` trước khi áp dụng. Commit SQL và metadata migration cùng thay đổi schema.
+
+### Giới hạn đã biết (Known Limitations)
+
+- Bộ ranh giới 34 tỉnh hiện tại còn 57 cặp tỉnh chồng lấn nhỏ (~8,92 km²), đã kiểm toán và ghi nhận trong [docs/boundary-overlap-audit.md](docs/boundary-overlap-audit.md) để chờ chủ nguồn rà soát.
+- Phân hệ khảo sát nhu cầu khách hàng (`survey_studies` / `survey_aggregates`) đã sẵn sàng ở DB, API và UI nhưng chưa nạp khảo sát thực địa thật nên màn hình `/decision` hiển thị rõ trạng thái chưa có bằng chứng và từ chối chấm điểm chính thức.
+- Checklist pháp lý theo ngành chỉ mang tính chất tham khảo chuẩn bị hồ sơ, không thay thế tư vấn pháp lý hoặc quyết định chấp thuận của cơ quan có thẩm quyền.
 
 ### Validate, stage và duyệt theo vai trò
 
@@ -247,6 +255,26 @@ Khi phát triển một thay đổi schema mới, cập nhật [`src/db/schema.t
 4. Steward mở cùng trang bằng steward token, kiểm tra batch đã duyệt và công bố. Công bố foundation trước khi stage Wave 2. Kiểm tra lại `/api/health`, bản đồ, hồ sơ và export sau khi công bố.
 
 `--publish` trực tiếp phục vụ khởi tạo local và được script setup gọi tự động. Dùng [runbook phát hành](docs/sprint4-release-runbook.md) cho backup, restore, rollback và giám sát trên môi trường dùng chung.
+
+### Chạy bằng Docker Production Image & Cold-Start Smoke
+
+`Dockerfile` dùng multi-stage build (`oven/bun:1.4.5`, `bun install --frozen-lockfile`, `next build` với `output: "standalone"`), chạy bằng user không có quyền root (`USER bun`), có sẵn `HEALTHCHECK` kiểm tra `/api/health` và không đóng gói file `.env` hay token vào image.
+
+```bash
+# 1. Khởi chạy PostGIS + ứng dụng production container (không dùng next dev)
+docker compose --profile app up -d --build
+
+# 2. Áp dụng migration & kiểm tra dữ liệu
+bun run db:migrate
+bun run db:check
+
+# 3. Cold-start smoke check trên container đang chạy
+curl -fsS http://127.0.0.1:3000/api/health
+curl -fsS -I http://127.0.0.1:3000/
+docker compose --profile app ps
+```
+
+Để phát triển với hot-reload trong Docker, tách riêng profile `dev`: `docker compose --profile dev up`.
 
 ### Retention
 

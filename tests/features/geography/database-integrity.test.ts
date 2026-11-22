@@ -4,20 +4,24 @@ import { env } from "../../../src/lib/env";
 
 const databaseTest = process.env.RUN_DB_TESTS === "1" ? test : test.skip;
 
-databaseTest("published geography, boundaries, observations, and dataset sources stay release-consistent", async () => {
-  const sql = postgres(env.DATABASE_URL, { max: 1 });
-  try {
-    const rows = await sql<{
-      geography_versions: number;
-      published_datasets: number;
-      geographies: number;
-      provinces: number;
-      boundaries: number;
-      observations: number;
-      observation_datasets: number;
-      public_sources: number;
-      missing_boundary_codes: number;
-    }[]>`
+databaseTest(
+	"published geography, boundaries, observations, and dataset sources stay release-consistent",
+	async () => {
+		const sql = postgres(env.DATABASE_URL, { max: 1 });
+		try {
+			const rows = await sql<
+				{
+					geography_versions: number;
+					published_datasets: number;
+					geographies: number;
+					provinces: number;
+					boundaries: number;
+					observations: number;
+					observation_datasets: number;
+					public_sources: number;
+					missing_boundary_codes: number;
+				}[]
+			>`
       with published as (
         select dataset_version_id, source_id
         from market_entry.dataset_versions
@@ -40,18 +44,37 @@ databaseTest("published geography, boundaries, observations, and dataset sources
         (select count(*) from market_entry.geo_units geo join active_geography on active_geography.geography_version_id = geo.geography_version_id where geo.level = 'province' and not exists (select 1 from market_entry.geo_boundaries boundary join published on published.dataset_version_id = boundary.dataset_version_id where boundary.geo_id = geo.geo_id))::int as missing_boundary_codes
     `;
 
-    expect(rows[0]).toMatchObject({ geography_versions: 1, geographies: 3356, provinces: 34, boundaries: 34, observations: 35, observation_datasets: 1, missing_boundary_codes: 0 });
-    expect(rows[0].published_datasets).toBeGreaterThanOrEqual(3);
-    expect(rows[0].public_sources).toBeGreaterThanOrEqual(3);
-  } finally {
-    await sql.end();
-  }
-});
+			expect(rows[0]).toMatchObject({
+				geography_versions: 1,
+				geographies: 3356,
+				provinces: 34,
+				boundaries: 34,
+				observations: 35,
+				observation_datasets: 1,
+				missing_boundary_codes: 0,
+			});
+			expect(rows[0].published_datasets).toBeGreaterThanOrEqual(3);
+			expect(rows[0].public_sources).toBeGreaterThanOrEqual(3);
+		} finally {
+			await sql.end();
+		}
+	},
+);
 
-databaseTest("published boundary topology and license remain within the pinned release baseline", async () => {
-  const sql = postgres(env.DATABASE_URL, { max: 1 });
-  try {
-    const [result] = await sql<{ invalid: number; overlapping: number; area_km2: number; missing_license: number }[]>`
+databaseTest(
+	"published boundary topology and license remain within the pinned release baseline",
+	async () => {
+		const sql = postgres(env.DATABASE_URL, { max: 1 });
+		try {
+			const [result] = await sql<
+				{
+					invalid: number;
+					overlapping: number;
+					area_km2: number;
+					total_area_km2: number;
+					missing_license: number;
+				}[]
+			>`
       with boundaries as (
         select b.* from market_entry.geo_boundaries b
         join market_entry.dataset_versions d using (dataset_version_id)
@@ -65,15 +88,21 @@ databaseTest("published boundary topology and license remain within the pinned r
         (select coalesce(sum(ST_Area(ST_Intersection(a.geom,b.geom)::geography))/1000000,0)::float
           from boundaries a join boundaries b on a.dataset_version_id = b.dataset_version_id
           and a.geo_id < b.geo_id and a.geom && b.geom and ST_Relate(a.geom,b.geom,'2********')) area_km2,
+        (select coalesce(sum(ST_Area(geom::geography))/1000000,0)::float from boundaries) total_area_km2,
         (select count(*)::int from market_entry.dataset_versions d join market_entry.source_registry s using (source_id)
           where d.publication_status = 'published' and s.access_right = 'public' and (btrim(s.license) = '' or btrim(s.citation_text) = '')) missing_license
     `;
-    expect(result.invalid).toBe(0);
-    expect(result.missing_license).toBe(0);
-    // The pinned simplified source already has overlaps. Flag any increase for review.
-    expect(result.overlapping).toBeLessThanOrEqual(57);
-    expect(result.area_km2).toBeLessThanOrEqual(9.0);
-  } finally {
-    await sql.end();
-  }
-}, 30_000);
+			expect(result.invalid).toBe(0);
+			expect(result.missing_license).toBe(0);
+			// Total provincial coverage sanity band for Vietnam (34 provinces, ~331,000 km²)
+			expect(result.total_area_km2).toBeGreaterThanOrEqual(320_000);
+			expect(result.total_area_km2).toBeLessThanOrEqual(345_000);
+			// The pinned simplified source already has overlaps. Flag any increase for review.
+			expect(result.overlapping).toBeLessThanOrEqual(57);
+			expect(result.area_km2).toBeLessThanOrEqual(9.0);
+		} finally {
+			await sql.end();
+		}
+	},
+	30_000,
+);

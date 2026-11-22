@@ -4,6 +4,11 @@ import { getI18n } from "../../../lib/i18n/server";
 export const dynamic = "force-dynamic";
 
 export default async function InternalInquiriesPage() {
-  const { t } = await getI18n();
-  return <main className="internal-page inquiry-page"><h1>{t("meta.adminInquiriesTitle")}</h1><InquiryDashboard /></main>;
+	const { t } = await getI18n();
+	return (
+		<main className="internal-page inquiry-page">
+			<h1>{t("meta.adminInquiriesTitle")}</h1>
+			<InquiryDashboard />
+		</main>
+	);
 }

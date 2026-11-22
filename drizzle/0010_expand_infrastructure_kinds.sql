@@ -1,0 +1,2 @@
+ALTER TABLE "market_entry"."infrastructure_pois" DROP CONSTRAINT "infrastructure_pois_kind_check";--> statement-breakpoint
+ALTER TABLE "market_entry"."infrastructure_pois" ADD CONSTRAINT "infrastructure_pois_kind_check" CHECK ("market_entry"."infrastructure_pois"."kind" in ('airport', 'seaport', 'industrial_park', 'icd', 'expressway_node'));

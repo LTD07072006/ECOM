@@ -71,6 +71,34 @@
       "when": 1795331855919,
       "tag": "0009_inquiry_notifications",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1795363872755,
+      "tag": "0010_expand_infrastructure_kinds",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1795365514513,
+      "tag": "0011_geo_units_pg_trgm_search",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1795368280678,
+      "tag": "0012_legal_readiness_and_snapshot_tz",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1795368815715,
+      "tag": "0013_survey_evidence_and_inquiry_idx",
+      "breakpoints": true
     }
   ]
 }
