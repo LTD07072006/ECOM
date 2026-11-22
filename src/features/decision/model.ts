@@ -17,8 +17,20 @@ export const criteria = [
 ] as const;
 
 export type ScoringReason =
-	| { code: "retail.reasonSelect" | "retail.reasonSameRelease" | "retail.reasonWeights" | "retail.reasonEvidence" }
-	| { code: "retail.reasonNoValue" | "retail.reasonNotEligible" | "retail.reasonMismatch"; criterion: MessageKey };
+	| {
+			code:
+				| "retail.reasonSelect"
+				| "retail.reasonSameRelease"
+				| "retail.reasonWeights"
+				| "retail.reasonEvidence";
+	  }
+	| {
+			code:
+				| "retail.reasonNoValue"
+				| "retail.reasonNotEligible"
+				| "retail.reasonMismatch";
+			criterion: MessageKey;
+	  };
 
 export type Evidence = {
 	status: "available" | "unavailable";
@@ -82,11 +94,17 @@ export function calculateRetailScore(
 					!item || item.value === null || item.quality === "unavailable",
 			)
 		) {
-			reasons.push({ code: "retail.reasonNoValue", criterion: criterion.labelKey });
+			reasons.push({
+				code: "retail.reasonNoValue",
+				criterion: criterion.labelKey,
+			});
 			return;
 		}
 		if (items.some((item) => !item!.scoreEligible))
-			reasons.push({ code: "retail.reasonNotEligible", criterion: criterion.labelKey });
+			reasons.push({
+				code: "retail.reasonNotEligible",
+				criterion: criterion.labelKey,
+			});
 		const first = items[0]!;
 		if (
 			items.some(
@@ -101,7 +119,10 @@ export function calculateRetailScore(
 					item!.definition !== first.definition,
 			)
 		)
-			reasons.push({ code: "retail.reasonMismatch", criterion: criterion.labelKey });
+			reasons.push({
+				code: "retail.reasonMismatch",
+				criterion: criterion.labelKey,
+			});
 	});
 	if (reasons.length) return { ok: false as const, reasons };
 
