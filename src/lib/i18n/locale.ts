@@ -10,19 +10,24 @@ export const LOCALE_COOKIE = "ecom_locale";
 export const LOCALE_HEADER = "x-ecom-locale";
 
 export function isLocale(value: unknown): value is Locale {
-  return typeof value === "string" && (LOCALES as readonly string[]).includes(value);
+	return (
+		typeof value === "string" && (LOCALES as readonly string[]).includes(value)
+	);
 }
 
 export function defaultLocaleForPath(pathname: string): Locale {
-  return pathname === "/internal" || pathname.startsWith("/internal/")
-    ? DEFAULT_INTERNAL_LOCALE
-    : DEFAULT_PUBLIC_LOCALE;
+	return pathname === "/internal" || pathname.startsWith("/internal/")
+		? DEFAULT_INTERNAL_LOCALE
+		: DEFAULT_PUBLIC_LOCALE;
 }
 
-export function parseLocale(value: string | null | undefined, fallback: Locale = DEFAULT_LOCALE): Locale {
-  return isLocale(value) ? value : fallback;
+export function parseLocale(
+	value: string | null | undefined,
+	fallback: Locale = DEFAULT_LOCALE,
+): Locale {
+	return isLocale(value) ? value : fallback;
 }
 
 export function intlLocale(locale: Locale): string {
-  return locale === "vi" ? "vi-VN" : "en-US";
+	return locale === "vi" ? "vi-VN" : "en-US";
 }

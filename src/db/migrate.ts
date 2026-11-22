@@ -7,8 +7,8 @@ import { env } from "../lib/env";
 const sql = postgres(env.DATABASE_URL, { max: 1 });
 
 try {
-  await migrate(drizzle(sql), { migrationsFolder: "./drizzle" });
-  console.log("Drizzle migrations applied.");
+	await migrate(drizzle(sql), { migrationsFolder: "./drizzle" });
+	console.log("Drizzle migrations applied.");
 } finally {
-  await sql.end();
+	await sql.end();
 }

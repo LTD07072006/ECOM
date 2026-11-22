@@ -1,4 +1,46 @@
 services:
+  app:
+    profiles: ["app"]
+    build:
+      context: .
+      target: production
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${ECOM_APP_PORT:-3000}:3000"
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgres://market_entry:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in the ignored .env file}@db:5432/market_entry
+      ECOM_OPERATORS: ${ECOM_OPERATORS:-}
+      ECOM_REQUIRE_NAMED_OPERATORS: ${ECOM_REQUIRE_NAMED_OPERATORS:-1}
+      ECOM_TRUSTED_PROXY_TOKEN: ${ECOM_TRUSTED_PROXY_TOKEN:-}
+      INQUIRY_PRIVACY_CONTROLLER: ${INQUIRY_PRIVACY_CONTROLLER:-}
+      INQUIRY_PRIVACY_EMAIL: ${INQUIRY_PRIVACY_EMAIL:-}
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "bun", "-e", "fetch('http://127.0.0.1:3000/api/health').then((r) => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      start_period: 20s
+      retries: 3
+  app-dev:
+    profiles: ["dev"]
+    build:
+      context: .
+      target: dependencies
+    command: ["bun", "run", "dev"]
+    ports:
+      - "127.0.0.1:${ECOM_APP_PORT:-3000}:3000"
+    volumes:
+      - .:/app
+      - /app/node_modules
+    environment:
+      NODE_ENV: development
+      DATABASE_URL: postgres://market_entry:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in the ignored .env file}@db:5432/market_entry
+    depends_on:
+      db:
+        condition: service_healthy
   retention:
     profiles: ["retention"]
     build:
@@ -16,6 +58,28 @@ services:
       interval: 5m
       timeout: 15s
       start_period: 2m
+      retries: 2
+  mail:
+    profiles: ["mail"]
+    build:
+      context: .
+      target: maintenance
+    restart: unless-stopped
+    command: ["bun", "run", "mail:scheduler"]
+    environment:
+      DATABASE_URL: postgres://market_entry:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in the ignored .env file}@db:5432/market_entry
+      ECOM_MAIL_TRANSPORT: ${ECOM_MAIL_TRANSPORT:-log}
+      ECOM_MAIL_FROM: ${ECOM_MAIL_FROM:-}
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      ECOM_STEWARD_NOTIFY_EMAIL: ${ECOM_STEWARD_NOTIFY_EMAIL:-}
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "bun", "run", "mail:flush", "--dry-run"]
+      interval: 5m
+      timeout: 15s
+      start_period: 1m
       retries: 2
   db:
     image: postgis/postgis:16-3.4
