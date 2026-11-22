@@ -92,13 +92,13 @@ test("reports preview the selected week, download stored CSV, and compare compat
   await page.goto(`${baseUrl}/internal/inquiries`);
   await page.getByLabel("Steward token").fill(browserToken);
   await page.getByRole("button", { name: "Báo cáo", exact: true }).click();
-  await page.getByLabel("Country", { exact: true }).fill(country);
-  await page.getByLabel("From", { exact: true }).fill(firstDay);
-  await page.getByLabel("To", { exact: true }).fill(today);
-  const search = page.getByLabel("Search geography by name");
+  await page.getByLabel("Quốc gia", { exact: true }).fill(country);
+  await page.getByLabel("Từ ngày", { exact: true }).fill(firstDay);
+  await page.getByLabel("Đến ngày", { exact: true }).fill(today);
+  const search = page.getByLabel("Tìm địa bàn theo tên");
   await search.fill("Hà Nội");
   await search.press("Enter");
-  await page.getByRole("button", { name: /^Hà Nội · province/ }).click();
+  await page.getByRole("button", { name: /^Hà Nội · tỉnh/ }).click();
   await expect(page.getByRole("button", { name: "Bỏ Hà Nội" })).toBeVisible();
 
   const preview = page.getByRole("region", { name: "Xem trước báo cáo" });
@@ -106,9 +106,9 @@ test("reports preview the selected week, download stored CSV, and compare compat
   await expect(save).toBeDisabled();
   await preview.getByRole("button", { name: "Xem trước", exact: true }).click();
   await expect(preview.getByText("1", { exact: true })).toBeVisible();
-  await page.getByLabel("Country", { exact: true }).fill("Other selection");
+  await page.getByLabel("Quốc gia", { exact: true }).fill("Other selection");
   await expect(save).toBeDisabled();
-  await page.getByLabel("Country", { exact: true }).fill(country);
+  await page.getByLabel("Quốc gia", { exact: true }).fill(country);
   const isSaveResponse = (response: Response) => response.url() === reportsUrl
     && response.request().method() === "POST" && response.request().postDataJSON()?.preview === false;
   const [saved] = await Promise.all([
@@ -133,14 +133,14 @@ test("reports preview the selected week, download stored CSV, and compare compat
     expect(response.status()).toBe(200);
   }
   await openSavedReport();
-  const detail = page.getByRole("article", { name: "Selected report snapshot" });
+  const detail = page.getByRole("article", { name: "Báo cáo đã chọn" });
   await expect(detail).toContainText(snapshot.snapshot_id);
   await expect(detail).toContainText("Địa bàn: Hà Nội");
   await expect(detail.getByRole("heading", { name: "Nhật ký" })).toBeVisible();
 
   const [download] = await Promise.all([
     page.waitForEvent("download"),
-    row.getByRole("button", { name: "Export stored snapshot" }).click(),
+    row.getByRole("button", { name: "Tải bản đã lưu" }).click(),
   ]);
   const csv = await readFile(await download.path(), "utf8");
   expect(csv).toContain(snapshot.snapshot_id);
@@ -153,7 +153,7 @@ test("reports preview the selected week, download stored CSV, and compare compat
   await comparison.selectOption(earlier);
   await detail.getByRole("button", { name: "So sánh", exact: true }).click();
   const table = page.getByRole("region", { name: "Bảng so sánh" });
-  const total = table.getByRole("row").filter({ has: page.getByRole("rowheader", { name: "Tổng inquiry" }) });
+  const total = table.getByRole("row").filter({ has: page.getByRole("rowheader", { name: "Tổng yêu cầu" }) });
   await expect(total.getByRole("cell")).toHaveText(["1", "0", "-1"]);
 
   await comparison.selectOption(incompatible);
@@ -193,17 +193,17 @@ test("steward dashboard refreshes the inquiry list, detail, and audit after savi
     route.continue({ headers: { ...route.request().headers(), authorization: `Bearer ${stewardToken}` } }));
   await page.goto(`${baseUrl}/internal/inquiries`);
   await page.getByLabel("Steward token").fill("t".repeat(43));
-  await page.getByLabel("Sector", { exact: true }).fill(sector);
-  const load = page.getByRole("button", { name: "Load inquiries" });
+  await page.getByLabel("Lĩnh vực", { exact: true }).fill(sector);
+  const load = page.getByRole("button", { name: "Tải danh sách" });
   await load.click();
 
-  const list = page.getByRole("list", { name: "Inquiries" });
+  const list = page.getByRole("list", { name: "Danh sách yêu cầu" });
   const reference = list.getByRole("button", { name: referenceCode, exact: true });
   const row = list.getByRole("listitem").filter({ hasText: referenceCode });
-  await expect(row).toContainText(" · new · ");
+  await expect(row).toContainText(" · Mới · ");
   const [download] = await Promise.all([
     page.waitForEvent("download"),
-    page.getByRole("button", { name: "Export safe CSV" }).click(),
+    page.getByRole("button", { name: "Tải CSV an toàn" }).click(),
   ]);
   const csv = await readFile(await download.path());
   expect(Array.from(csv.subarray(0, 3))).toEqual([0xef, 0xbb, 0xbf]);
@@ -214,21 +214,21 @@ test("steward dashboard refreshes the inquiry list, detail, and audit after savi
   const detail = page.getByRole("article").filter({ has: page.getByRole("heading", { name: referenceCode, exact: true }) });
   await expect(detail).toContainText(message);
 
-  await detail.getByLabel("Internal note").fill("Note saved without changing status.");
-  const save = detail.getByRole("button", { name: "Save update" });
+  await detail.getByLabel("Ghi chú nội bộ").fill("Note saved without changing status.");
+  const save = detail.getByRole("button", { name: "Lưu cập nhật" });
   await save.click();
   await expect(detail.getByText(/note_added.*Note saved without changing status/)).toBeVisible();
-  await expect(row).toContainText(" · new · ");
+  await expect(row).toContainText(" · Mới · ");
 
-  await detail.getByRole("combobox", { name: "Update status", exact: true }).selectOption("contacted");
+  await detail.getByRole("combobox", { name: "Cập nhật trạng thái", exact: true }).selectOption("contacted");
   await save.click();
-  await expect(detail.getByText("Status: contacted", { exact: true })).toBeVisible();
-  await expect(detail.getByText(/status_changed.*new → contacted/)).toBeVisible();
-  await expect(row).toContainText(" · contacted · ");
+  await expect(detail.getByText("Trạng thái: Đã liên hệ", { exact: true })).toBeVisible();
+  await expect(detail.getByText(/status_changed.*Mới → Đã liên hệ/)).toBeVisible();
+  await expect(row).toContainText(" · Đã liên hệ · ");
 
-  await page.getByRole("combobox", { name: "Status", exact: true }).selectOption("new");
+  await page.getByRole("combobox", { name: "Trạng thái", exact: true }).selectOption("new");
   await load.click();
-  await expect(page.getByRole("status")).toHaveText("No inquiries found.");
+  await expect(page.getByRole("status")).toHaveText("Không có yêu cầu nào.");
   await expect(reference).toHaveCount(0);
   await expect(detail).toHaveCount(0);
 });

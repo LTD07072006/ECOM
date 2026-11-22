@@ -3,18 +3,22 @@
 import { useState } from "react";
 import type { Profile } from "../geography/types";
 import { compareProfiles } from "../geography/domain";
+import { InquiryForm } from "../inquiries/InquiryForm";
 import { calculateRetailScore, criteria, type Evidence } from "./model";
+import { useI18n } from "../../lib/i18n/provider";
+import { qualityLabel, unitLabel } from "../../lib/i18n/data-labels";
 
 const noEvidence: Evidence = { status: "unavailable" };
-const format = new Intl.NumberFormat("en", { maximumFractionDigits: 2 });
 
 export function RetailScenario({ provinces }: { provinces: Profile[] }) {
+  const { t, tc, locale, formatNumber } = useI18n();
   const [sector, setSector] = useState("");
   const [retailMinimum, setRetailMinimum] = useState("");
   const [labourMinimum, setLabourMinimum] = useState("");
   const [selected, setSelected] = useState<string[]>([]);
   const [weights, setWeights] = useState(["60", "40"]);
   const [showResult, setShowResult] = useState(false);
+  const [benchmarkId, setBenchmarkId] = useState("");
 
   const thresholds = [retailMinimum, labourMinimum].map((value) => value.trim() === "" ? null : Number(value));
   const invalid = thresholds.some((value) => value !== null && (!Number.isFinite(value) || value < 0));
@@ -25,6 +29,8 @@ export function RetailScenario({ provinces }: { provinces: Profile[] }) {
   }));
   const chosen = candidates.filter((profile) => selected.includes(profile.id));
   const comparison = chosen.length >= 2 ? compareProfiles(chosen) : null;
+  const benchmarkIndex = chosen.findIndex((profile) => profile.id === benchmarkId);
+  const excluded = provinces.filter((profile) => !candidates.includes(profile));
   const result = calculateRetailScore(chosen, weights.map((weight) => weight.trim() === "" ? NaN : Number(weight)), noEvidence);
 
   function toggle(id: string) {
@@ -34,31 +40,43 @@ export function RetailScenario({ provinces }: { provinces: Profile[] }) {
   }
 
   return <div className="decision-flow">
+    {sector === "retail" && <nav aria-label={t("retail.stepsAria")} className="decision-steps"><a href="#sector-title">{t("retail.sector")}</a><a href="#filters-title">{t("retail.stepFilter")}</a>{chosen.length > 0 && <a href="#compare-title">{t("retail.stepCompare")}</a>}<a href="#evidence-title">{t("retail.stepEvidence")}</a>{chosen.length > 0 && <a href="#contact-title">{t("retail.stepContact")}</a>}</nav>}
     <section aria-labelledby="sector-title">
-      <h2 id="sector-title">Choose a sector</h2>
-      <label>Sector
+      <h2 id="sector-title">{t("retail.sectorTitle")}</h2>
+      <label>{t("retail.sector")}
         <select value={sector} onChange={(event) => { setSector(event.target.value); setSelected([]); setShowResult(false); }}>
-          <option value="">Select a sector</option>
-          <option value="retail">Retail</option>
+          <option value="">{t("retail.selectSector")}</option>
+          <option value="retail">{t("retail.retail")}</option>
         </select>
       </label>
     </section>
     {sector === "retail" && <>
       <section aria-labelledby="filters-title">
-        <h2 id="filters-title">Filter provinces</h2>
-        <p>These figures provide market context for the published period.</p>
+        <h2 id="filters-title">{t("retail.filterTitle")}</h2>
+        <p>{t("retail.filterNote")}</p>
         <div className="decision-filters">
-          <label>Minimum retail sales and consumer services (billion VND)
+          <label>{t("retail.retailMinimum")}
             <input type="number" min="0" value={retailMinimum} onChange={(event) => { setRetailMinimum(event.target.value); setSelected([]); setShowResult(false); }} />
           </label>
-          <label>Minimum labour force (thousand people)
+          <label>{t("retail.labourMinimum")}
             <input type="number" min="0" value={labourMinimum} onChange={(event) => { setLabourMinimum(event.target.value); setSelected([]); setShowResult(false); }} />
           </label>
         </div>
-        <p>When a minimum is set, provinces with no value for that indicator are excluded.</p>
-        {invalid ? <p role="alert">Enter non-negative numbers for the minimums.</p> : <p role="status">{candidates.length} provinces match. Select two or three to compare.</p>}
+        <p>{t("retail.missingExcluded")}</p>
+        {invalid ? <p role="alert">{t("retail.invalid")}</p> : <p role="status">{t("retail.matchCount", { count: candidates.length })}</p>}
+        {!invalid && excluded.length > 0 && <details><summary>{t("retail.excludedTitle", { count: excluded.length })}</summary><ul>{excluded.map((profile) => <li key={profile.id}><strong>{profile.displayName}:</strong> {criteria.flatMap((criterion, index) => {
+          const minimum = thresholds[index];
+          if (minimum === null) return [];
+          const item = profile.observations.find((row) => row.indicator === criterion.code);
+          const label = t(criterion.labelKey);
+          return !item || item.value === null || item.quality === "unavailable"
+            ? [t("retail.excludedMissing", { label })]
+            : item.value < minimum
+              ? [t("retail.excludedBelow", { label, value: formatNumber(item.value), unit: unitLabel(locale, item.unit), minimum: formatNumber(minimum) })]
+              : [];
+        }).join("; ")}</li>)}</ul></details>}
         {!invalid && <fieldset className="decision-places">
-          <legend>Provinces</legend>
+          <legend>{t("retail.provinces")}</legend>
           {candidates.map((profile) => <label key={profile.id}>
             <input type="checkbox" checked={selected.includes(profile.id)}
               disabled={selected.length >= 3 && !selected.includes(profile.id)} onChange={() => toggle(profile.id)} />
@@ -67,55 +85,66 @@ export function RetailScenario({ provinces }: { provinces: Profile[] }) {
         </fieldset>}
       </section>
       {chosen.length > 0 && <section aria-labelledby="compare-title">
-        <h2 id="compare-title">Compare published context</h2>
+        <h2 id="compare-title">{t("retail.compareTitle")}</h2>
+        {chosen.length >= 2 && <label>{t("retail.baseline")}
+          <select value={benchmarkIndex >= 0 ? benchmarkId : ""} onChange={(event) => setBenchmarkId(event.target.value)}><option value="">{t("retail.baselinePlaceholder")}</option>{chosen.map((profile) => <option key={profile.id} value={profile.id}>{profile.displayName}</option>)}</select>
+        </label>}
+        <p>{t("retail.differencesNote")}</p>
         <div className="decision-table-wrap"><table>
-          <thead><tr><th scope="col">Indicator</th>{chosen.map((profile) => <th scope="col" key={profile.id}>{profile.displayName}</th>)}</tr></thead>
-          <tbody>{criteria.map((criterion) => <tr key={criterion.code}><th scope="row">{criterion.label}
-            {comparison?.rows.find((row) => row.indicator === criterion.code)?.reason && <small className="decision-mismatch">{comparison.rows.find((row) => row.indicator === criterion.code)?.reason}</small>}</th>
-            {chosen.map((profile) => {
+          <thead><tr><th scope="col">{t("retail.indicatorCol")}</th>{chosen.map((profile) => <th scope="col" key={profile.id}>{profile.displayName}</th>)}</tr></thead>
+          <tbody>{criteria.map((criterion) => <tr key={criterion.code}><th scope="row">{t(criterion.labelKey)}
+            {comparison?.rows.find((row) => row.indicator === criterion.code)?.reason && <small className="decision-mismatch">{tc(comparison.rows.find((row) => row.indicator === criterion.code)?.reasonCode, comparison.rows.find((row) => row.indicator === criterion.code)?.reason)}</small>}</th>
+            {chosen.map((profile, profileIndex) => {
               const item = profile.observations.find((observation) => observation.indicator === criterion.code);
               const matches = comparison?.rows.find((row) => row.indicator === criterion.code)?.metadataMatches ?? true;
-              return <td key={profile.id}>{!matches ? <span>Not comparable</span> : !item || item.value === null || item.quality === "unavailable"
-                ? <span>Unavailable{item?.missingReason ? ` · ${item.missingReason}` : ""}</span>
-                : <><strong>{format.format(item.value)} {item.unit}</strong><br />{item.period} · {item.quality}<br />
+              const baseline = benchmarkIndex >= 0 ? comparison?.rows.find((row) => row.indicator === criterion.code)?.values[benchmarkIndex] : null;
+              const value = comparison?.rows.find((row) => row.indicator === criterion.code)?.values[profileIndex];
+              return <td key={profile.id}>{!matches ? <span>{t("retail.notComparable")}</span> : !item || item.value === null || item.quality === "unavailable"
+                ? <span>{t("common.unavailable")}{item?.missingReason ? ` · ${item.missingReason}` : ""}</span>
+                : <><strong>{formatNumber(item.value)} {unitLabel(locale, item.unit)}</strong><br />{item.period} · {qualityLabel(locale, item.quality)}<br />
                   {item.source.url ? <a href={item.source.url}>{item.source.publisher}</a> : item.source.publisher}
-                  <br />{item.datasetVersion} · {item.source.license}</>}</td>;
+                  <br />{item.datasetVersion} · {item.source.license}
+                  {benchmarkIndex >= 0 && profileIndex !== benchmarkIndex && baseline != null && value != null && <><br /><small>{t("retail.difference", { name: chosen[benchmarkIndex].displayName, delta: formatNumber(value - baseline), unit: unitLabel(locale, item.unit) })}{baseline !== 0 ? t("retail.percentage", { percent: formatNumber((value - baseline) / baseline * 100) }) : t("retail.percentageUnavailable")}</small></>}</>}</td>;
             })}
           </tr>)}</tbody>
         </table></div>
       </section>}
       <section aria-labelledby="evidence-title">
-        <h2 id="evidence-title">Customer needs evidence</h2>
-        <p role="status">No customer needs study is available for the retail segment and selected provinces.</p>
-        <p>A study needs a defined segment, covered locations, sample size, method, period and source before it can support an assessment.</p>
+        <h2 id="evidence-title">{t("retail.evidenceTitle")}</h2>
+        <p role="status">{t("retail.evidenceNone")}</p>
+        <p>{t("retail.evidenceRequirement")}</p>
       </section>
       <section aria-labelledby="score-title">
-        <h2 id="score-title">Weighted assessment</h2>
-        <p>Weights must total 100%. The calculation compares the selected provinces within this scenario.</p>
+        <h2 id="score-title">{t("retail.scoreTitle")}</h2>
+        <p>{t("retail.scoreNote")}</p>
         <div className="decision-filters">{criteria.map((criterion, index) => <label key={criterion.code}>
-          {criterion.label} weight (%)
+          {t("retail.weight", { label: t(criterion.labelKey) })}
           <input type="number" min="0" max="100" value={weights[index]} onChange={(event) => {
             setWeights((current) => current.map((value, i) => i === index ? event.target.value : value));
             setShowResult(false);
           }} />
         </label>)}</div>
-        <button type="button" onClick={() => setShowResult(true)}>Assess evidence and calculate</button>
+        <button type="button" onClick={() => setShowResult(true)}>{t("retail.assess")}</button>
         {showResult && <div role="status" className="decision-result">
-          {!result.ok ? <><strong>Assessment unavailable</strong><ul>{result.reasons.map((reason) => <li key={reason}>{reason}</li>)}</ul></>
-            : <><p>Scores are relative to the selected provinces. Equal values receive 50 points.</p>
-              {result.results.map((item) => <article key={item.id}><h3>{item.name} · {format.format(item.score)} / 100</h3>
-                <ul>{item.parts.map((part) => <li key={part.label}>{part.label}: {format.format(part.value)} → {format.format(part.normalized)} / 100 × {part.weight}% = {format.format(part.contribution)}</li>)}</ul>
+          {!result.ok ? <><strong>{t("retail.assessUnavailable")}</strong><ul>{result.reasons.map((reason, index) => <li key={`${reason.code}-${index}`}>{t(reason.code, "criterion" in reason ? { label: t(reason.criterion) } : undefined)}</li>)}</ul></>
+            : <><p>{t("retail.scoreRelative")}</p>
+              {result.results.map((item) => <article key={item.id}><h3>{t("retail.scoreHeading", { name: item.name, score: formatNumber(item.score) })}</h3>
+                <ul>{item.parts.map((part) => <li key={part.label}>{t("retail.partLine", {
+                  label: t(part.labelKey), value: formatNumber(part.value), normalized: formatNumber(part.normalized),
+                  weight: formatNumber(part.weight), contribution: formatNumber(part.contribution),
+                })}</li>)}</ul>
               </article>)}</>}
         </div>}
       </section>
+      {chosen.length > 0 && <section aria-labelledby="contact-title"><h2 id="contact-title">{t("retail.contactTitle")}</h2><p>{t("retail.contactBody")}</p><InquiryForm key={chosen.map((profile) => profile.id).join(",")} geographyIds={chosen.map((profile) => profile.id)} geographyLabels={chosen.map((profile) => profile.displayName)} defaultSector={t("retail.retail")} /></section>}
       <section aria-labelledby="checklist-title">
-        <h2 id="checklist-title">Market entry checklist</h2>
-        <p>Use this as a planning list and verify requirements with the competent authorities for the proposed activity and location.</p>
+        <h2 id="checklist-title">{t("retail.checklistTitle")}</h2>
+        <p>{t("retail.checklistNote")}</p>
         <ul className="decision-checklist">
-          <li><label><input type="checkbox" /> Define the retail activity, customer segment and operating model.</label></li>
-          <li><label><input type="checkbox" /> Verify investment, business registration and ownership requirements for the investor.</label></li>
-          <li><label><input type="checkbox" /> Check location, premises and any activity-specific authorisations with the relevant authorities.</label></li>
-          <li><label><input type="checkbox" /> Confirm tax, employment and product-specific obligations with qualified advisers.</label></li>
+          <li><label><input type="checkbox" /> {t("retail.checklist1")}</label></li>
+          <li><label><input type="checkbox" /> {t("retail.checklist2")}</label></li>
+          <li><label><input type="checkbox" /> {t("retail.checklist3")}</label></li>
+          <li><label><input type="checkbox" /> {t("retail.checklist4")}</label></li>
         </ul>
       </section>
     </>}

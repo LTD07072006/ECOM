@@ -18,9 +18,14 @@ const evidence: Evidence = {
 test("refuses scoring when evidence, eligibility, values or weights are missing", () => {
   const none = calculateRetailScore(profiles, [60, 40], { status: "unavailable" });
   expect(none.ok).toBe(false);
-  if (!none.ok) expect(none.reasons.join(" ")).toContain("Customer needs evidence");
+  if (!none.ok) expect(none.reasons.map((reason) => reason.code)).toContain("retail.reasonEvidence");
   const unapproved = profiles.map((profile) => ({ ...profile, observations: profile.observations.map((o) => ({ ...o, scoreEligible: false })) }));
   expect(calculateRetailScore(unapproved, [60, 40], evidence).ok).toBe(false);
+  const unapprovedReasons = calculateRetailScore(unapproved, [60, 40], evidence);
+  if (!unapprovedReasons.ok) {
+    const eligibility = unapprovedReasons.reasons.find((reason) => reason.code === "retail.reasonNotEligible");
+    expect(eligibility && "criterion" in eligibility ? eligibility.criterion : null).toBe("retail.criterionRetail");
+  }
   expect(calculateRetailScore(profiles, [50, 40], evidence).ok).toBe(false);
   const missing = [{ ...profiles[0], observations: [] }, profiles[1]];
   expect(calculateRetailScore(missing, [60, 40], evidence).ok).toBe(false);

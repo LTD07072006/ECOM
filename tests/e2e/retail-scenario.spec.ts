@@ -6,12 +6,15 @@ test("retail scenario filters and compares provinces before explaining why scori
   await page.goto(baseUrl);
   await page.getByRole("link", { name: "Explore a retail scenario" }).click();
   await expect(page.getByRole("heading", { name: "Explore a retail market" })).toBeVisible();
+  await page.waitForLoadState("networkidle");
   const sector = page.getByRole("combobox", { name: "Sector", exact: true });
   await sector.focus();
   await sector.selectOption("retail");
   await expect(page.getByText("34 provinces match.")).toBeVisible();
   await page.getByLabel("Minimum retail sales and consumer services (billion VND)").fill("999999999");
   await expect(page.getByText("0 provinces match.")).toBeVisible();
+  await page.getByText("Why 34 provinces were excluded").click();
+  await expect(page.getByText("below 999,999,999").first()).toBeVisible();
   await page.getByLabel("Minimum retail sales and consumer services (billion VND)").clear();
   const places = page.getByRole("group", { name: "Provinces" });
   const hanoi = places.getByLabel("Hà Nội", { exact: true });
@@ -24,6 +27,10 @@ test("retail scenario filters and compares provinces before explaining why scori
   await expect(comparison).toBeVisible();
   await expect(page.getByRole("table")).toContainText("2025");
   await expect(page.getByRole("table")).toContainText("Cục Thống kê");
+  await page.getByLabel("Comparison baseline").selectOption({ label: "Hà Nội" });
+  await expect(page.getByRole("table").getByText("Difference from Hà Nội", { exact: false }).first()).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Ask about selected provinces" })).toBeVisible();
+  await expect(page.getByRole("textbox", { name: "Sector" })).toHaveValue("Retail");
   await expect(page.getByText("No customer needs study is available", { exact: false })).toBeVisible();
   await page.getByRole("button", { name: "Assess evidence and calculate" }).click();
   await expect(page.getByText("Assessment unavailable")).toBeVisible();

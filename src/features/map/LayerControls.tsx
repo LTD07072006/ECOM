@@ -2,27 +2,31 @@
 
 import { useState } from "react";
 import { colorScale, indicatorGroups, missingColor, sourcesAreComparable, type MapLayers, type StatisticalLayer } from "./layers";
+import { useI18n } from "../../lib/i18n/provider";
+import { indicatorLabel, qualityLabel, scopeLabel, unitLabel } from "../../lib/i18n/data-labels";
+import type { MessageKey } from "../../lib/i18n";
 
-const number = new Intl.NumberFormat("en", { maximumFractionDigits: 2 });
-
-function layerOption(layer: StatisticalLayer) {
-  return `${layer.label} · ${layer.period} · ${layer.dataset.version}`;
+function groupMessageKey(code: string): MessageKey {
+  const group = indicatorGroups[code] ?? "other";
+  return `layers.group.${group}` as MessageKey;
 }
 
 function SourceDetails({ layer }: { layer: StatisticalLayer }) {
+  const { t, locale } = useI18n();
+  const covered = Object.values(layer.values).filter((value) => value !== null).length;
   return <article className="layer-source">
-    <strong>{layer.label}</strong>
+    <strong>{indicatorLabel(locale, layer.indicator, layer.label)}</strong>
     <a href={layer.dataset.source.url ?? undefined}>{layer.dataset.source.title}</a>
     <dl className="dataset-details">
-      <div><dt>Publisher</dt><dd>{layer.dataset.source.publisher}</dd></div>
-      <div><dt>Version</dt><dd>{layer.dataset.version}</dd></div>
-      <div><dt>Period</dt><dd>{layer.period}</dd></div>
-      <div><dt>Geography</dt><dd>{layer.geographyVersion}</dd></div>
-      <div><dt>Unit</dt><dd>{layer.unit}</dd></div>
-      <div><dt>Scope</dt><dd>{layer.scope.replaceAll("_", " ")}</dd></div>
-      <div><dt>Coverage</dt><dd>{Object.values(layer.values).filter((value) => value !== null).length} provinces with values</dd></div>
-      <div><dt>License</dt><dd>{layer.dataset.source.license}</dd></div>
-      <div><dt>Review</dt><dd>{layer.dataset.freshness === "review_due" ? "Due" : "Current"} · {layer.dataset.reviewDueAt.slice(0, 10)}</dd></div>
+      <div><dt>{t("layers.publisher")}</dt><dd>{layer.dataset.source.publisher}</dd></div>
+      <div><dt>{t("layers.version")}</dt><dd>{layer.dataset.version}</dd></div>
+      <div><dt>{t("layers.period")}</dt><dd>{layer.period}</dd></div>
+      <div><dt>{t("layers.geography")}</dt><dd>{layer.geographyVersion}</dd></div>
+      <div><dt>{t("layers.unit")}</dt><dd>{unitLabel(locale, layer.unit)}</dd></div>
+      <div><dt>{t("layers.scope")}</dt><dd>{scopeLabel(locale, layer.scope)}</dd></div>
+      <div><dt>{t("layers.coverage")}</dt><dd>{t("layers.covered", { count: covered })}</dd></div>
+      <div><dt>{t("layers.license")}</dt><dd>{layer.dataset.source.license}</dd></div>
+      <div><dt>{t("layers.review")}</dt><dd>{layer.dataset.freshness === "review_due" ? t("layers.due") : t("layers.current")} · {layer.dataset.reviewDueAt.slice(0, 10)}</dd></div>
     </dl>
     <p>{layer.definition}</p><p>{layer.method}</p><p>{layer.limitations}</p>
   </article>;
@@ -31,6 +35,7 @@ function SourceDetails({ layer }: { layer: StatisticalLayer }) {
 function SourceComparison({ layers, active, province }: {
   layers: StatisticalLayer[]; active: StatisticalLayer | null; province: { id: string; name: string } | null;
 }) {
+  const { t, locale, formatNumber } = useI18n();
   const [firstId, setFirstId] = useState("");
   const [secondId, setSecondId] = useState("");
   const first = layers.find((item) => item.id === firstId) ?? active ?? layers[0];
@@ -40,25 +45,33 @@ function SourceComparison({ layers, active, province }: {
   const comparable = sourcesAreComparable(first, second);
   const firstValue = province ? first.values[province.id] : null;
   const secondValue = province ? second.values[province.id] : null;
+  const option = (layer: StatisticalLayer) => `${indicatorLabel(locale, layer.indicator, layer.label)} · ${layer.period} · ${layer.dataset.version}`;
 
   return <details className="layer-comparison">
-    <summary>Compare sources</summary>
-    <label>First source
+    <summary>{t("layers.compareSources")}</summary>
+    <label>{t("layers.firstSource")}
       <select value={first.id} onChange={(event) => setFirstId(event.target.value)}>
-        {layers.map((item) => <option key={item.id} value={item.id}>{layerOption(item)}</option>)}
+        {layers.map((item) => <option key={item.id} value={item.id}>{option(item)}</option>)}
       </select>
     </label>
-    <label>Second source
+    <label>{t("layers.secondSource")}
       <select value={second.id} onChange={(event) => setSecondId(event.target.value)}>
-        {others.map((item) => <option key={item.id} value={item.id}>{layerOption(item)}</option>)}
+        {others.map((item) => <option key={item.id} value={item.id}>{option(item)}</option>)}
       </select>
     </label>
     <div className="layer-comparison-result" aria-live="polite">
-      {!comparable ? <p>Numeric comparison requires the same indicator, definition, unit, period, scope and geography version.</p>
-        : !province ? <p>Select a province to compare its published values.</p>
-          : firstValue == null || secondValue == null ? <p>Both sources need a value for {province.name}.</p>
-            : <p><strong>{province.name}</strong> — {number.format(firstValue)} {first.unit} vs {number.format(secondValue)} {second.unit}.
-              {` Second minus first: ${number.format(secondValue - firstValue)} ${first.unit === "%" ? "percentage points" : first.unit}.`}</p>}
+      {!comparable ? <p>{t("layers.compareIncompatible")}</p>
+        : !province ? <p>{t("layers.compareSelectProvince")}</p>
+          : firstValue == null || secondValue == null ? <p>{t("layers.compareNeedsBoth", { name: province.name })}</p>
+            : <p>{t("layers.compareResult", {
+              name: province.name,
+              first: formatNumber(firstValue),
+              firstUnit: unitLabel(locale, first.unit),
+              second: formatNumber(secondValue),
+              secondUnit: unitLabel(locale, second.unit),
+              delta: formatNumber(secondValue - firstValue),
+              unit: first.unit === "%" ? t("common.percentagePoints") : unitLabel(locale, first.unit),
+            })}</p>}
     </div>
     <SourceDetails layer={first} />
     <SourceDetails layer={second} />
@@ -74,45 +87,48 @@ export function LayerControls({ data, layer, setLayer, airports, setAirports, pr
   province: { id: string; name: string } | null;
   provinceCount: number;
 }) {
+  const { t, locale, formatNumber } = useI18n();
   const groups = new Map<string, StatisticalLayer[]>();
   for (const item of data.indicators) {
-    const name = indicatorGroups[item.indicator] ?? "Other";
+    const name = groupMessageKey(item.indicator);
     const group = groups.get(name);
     if (group) group.push(item);
     else groups.set(name, [item]);
   }
-  return <section className="layer-controls" aria-label="Map layers">
-    <label>Colour provinces by
+  const covered = layer ? Object.values(layer.values).filter((value) => value != null).length : 0;
+  const details = layer && province ? layer.valueDetails?.[province.id] : undefined;
+  return <section className="layer-controls" aria-label={t("layers.aria")}>
+    <label>{t("layers.colourBy")}
       <select value={layer?.id ?? ""} onChange={(event) => setLayer(event.target.value)}>
-        <option value="">Administrative boundaries</option>
-        {[...groups].map(([name, items]) => <optgroup key={name} label={name}>
-          {items.map((item) => <option value={item.id} key={item.id}>{layerOption(item)}</option>)}
+        <option value="">{t("layers.boundaries")}</option>
+        {[...groups].map(([name, items]) => <optgroup key={name} label={t(name as MessageKey)}>
+          {items.map((item) => <option value={item.id} key={item.id}>{indicatorLabel(locale, item.indicator, item.label)} · {item.period} · {item.dataset.version}</option>)}
         </optgroup>)}
       </select>
     </label>
-    {layer && <div className="layer-legend" aria-label="Indicator legend">
-      <p>{layer.unit} · {layer.period} · {Object.values(layer.values).filter((value) => value != null).length} of {provinceCount} provinces</p>
+    {layer && <div className="layer-legend" aria-label={t("layers.legendAria")}>
+      <p>{t("layers.legendSummary", { unit: unitLabel(locale, layer.unit), period: layer.period, covered, total: provinceCount })}</p>
       <ul>
         {colorScale(layer).map((bin, index) => <li key={bin.color}>
           <span style={{ background: bin.color }} aria-hidden="true" />
-          {bin.min === bin.max ? number.format(bin.min) : `${index === 0 ? "" : "≥ "}${number.format(bin.min)} – ${number.format(bin.max)}`}
+          {bin.min === bin.max ? formatNumber(bin.min) : `${index === 0 ? "" : "≥ "}${formatNumber(bin.min)} – ${formatNumber(bin.max)}`}
         </li>)}
-        <li><span style={{ background: missingColor }} aria-hidden="true" /> Data unavailable</li>
+        <li><span style={{ background: missingColor }} aria-hidden="true" /> {t("layers.unavailable")}</li>
       </ul>
       <a href={layer.dataset.source.url ?? undefined}>{layer.dataset.source.title}</a>
       {province && <div className="layer-comparison-result" aria-live="polite">
         <strong>{province.name}</strong>
-        <p>{layer.values[province.id] == null ? "Data unavailable" : `${number.format(layer.values[province.id]!)} ${layer.unit}`} · {layer.period}</p>
-        <p>Quality: {layer.valueDetails?.[province.id]?.quality ?? "unavailable"}</p>
-        {layer.valueDetails?.[province.id]?.missingReason && <p>{layer.valueDetails[province.id].missingReason}</p>}
-        <p>Source: {layer.dataset.source.publisher} · {layer.dataset.source.title} · {layer.dataset.source.license}</p>
-        {layer.valueDetails?.[province.id]?.method && <p>{layer.valueDetails[province.id].method}</p>}
-        {layer.valueDetails?.[province.id]?.limitations && <p>{layer.valueDetails[province.id].limitations}</p>}
+        <p>{layer.values[province.id] == null ? t("layers.unavailable") : `${formatNumber(layer.values[province.id]!)} ${unitLabel(locale, layer.unit)}`} · {layer.period}</p>
+        <p>{t("layers.quality", { quality: qualityLabel(locale, details?.quality ?? "unavailable") })}</p>
+        {details?.missingReason && <p>{details.missingReason}</p>}
+        <p>{t("layers.source", { publisher: layer.dataset.source.publisher, title: layer.dataset.source.title, license: layer.dataset.source.license })}</p>
+        {details?.method && <p>{details.method}</p>}
+        {details?.limitations && <p>{details.limitations}</p>}
       </div>}
     </div>}
     {data.infrastructure && <div className="poi-control">
-      <label><input type="checkbox" checked={airports} onChange={(event) => setAirports(event.target.checked)} /> Civil airports</label>
-      {airports && <p><a href={data.infrastructure.dataset.source.url ?? undefined}>{data.infrastructure.dataset.source.publisher}</a> · {data.infrastructure.points.features.length} reference points</p>}
+      <label><input type="checkbox" checked={airports} onChange={(event) => setAirports(event.target.checked)} /> {t("layers.airports")}</label>
+      {airports && <p><a href={data.infrastructure.dataset.source.url ?? undefined}>{data.infrastructure.dataset.source.publisher}</a> · {t("layers.referencePoints", { count: data.infrastructure.points.features.length })}</p>}
     </div>}
     <SourceComparison layers={data.indicators} active={layer} province={province} />
   </section>;

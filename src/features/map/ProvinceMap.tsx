@@ -5,19 +5,23 @@ import type { ExpressionSpecification, GeoJSONSource, Map as MapLibreMap, Popup 
 import type { DatasetMetadata, ProvinceMapData } from "../geography/types";
 import { safeSourceUrl } from "../../lib/source-url";
 import { colorScale, layerColor, missingColor, type InfrastructureLayer, type StatisticalLayer } from "./layers";
+import { useI18n } from "../../lib/i18n/provider";
 
 const provinceSource = "provinces";
 const fillLayer = "province-fill";
 const airportLayer = "civil-airports";
 const baseFill = "#38615b";
 
-export function ProvinceMap({ selectedId, onSelect, layer, infrastructure }: {
-  selectedId: string | null; onSelect: (id: string) => void;
+export function ProvinceMap({ selectedId, regionIds = [], onSelect, layer, infrastructure }: {
+  selectedId: string | null; regionIds?: string[]; onSelect: (id: string) => void;
   layer: StatisticalLayer | null; infrastructure: InfrastructureLayer | null;
 }) {
+  const { t } = useI18n();
   const container = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
-  const previousId = useRef<string | null>(null);
+  const previousIds = useRef<string[]>([]);
+  const onSelectRef = useRef(onSelect);
+  onSelectRef.current = onSelect;
   const popupRef = useRef<MapPopup | null>(null);
   const [dataset, setDataset] = useState<DatasetMetadata | null>(null);
   const [status, setStatus] = useState<"loading" | "empty" | "unavailable" | "ready">("loading");
@@ -106,7 +110,7 @@ export function ProvinceMap({ selectedId, onSelect, layer, infrastructure }: {
             const url = typeof item.url === "string" ? safeSourceUrl(item.url) : null;
             if (url) {
               const source = document.createElement("a");
-              source.textContent = "Airport record";
+              source.textContent = t("map.airportRecord");
               source.href = url;
               content.append(source);
             }
@@ -117,7 +121,7 @@ export function ProvinceMap({ selectedId, onSelect, layer, infrastructure }: {
             if (view.getLayoutProperty(airportLayer, "visibility") === "visible"
               && view.queryRenderedFeatures(event.point, { layers: [airportLayer] }).length) return;
             const id = event.features?.[0]?.properties.id;
-            if (typeof id === "string") onSelect(id);
+            if (typeof id === "string") onSelectRef.current(id);
           });
           view.on("mouseenter", fillLayer, () => { view.getCanvas().style.cursor = "pointer"; });
           view.on("mouseleave", fillLayer, () => { view.getCanvas().style.cursor = ""; });
@@ -149,18 +153,19 @@ export function ProvinceMap({ selectedId, onSelect, layer, infrastructure }: {
       removeLifecycleListeners?.();
       map?.remove();
       mapRef.current = null;
-      previousId.current = null;
+      previousIds.current = [];
       popupRef.current = null;
     };
-  }, [onSelect]);
+  }, [t]);
 
   useEffect(() => {
     const map = mapRef.current;
     if (status !== "ready" || !map?.getSource(provinceSource)) return;
-    if (previousId.current) map.removeFeatureState({ source: provinceSource, id: previousId.current });
-    if (selectedId) map.setFeatureState({ source: provinceSource, id: selectedId }, { selected: true });
-    previousId.current = selectedId;
-  }, [selectedId, status]);
+    for (const id of previousIds.current) map.removeFeatureState({ source: provinceSource, id });
+    const ids = [...new Set([...regionIds, ...(selectedId ? [selectedId] : [])])];
+    for (const id of ids) map.setFeatureState({ source: provinceSource, id }, { selected: true });
+    previousIds.current = ids;
+  }, [selectedId, regionIds, status]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -184,18 +189,18 @@ export function ProvinceMap({ selectedId, onSelect, layer, infrastructure }: {
   }, [infrastructure, status]);
 
   return <>
-    <div className="province-map" ref={container} aria-label="Interactive map of provincial boundaries" data-map-status={status} />
+    <div className="province-map" ref={container} aria-label={t("map.aria")} data-map-status={status} />
     {status !== "ready" && <p className="province-map-status" role="status">{
-      status === "loading" ? "Loading provincial boundaries…"
-        : status === "empty" ? "No provincial boundaries have been published. Use place search to explore the catalog."
-          : "The map is temporarily unavailable. Use place search to open a profile."
+      status === "loading" ? t("map.loading")
+        : status === "empty" ? t("map.empty")
+          : t("map.unavailable")
     }</p>}
     {dataset && <div className="province-map-credit">
       <a href={dataset.source.url ?? undefined}>{dataset.source.publisher} · {dataset.version}</a>
       {dataset.source.license === "CC BY 3.0 IGO"
         ? <a href="https://creativecommons.org/licenses/by/3.0/igo/">CC BY 3.0 IGO</a>
         : <span>{dataset.source.license}</span>}
-      <span>Simplified provincial boundaries</span>
+      <span>{t("map.simplified")}</span>
     </div>}
   </>;
 }

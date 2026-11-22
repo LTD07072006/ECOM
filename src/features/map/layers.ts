@@ -2,14 +2,14 @@ import type { FeatureCollection, Point } from "geojson";
 import type { DatasetMetadata } from "../geography/types";
 
 export const indicatorGroups: Record<string, string> = {
-  POP_AVG: "Population",
-  GRDP_PC: "Economy and retail",
-  GRDP_GROWTH: "Economy and retail",
-  RETAIL_TOTAL: "Economy and retail",
-  FDI_LICENSED: "Investment and business",
-  ENTERPRISES_NEW: "Investment and business",
-  LABOR_FORCE: "Workforce and talent",
-  TRAINED_LABOR_RATE: "Workforce and talent",
+  POP_AVG: "population",
+  GRDP_PC: "economy",
+  GRDP_GROWTH: "economy",
+  RETAIL_TOTAL: "economy",
+  FDI_LICENSED: "investment",
+  ENTERPRISES_NEW: "investment",
+  LABOR_FORCE: "workforce",
+  TRAINED_LABOR_RATE: "workforce",
 };
 
 export type StatisticalLayer = {

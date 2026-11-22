@@ -1,13 +1,24 @@
 import type { Profile } from "../geography/types";
+import type { MessageKey } from "../../lib/i18n/en";
 
 export const criteria = [
 	{
 		code: "RETAIL_TOTAL",
 		label: "Retail sales and consumer services",
+		labelKey: "retail.criterionRetail" as MessageKey,
 		unit: "billion VND",
 	},
-	{ code: "LABOR_FORCE", label: "Labour force", unit: "thousand people" },
+	{
+		code: "LABOR_FORCE",
+		label: "Labour force",
+		labelKey: "retail.criterionLabour" as MessageKey,
+		unit: "thousand people",
+	},
 ] as const;
+
+export type ScoringReason =
+	| { code: "retail.reasonSelect" | "retail.reasonSameRelease" | "retail.reasonWeights" | "retail.reasonEvidence" }
+	| { code: "retail.reasonNoValue" | "retail.reasonNotEligible" | "retail.reasonMismatch"; criterion: MessageKey };
 
 export type Evidence = {
 	status: "available" | "unavailable";
@@ -24,28 +35,26 @@ export function calculateRetailScore(
 	weights: number[],
 	evidence: Evidence,
 ) {
-	const reasons: string[] = [];
+	const reasons: ScoringReason[] = [];
 	if (
 		profiles.length < 2 ||
 		profiles.length > 3 ||
 		new Set(profiles.map((p) => p.id)).size !== profiles.length
 	) {
-		reasons.push("Select two or three different provinces.");
+		reasons.push({ code: "retail.reasonSelect" });
 	}
 	if (
 		profiles.some((p) => p.level !== "province") ||
 		new Set(profiles.map((p) => p.geographyVersion)).size > 1
 	) {
-		reasons.push(
-			"Selected places must be provinces from the same geography release.",
-		);
+		reasons.push({ code: "retail.reasonSameRelease" });
 	}
 	if (
 		weights.length !== criteria.length ||
 		weights.some((w) => !Number.isFinite(w) || w < 0) ||
 		Math.abs(weights.reduce((a, b) => a + b, 0) - 100) > 0.001
 	) {
-		reasons.push("Weights must be non-negative and add up to 100%.");
+		reasons.push({ code: "retail.reasonWeights" });
 	}
 	if (
 		evidence.status !== "available" ||
@@ -57,9 +66,7 @@ export function calculateRetailScore(
 		!evidence.source ||
 		profiles.some((profile) => !evidence.geographyIds?.includes(profile.id))
 	) {
-		reasons.push(
-			"Customer needs evidence with a segment, sample, method, period, source and selected geography coverage is unavailable.",
-		);
+		reasons.push({ code: "retail.reasonEvidence" });
 	}
 
 	const observations = criteria.map((criterion) =>
@@ -68,18 +75,18 @@ export function calculateRetailScore(
 		),
 	);
 	observations.forEach((items, index) => {
-		const label = criteria[index].label;
+		const criterion = criteria[index];
 		if (
 			items.some(
 				(item) =>
 					!item || item.value === null || item.quality === "unavailable",
 			)
 		) {
-			reasons.push(`${label}: a selected province has no usable value.`);
+			reasons.push({ code: "retail.reasonNoValue", criterion: criterion.labelKey });
 			return;
 		}
 		if (items.some((item) => !item!.scoreEligible))
-			reasons.push(`${label}: this indicator is not approved for scoring.`);
+			reasons.push({ code: "retail.reasonNotEligible", criterion: criterion.labelKey });
 		const first = items[0]!;
 		if (
 			items.some(
@@ -94,9 +101,7 @@ export function calculateRetailScore(
 					item!.definition !== first.definition,
 			)
 		)
-			reasons.push(
-				`${label}: sources, releases, periods, units or definitions do not match.`,
-			);
+			reasons.push({ code: "retail.reasonMismatch", criterion: criterion.labelKey });
 	});
 	if (reasons.length) return { ok: false as const, reasons };
 
@@ -109,6 +114,7 @@ export function calculateRetailScore(
 				max === min ? 50 : (100 * (values[index] - min)) / (max - min);
 			return {
 				label: criteria[criterion].label,
+				labelKey: criteria[criterion].labelKey,
 				value: values[index],
 				normalized,
 				weight: weights[criterion],

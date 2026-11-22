@@ -57,8 +57,8 @@ test("the internal page keeps data behind its role gate and supports reviewer ke
   const token = process.env.E2E_RELEASE_REVIEWER_TOKEN;
   test.skip(!token, "Set a disposable reviewer token for the browser test.");
   await page.goto(new URL("/internal/releases", baseUrl).href);
-  await expect(page.getByRole("heading", { name: "Dataset freshness" })).toHaveCount(0);
-  const field = page.getByLabel("Release access token");
+  await expect(page.getByRole("heading", { name: "Độ mới của bộ dữ liệu" })).toHaveCount(0);
+  const field = page.getByLabel("Token truy cập phát hành");
   await field.fill("x".repeat(43));
   await field.press("Enter");
   await expect(page.getByRole("main").getByRole("alert")).toContainText("A valid release access token is required.");
@@ -67,11 +67,11 @@ test("the internal page keeps data behind its role gate and supports reviewer ke
   }));
   await field.fill("v".repeat(43));
   await field.press("Enter");
-  await expect(page.getByRole("heading", { name: "Dataset freshness" })).toBeVisible();
-  await expect(page.getByText(/Signed in as .*reviewer/i)).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Độ mới của bộ dữ liệu" })).toBeVisible();
+  await expect(page.getByText(/Đăng nhập với .*reviewer/i)).toBeVisible();
   await expect(page.getByText("VN_ADMIN_CATALOG")).toBeVisible();
-  await page.getByRole("button", { name: "Sign out" }).click();
+  await page.getByRole("button", { name: "Đăng xuất" }).click();
   await expect(field).toBeVisible();
   await expect(field).toHaveValue("");
-  await expect(page.getByRole("heading", { name: "Dataset freshness" })).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "Độ mới của bộ dữ liệu" })).toHaveCount(0);
 });

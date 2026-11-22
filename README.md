@@ -7,6 +7,7 @@ ECOM là hệ thống tra cứu bối cảnh đầu tư theo địa bàn tại V
 - [Chạy lần đầu](#chạy-lần-đầu)
 - [Chạy lại và dừng ứng dụng](#chạy-lại-và-dừng-ứng-dụng)
 - [Cấu hình và bảo mật](#cấu-hình-và-bảo-mật)
+- [Ngôn ngữ giao diện](#ngôn-ngữ-giao-diện)
 - [Thử các luồng trên giao diện](#thử-các-luồng-trên-giao-diện)
 - [Kiểm thử](#kiểm-thử)
 - [Migration và phát hành dữ liệu](#migration-và-phát-hành-dữ-liệu)
@@ -113,6 +114,19 @@ Lệnh thực hiện lần lượt các bước sau.
 Trong môi trường dùng chung, cấp cho mỗi người một token ngẫu nhiên riêng và đặt `ECOM_OPERATORS` từ secret manager. Danh sách JSON có dạng `[{"id":"operator-id","role":"steward","token":"<token-rieng>"}]`. Vai trò hỗ trợ `steward` và `reviewer`. ID và token phải duy nhất, token phải là chuỗi base64url ngẫu nhiên dài 43–128 ký tự. Thu hồi bằng cách xóa operator hoặc thay token trong secret manager và cập nhật cấu hình ứng dụng. Chế độ production yêu cầu operator định danh. Token chung chỉ được hỗ trợ ở chế độ phát triển local.
 
 Tài liệu API nằm tại [OpenAPI](docs/openapi.yaml). Trạng thái từng yêu cầu T01–T06 và bằng chứng kiểm thử nằm trong [ma trận nghiệm thu](docs/acceptance-matrix.md).
+
+## Ngôn ngữ giao diện
+
+Giao diện có hai ngôn ngữ, tiếng Việt và tiếng Anh. Nút chuyển **VI / EN** nằm ở góc dưới bên phải của mọi trang.
+
+- Trang công khai mặc định tiếng Anh cho nhà đầu tư nước ngoài.
+- Khu vực nội bộ `/internal/...` mặc định tiếng Việt cho steward và reviewer.
+- Lựa chọn được lưu trong cookie `ecom_locale` trong một năm. Thêm `?lang=vi` hoặc `?lang=en` vào URL để đặt ngôn ngữ và lưu lựa chọn đó.
+- Thẻ `<html lang>` đi theo ngôn ngữ đang dùng; số và ngày định dạng theo `vi-VN` hoặc `en-US`.
+
+Nhãn chỉ tiêu, đơn vị, trạng thái chất lượng, cấp địa giới và lý do so sánh được dịch ở lớp hiển thị. Định nghĩa, phương pháp, giới hạn và lý do thiếu dữ liệu vẫn giữ nguyên như nguồn công bố, không dịch. Thông báo lỗi trả về từ API cũng giữ tiếng Anh.
+
+Chuỗi giao diện nằm trong [`src/lib/i18n/en.ts`](src/lib/i18n/en.ts) và [`src/lib/i18n/vi.ts`](src/lib/i18n/vi.ts). Bản tiếng Việt được khai báo kiểu `Record<MessageKey, string>` nên thiếu một khoá là lỗi biên dịch. [`tests/features/i18n.test.ts`](tests/features/i18n.test.ts) kiểm tra thêm các phần giữ chỗ `{...}` phải khớp giữa hai ngôn ngữ.
 
 ## Thử các luồng trên giao diện
 
@@ -262,6 +276,7 @@ Báo cáo mới dùng công thức `inquiry-funnel-v4`. Tỷ lệ và thời gia
 | --- | --- |
 | [`src/app/`](src/app/) | Trang Next.js và Route Handlers cho API. |
 | [`src/features/`](src/features/) | Bản đồ, tìm kiếm, hồ sơ, shortlist, inquiry, báo cáo và quản trị release. |
+| [`src/lib/i18n/`](src/lib/i18n/) | Từ điển tiếng Việt/tiếng Anh, chọn ngôn ngữ theo cookie và định dạng số, ngày. |
 | [`src/db/`](src/db/) và [`drizzle/`](drizzle/) | Schema Drizzle, kết nối PostgreSQL, migration và CLI import. |
 | [`data/sprint1/`](data/sprint1/) và [`data/sprint3/`](data/sprint3/) | Manifest và dữ liệu nguồn đi kèm cho setup local. |
 | [`database/market-entry/`](database/market-entry/) | SQL tham chiếu, sơ đồ schema và tài liệu database. |

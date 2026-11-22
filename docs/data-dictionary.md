@@ -30,6 +30,10 @@ Every public indicator observation must expose its definition, unit, period, geo
 
 `loadPublicCatalog()` reads only an active geography version and dataset with `publication_status=published`, public access, and active source status. Dataset metadata includes owner, data-as-of, review date, review due date, freshness, license, and citation. If the database is unreachable, the catalog mode is `unavailable`; APIs return an explicit temporary-unavailable response rather than a demo response.
 
+## Display language
+
+The interface ships in Vietnamese and English. Indicator labels, units, quality statuses, geography levels and comparison reasons are translated at the display layer, keyed by indicator code and unit string; the stored observation, its definition, method, limitations and missing reason are always shown as published. API error messages stay in English. See the language section of the [README](../README.md#ngôn-ngữ-giao-diện).
+
 ## Comparison and export
 
 Comparison is descriptive only. It refuses mixed geography versions/levels or incompatible observation snapshots and never normalizes, ranks, or scores. JSON/CSV exports preserve observation values (including null), source, period, unit, quality, geography version, dataset version, license/access, updated date, and limitations. CSV cells are escaped and formula-prefixed values are neutralized.

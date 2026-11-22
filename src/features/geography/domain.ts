@@ -38,34 +38,36 @@ export function getProfile(catalog: Catalog, id: string): Profile | null {
 }
 
 export function compareProfiles(profiles: Profile[]) {
-  const failure = (reason: string) => ({
+  const failure = (reasonCode: string, reason: string) => ({
     compatible: false,
     reason,
+    reasonCode,
     rows: [],
   });
 
-  if (profiles.length < 2 || profiles.length > 3) return failure("Select between two and three places to compare.");
-  if (new Set(profiles.map((profile) => profile.id)).size !== profiles.length) return failure("A place can only appear once in a comparison.");
-  if (new Set(profiles.map((profile) => profile.level)).size !== 1) return failure("Places must use the same geography level.");
-  if (new Set(profiles.map((profile) => profile.geographyVersion)).size !== 1) return failure("Places use different geography versions.");
+  if (profiles.length < 2 || profiles.length > 3) return failure("compare.selectTwoOrThree", "Select between two and three places to compare.");
+  if (new Set(profiles.map((profile) => profile.id)).size !== profiles.length) return failure("compare.duplicatePlace", "A place can only appear once in a comparison.");
+  if (new Set(profiles.map((profile) => profile.level)).size !== 1) return failure("compare.sameLevel", "Places must use the same geography level.");
+  if (new Set(profiles.map((profile) => profile.geographyVersion)).size !== 1) return failure("compare.geographyVersion", "Places use different geography versions.");
 
   const indicatorOrder = [...new Set(profiles.flatMap((profile) => profile.observations.map((observation) => observation.indicator)))];
   const observationsByProfile = profiles.map((profile) => new Map(profile.observations.map((observation) => [observation.indicator, observation])));
   if (profiles.some((_, index) => observationsByProfile[index].size !== profiles[index].observations.length)) {
-    return failure("A place contains duplicate indicator observations.");
+    return failure("compare.duplicateIndicators", "A place contains duplicate indicator observations.");
   }
 
   const rows = indicatorOrder.map((indicator) => {
     const observations = observationsByProfile.map((map) => map.get(indicator));
     const reference = observations.find(Boolean);
-    const mismatch = !reference || observations.some((observation) => !observation) ? "Missing indicator for at least one place."
+    const mismatch = !reference || observations.some((observation) => !observation)
+      ? { code: "compare.missingIndicator", reason: "Missing indicator for at least one place." }
       : observations.some((o) => o!.source.id !== reference.source.id
         || o!.datasetVersion !== reference.datasetVersion
         || o!.dataset?.code !== reference.dataset?.code
-        || o!.dataset?.id !== reference.dataset?.id) ? "Different source or dataset snapshot."
-      : observations.some((o) => o!.periodStart !== reference.periodStart || o!.periodEnd !== reference.periodEnd) ? "Different observation periods."
-      : observations.some((o) => o!.unit !== reference.unit) ? "Different units."
-      : observations.some((o) => o!.definition !== reference.definition || o!.scope !== reference.scope) ? "Different definitions or scope."
+        || o!.dataset?.id !== reference.dataset?.id) ? { code: "compare.differentSource", reason: "Different source or dataset snapshot." }
+      : observations.some((o) => o!.periodStart !== reference.periodStart || o!.periodEnd !== reference.periodEnd) ? { code: "compare.differentPeriod", reason: "Different observation periods." }
+      : observations.some((o) => o!.unit !== reference.unit) ? { code: "compare.differentUnit", reason: "Different units." }
+      : observations.some((o) => o!.definition !== reference.definition || o!.scope !== reference.scope) ? { code: "compare.differentDefinition", reason: "Different definitions or scope." }
       : null;
     const metadataMatches = mismatch === null;
     return {
@@ -73,7 +75,8 @@ export function compareProfiles(profiles: Profile[]) {
       label: reference?.label ?? indicator,
       unit: reference?.unit ?? "",
       metadataMatches,
-      reason: mismatch,
+      reason: mismatch?.reason ?? null,
+      reasonCode: mismatch?.code ?? null,
       values: observations.map((observation) => metadataMatches && observation?.quality !== "unavailable" ? observation?.value ?? null : null),
     };
   });
@@ -81,6 +84,7 @@ export function compareProfiles(profiles: Profile[]) {
   return {
     compatible,
     reason: compatible ? null : "Some indicators have different dataset snapshots, periods, scopes, units or definitions, or are missing. See each row for details.",
+    reasonCode: compatible ? null : "compare.incompatibleSummary",
     rows,
   };
 }

@@ -2,14 +2,17 @@
 
 import { useId, useState, type FormEvent } from "react";
 import { INQUIRY_NOTICE_VERSION } from "./privacy";
+import { useI18n } from "../../lib/i18n/provider";
 
 export type InquiryFormProps = {
   geographyIds: string[];
   geographyLabels?: string[];
   onSubmitted?: (referenceCode: string) => void;
+  defaultSector?: string;
 };
 
-export function InquiryForm({ geographyIds, geographyLabels = [], onSubmitted }: InquiryFormProps) {
+export function InquiryForm({ geographyIds, geographyLabels = [], onSubmitted, defaultSector = "" }: InquiryFormProps) {
+  const { t } = useI18n();
   const privacySummary = useId();
   const [error, setError] = useState<string | null>(null);
   const [referenceCode, setReferenceCode] = useState<string | null>(null);
@@ -33,32 +36,32 @@ export function InquiryForm({ geographyIds, geographyLabels = [], onSubmitted }:
       });
       const body = await response.json().catch(() => ({})) as { referenceCode?: string; error?: string };
       if (!response.ok || !body.referenceCode) {
-        setError(body.error ?? "Unable to submit your request.");
+        setError(body.error ?? t("inquiry.errorDefault"));
         return;
       }
       setReferenceCode(body.referenceCode);
       onSubmitted?.(body.referenceCode);
     } catch {
-      setError("The request could not be sent. Check your connection and try again.");
+      setError(t("inquiry.errorNetwork"));
     } finally {
       setPending(false);
     }
   }
 
-  if (referenceCode) return <div role="status"><p>Your request has been received.</p><p>Reference code: <strong>{referenceCode}</strong></p><p>Keep this code when communicating with the steward.</p></div>;
+  if (referenceCode) return <div role="status"><p>{t("inquiry.received")}</p><p>{t("inquiry.reference", { code: referenceCode })}</p><p>{t("inquiry.keepCode")}</p></div>;
   return <form className="inquiry-form" onSubmit={submit}>
-    <p>Required fields are marked <span aria-hidden="true">*</span>.</p>
-    {geographyLabels.length > 0 && <fieldset><legend>Places of interest</legend><ul>{geographyLabels.map((label) => <li key={label}>{label}</li>)}</ul><p className="muted">Country and sector are self-reported and are not verified by this form.</p></fieldset>}
-    <label>Email *<input name="email" type="email" required maxLength={254} autoComplete="email" /></label>
-    <label>Message *<textarea name="message" required minLength={10} maxLength={5000} /></label>
-    <label>Name<input name="name" maxLength={160} autoComplete="name" /></label>
-    <label>Organization<input name="organization" maxLength={200} autoComplete="organization" /></label>
-    <label>Country<input name="country" maxLength={100} autoComplete="country-name" /></label>
-    <label>Sector<input name="sector" maxLength={160} /></label>
+    <p>{t("inquiry.requiredNote")}</p>
+    {geographyLabels.length > 0 && <fieldset><legend>{t("inquiry.places")}</legend><ul>{geographyLabels.map((label) => <li key={label}>{label}</li>)}</ul><p className="muted">{t("inquiry.selfReported")}</p></fieldset>}
+    <label>{t("inquiry.email")} *<input name="email" type="email" required maxLength={254} autoComplete="email" /></label>
+    <label>{t("inquiry.message")} *<textarea name="message" required minLength={10} maxLength={5000} /></label>
+    <label>{t("inquiry.name")}<input name="name" maxLength={160} autoComplete="name" /></label>
+    <label>{t("inquiry.organization")}<input name="organization" maxLength={200} autoComplete="organization" /></label>
+    <label>{t("inquiry.country")}<input name="country" maxLength={100} autoComplete="country-name" /></label>
+    <label>{t("inquiry.sector")}<input name="sector" maxLength={160} defaultValue={defaultSector} /></label>
     <label className="inquiry-honeypot" aria-hidden="true">Website<input name="website" tabIndex={-1} autoComplete="off" /></label>
-    <p id={privacySummary}>Stewards use your details to review and respond to this inquiry. It is due for anonymization 12 months after the last update. See the <a href="/privacy/inquiries" target="_blank" rel="noopener noreferrer">inquiry privacy notice (opens in a new tab)</a> for the privacy contact and your options.</p>
-    <label className="inquiry-consent"><input type="checkbox" name="consent" required aria-describedby={privacySummary} /> I consent to the use of my data to handle this inquiry.</label>
+    <p id={privacySummary}>{t("inquiry.privacyBefore")} <a href="/privacy/inquiries" target="_blank" rel="noopener noreferrer">{t("inquiry.privacyLink")}</a> {t("inquiry.privacyAfter")}</p>
+    <label className="inquiry-consent"><input type="checkbox" name="consent" required aria-describedby={privacySummary} /> {t("inquiry.consent")}</label>
     {error && <p role="alert">{error}</p>}
-    <button type="submit" disabled={pending}>{pending ? "Sending…" : "Send inquiry"}</button>
+    <button type="submit" disabled={pending}>{pending ? t("inquiry.sending") : t("inquiry.send")}</button>
   </form>;
 }

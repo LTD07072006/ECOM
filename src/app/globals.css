@@ -135,6 +135,7 @@ h1 {
 .shortlist-button { width: 100%; margin-top: 1rem; padding: .8rem; border: 1px solid var(--teal); background: var(--teal); color: white; cursor: pointer; }
 .shortlist-tray { margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--line); }
 .shortlist-heading, .comparison-heading { display: flex; align-items: center; justify-content: space-between; gap: .8rem; }
+.shortlist-heading .map-label { text-transform: uppercase; }
 .shortlist-heading > div { display: grid; gap: .3rem; }
 .shortlist-actions { display: flex !important; flex-wrap: wrap; justify-content: flex-end; gap: .45rem; }
 .shortlist-heading strong { font-family: Georgia, serif; font-size: 1.2rem; font-weight: 400; }
@@ -361,3 +362,41 @@ h1 {
   .inquiry-report-meta { grid-template-columns: minmax(0, 1fr); }
   .inquiry-report-meta dd { margin-bottom: .3rem; }
 }
+
+.decision-steps { display: flex; flex-wrap: wrap; gap: .75rem 1.5rem; padding: 1rem 0; }
+.decision-flow details { margin: 1rem 0; }
+.decision-flow details summary { cursor: pointer; color: var(--teal); }
+.decision-flow :focus-visible { outline: 3px solid #b65a21; outline-offset: 3px; }
+
+.locale-switcher {
+  position: fixed; right: 1rem; bottom: 1rem; z-index: 20;
+  display: flex; gap: .25rem; margin: 0; min-width: 0; padding: .2rem;
+  border: 1px solid var(--line); border-radius: 999px;
+  background: rgba(251, 250, 245, .96);
+  box-shadow: 0 .5rem 1.5rem rgba(23, 33, 31, .14);
+}
+.locale-switcher-legend {
+  position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0;
+  overflow: hidden; white-space: nowrap; border: 0; clip-path: inset(50%);
+}
+.locale-switcher button {
+  min-width: 2.4rem; padding: .35rem .6rem;
+  border: 0; border-radius: 999px; background: transparent;
+  color: var(--muted); cursor: pointer;
+  font-size: .7rem; font-weight: 700; letter-spacing: .08em;
+}
+.locale-switcher button[aria-pressed="true"] { background: var(--teal); color: #fff; }
+.locale-switcher button:hover { color: var(--ink); }
+.locale-switcher button[aria-pressed="true"]:hover { color: #fff; }
+.locale-switcher :focus-visible { outline: 3px solid var(--copper); outline-offset: 2px; }
+
+.profile-category { border-top: 1px solid var(--line); padding-top: .75rem; margin-top: 1rem; }
+.profile-category h4 { margin: 0 0 .6rem; font-size: 1rem; }
+.investor-guide-steps { display: grid; gap: .8rem; padding-left: 1.5rem; max-width: 65ch; }
+
+.region-panel { padding: 1rem 0; border-bottom: 1px solid var(--line); }
+.region-panel fieldset { display: flex; flex-wrap: wrap; gap: 1rem; border: 1px solid var(--line); }
+.region-radio { display: inline-flex; align-items: center; gap: .4rem; }
+.region-panel li { margin: .4rem 0; }
+.region-metric { border-top: 1px solid var(--line); padding: .7rem 0; }
+.region-metric > div { margin: .6rem 0; }

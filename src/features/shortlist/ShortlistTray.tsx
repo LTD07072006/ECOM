@@ -5,8 +5,10 @@ import type { Geography } from "../geography/types";
 import { removeFromShortlist, readShortlist, selectForComparison } from "./store";
 import { ComparisonPanel } from "../comparison/ComparisonPanel";
 import { InquiryForm } from "../inquiries/InquiryForm";
+import { useI18n } from "../../lib/i18n/provider";
 
 export function ShortlistTray() {
+  const { t } = useI18n();
   const [ids, setIds] = useState<string[]>([]);
   const [places, setPlaces] = useState<Geography[]>([]);
   const [comparisonIds, setComparisonIds] = useState<string[] | null>(null);
@@ -15,7 +17,7 @@ export function ShortlistTray() {
   useEffect(() => {
     const sync = () => {
       try { setIds(readShortlist(localStorage.getItem("investor-shortlist"))); }
-      catch { setError("Browser storage is unavailable."); }
+      catch { setError(t("shortlist.storageError")); }
     };
     sync();
     const handleChange = () => sync();
@@ -25,7 +27,7 @@ export function ShortlistTray() {
       window.removeEventListener("investor-shortlist-change", handleChange);
       window.removeEventListener("storage", handleChange);
     };
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     let active = true;
@@ -41,10 +43,10 @@ export function ShortlistTray() {
       if (!active) return;
       const valid = next.filter((place): place is Geography => place !== null);
       setPlaces(valid);
-      setError(valid.length === ids.length ? null : "Some saved places are no longer available in the public catalog.");
-    }).catch(() => { if (active) setError("Saved places could not be loaded."); });
+      setError(valid.length === ids.length ? null : t("shortlist.someMissing"));
+    }).catch(() => { if (active) setError(t("shortlist.loadFailed")); });
     return () => { active = false; };
-  }, [ids]);
+  }, [ids, t]);
 
   function remove(id: string) {
     try {
@@ -52,7 +54,7 @@ export function ShortlistTray() {
       localStorage.setItem("investor-shortlist", JSON.stringify(next));
       setIds(next);
       window.dispatchEvent(new CustomEvent("investor-shortlist-change", { detail: next }));
-    } catch { setError("Browser storage is unavailable."); }
+    } catch { setError(t("shortlist.storageError")); }
   }
 
   async function download(format: "json" | "csv") {
@@ -61,7 +63,7 @@ export function ShortlistTray() {
       const response = await fetch(`/api/geographies/export?ids=${ids.join(",")}&format=${format}`);
       if (!response.ok) {
         const body = await response.json();
-        throw new Error(body?.error ?? "Export is unavailable.");
+        throw new Error(body?.error ?? t("shortlist.exportUnavailable"));
       }
       const blob = await response.blob();
       const link = document.createElement("a");
@@ -72,7 +74,7 @@ export function ShortlistTray() {
       link.remove();
       URL.revokeObjectURL(link.href);
     } catch (reason: unknown) {
-      setError(reason instanceof Error ? reason.message : "Export is unavailable.");
+      setError(reason instanceof Error ? reason.message : t("shortlist.exportUnavailable"));
     }
   }
 
@@ -80,12 +82,12 @@ export function ShortlistTray() {
 
   if (!ids.length) return null;
   return <>
-      <section className="shortlist-tray" aria-label="Saved places">
-      <div className="shortlist-heading"><div><span className="map-label">SAVED PLACES</span><strong>{places.length} saved</strong></div><div className="shortlist-actions">{ids.length >= 2 ? <button className="text-button" onClick={() => setComparisonIds(selectForComparison(ids))}>Compare {Math.min(ids.length, 3)}</button> : null}<button className="text-button" onClick={() => download("json")}>Download JSON</button><button className="text-button" onClick={() => download("csv")}>Download CSV</button></div></div>
+      <section className="shortlist-tray" aria-label={t("shortlist.savedPlaces")}>
+      <div className="shortlist-heading"><div><span className="map-label">{t("shortlist.savedPlaces")}</span><strong>{t("shortlist.savedCount", { count: places.length })}</strong></div><div className="shortlist-actions">{ids.length >= 2 ? <button className="text-button" onClick={() => setComparisonIds(selectForComparison(ids))}>{t("shortlist.compare", { count: Math.min(ids.length, 3) })}</button> : null}<button className="text-button" onClick={() => download("json")}>{t("shortlist.downloadJson")}</button><button className="text-button" onClick={() => download("csv")}>{t("shortlist.downloadCsv")}</button></div></div>
       {error ? <p className="state-message">{error}</p> : null}
-       <ul>{ids.map((id) => { const place = placesById.get(id); return <li key={id}><span>{place?.displayName ?? "Unavailable saved place"}</span><button className="remove-button" onClick={() => remove(id)} aria-label={`Remove ${place?.displayName ?? "unavailable place"}`}>Remove</button></li>; })}</ul>
+       <ul>{ids.map((id) => { const place = placesById.get(id); return <li key={id}><span>{place?.displayName ?? t("shortlist.removedPlace")}</span><button className="remove-button" onClick={() => remove(id)} aria-label={place ? t("shortlist.removeAria", { name: place.displayName }) : t("shortlist.unavailableAria")}>{t("common.remove")}</button></li>; })}</ul>
        <details className="inquiry-entry">
-         <summary>Request support for these places</summary>
+         <summary>{t("shortlist.requestSupport")}</summary>
          <InquiryForm geographyIds={ids} geographyLabels={places.map((place) => place.displayName)} />
        </details>
      </section>
