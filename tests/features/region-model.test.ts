@@ -18,5 +18,6 @@ test("does not report partial totals, mixed releases, duplicate or mixed geograp
   expect(regionMetric([profiles[0], { ...profiles[1], observations: [{ ...profiles[1].observations[0], datasetVersion: "different" }] }], "POP_AVG").value).toBeNull();
   expect(regionMetric([profiles[0], profiles[0]], "POP_AVG").value).toBeNull();
   expect(regionMetric([profiles[0], { ...profiles[1], level: "commune" }], "POP_AVG").value).toBeNull();
+  expect(compatibleRegionMetrics(regionMetric([profiles[0]], "POP_AVG"), regionMetric([{ ...profiles[1], geographyVersion: "older-geography" }], "POP_AVG"))).toBe(false);
   expect(compatibleRegionMetrics(regionMetric([profiles[0]], "POP_AVG"), regionMetric([{ ...profiles[1], observations: [{ ...profiles[1].observations[0], periodEnd: "different" }] }], "POP_AVG"))).toBe(false);
 });

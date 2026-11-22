@@ -12,9 +12,9 @@ const fillLayer = "province-fill";
 const airportLayer = "civil-airports";
 const baseFill = "#38615b";
 
-export function ProvinceMap({ selectedId, regionIds = [], onSelect, layer, infrastructure }: {
+export function ProvinceMap({ selectedId, regionIds = [], onSelect, layer, matchIds, infrastructure }: {
   selectedId: string | null; regionIds?: string[]; onSelect: (id: string) => void;
-  layer: StatisticalLayer | null; infrastructure: InfrastructureLayer | null;
+  layer: StatisticalLayer | null; matchIds: string[] | null; infrastructure: InfrastructureLayer | null;
 }) {
   const { t } = useI18n();
   const container = useRef<HTMLDivElement>(null);
@@ -41,7 +41,7 @@ export function ProvinceMap({ selectedId, regionIds = [], onSelect, layer, infra
         return;
       }
 
-      const { LngLatBounds, Map, NavigationControl, Popup, setWorkerUrl } = await import("maplibre-gl");
+      const { LngLatBounds, Map: MapView, NavigationControl, Popup, setWorkerUrl } = await import("maplibre-gl");
       if (request.signal.aborted || !container.current) return;
       setWorkerUrl(new URL("maplibre-gl/dist/maplibre-gl-worker.mjs", import.meta.url).toString());
       const bounds = new LngLatBounds();
@@ -52,7 +52,7 @@ export function ProvinceMap({ selectedId, regionIds = [], onSelect, layer, infra
         }
       }
 
-      const view = new Map({
+      const view = new MapView({
         container: container.current,
         style: {
           version: 8,
@@ -182,6 +182,17 @@ export function ProvinceMap({ selectedId, regionIds = [], onSelect, layer, infra
 
   useEffect(() => {
     const map = mapRef.current;
+    if (status !== "ready" || !map?.getLayer(fillLayer)) return;
+    if (!matchIds) {
+      map.setPaintProperty(fillLayer, "fill-opacity", 0.92);
+      return;
+    }
+    const expression: ExpressionSpecification = ["case", ["in", ["get", "id"], ["literal", matchIds]], 0.92, 0.12];
+    map.setPaintProperty(fillLayer, "fill-opacity", expression);
+  }, [matchIds, status]);
+
+  useEffect(() => {
+    const map = mapRef.current;
     if (status !== "ready" || !map?.getLayer(airportLayer)) return;
     if (infrastructure) map.getSource<GeoJSONSource>(airportLayer)?.setData(infrastructure.points);
     else popupRef.current?.remove();
@@ -189,7 +200,7 @@ export function ProvinceMap({ selectedId, regionIds = [], onSelect, layer, infra
   }, [infrastructure, status]);
 
   return <>
-    <div className="province-map" ref={container} aria-label={t("map.aria")} data-map-status={status} />
+    <div className="province-map" ref={container} role="region" aria-label={t("map.aria")} data-map-status={status} />
     {status !== "ready" && <p className="province-map-status" role="status">{
       status === "loading" ? t("map.loading")
         : status === "empty" ? t("map.empty")

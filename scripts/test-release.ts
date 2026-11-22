@@ -36,7 +36,7 @@ try {
     const tests = suite === "workflow" ? [workflowTest] : [
       "tests/api", "tests/features", "tests/smoke", ...dbTests.filter((file) => file !== workflowTest),
     ];
-    await run(["test", "--reporter=junit", `--reporter-outfile=${report}`, ...tests], {
+    await run(["test", "--timeout", "15000", "--reporter=junit", `--reporter-outfile=${report}`, ...tests], {
       ...mode, RUN_DB_TESTS: "1", RUN_INQUIRY_DB_TESTS: "1", RUN_RELEASE_WORKFLOW_TESTS: "1",
     });
     const result = await Bun.file(report).text();

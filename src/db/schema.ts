@@ -90,6 +90,25 @@ export const inquiryAudit = marketEntry.table("inquiry_audit", {
   check("inquiry_audit_note_length_check", sql`${table.note} is null or length(${table.note}) between 1 and 5000`),
 ]);
 
+export const inquiryNotifications = marketEntry.table("inquiry_notifications", {
+  notificationId: uuid("notification_id").defaultRandom().primaryKey(),
+  inquiryId: uuid("inquiry_id").notNull().references(() => investorInquiries.inquiryId, { onDelete: "cascade" }),
+  kind: text("kind").notNull(),
+  locale: text("locale").notNull().default("en"),
+  status: text("status").notNull().default("pending"),
+  attempts: integer("attempts").notNull().default(0),
+  lastError: text("last_error"),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  sentAt: timestamp("sent_at", { withTimezone: true }),
+}, (table) => [
+  unique("inquiry_notifications_inquiry_kind_key").on(table.inquiryId, table.kind),
+  index("inquiry_notifications_status_created_idx").on(table.status, table.createdAt),
+  check("inquiry_notifications_kind_check", sql`${table.kind} in ('acknowledgement', 'steward_alert')`),
+  check("inquiry_notifications_status_check", sql`${table.status} in ('pending', 'sent', 'failed', 'skipped')`),
+  check("inquiry_notifications_locale_check", sql`${table.locale} in ('vi', 'en')`),
+  check("inquiry_notifications_attempts_check", sql`${table.attempts} between 0 and 10`),
+]);
+
 const geometry = customType<{ data: string; driverData: string }>({
   dataType() {
     return "geometry";

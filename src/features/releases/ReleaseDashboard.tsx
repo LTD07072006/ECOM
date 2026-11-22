@@ -100,8 +100,8 @@ export function ReleaseDashboard() {
     <h1>{t("release.title")}</h1>
     {result ? <div className="release-toolbar">
       <p>{t("release.signedInAs")} <strong>{result.actor ?? result.role}</strong> · {result.role}</p>
-      <button disabled={busy} onClick={() => void request()}>{t("release.refresh")}</button>
-      <button disabled={busy} onClick={() => {
+      <button type="button" disabled={busy} onClick={() => void request()}>{t("release.refresh")}</button>
+      <button type="button" disabled={busy} onClick={() => {
         setResult(undefined);
         setToken("");
         setStatus(t("release.signedOut"));
@@ -146,10 +146,11 @@ export function ReleaseDashboard() {
           </details>
           {available && (batch.id === batchId && action ? <form onSubmit={submitAction}>
             <label htmlFor="release-note">{t("release.reviewNote")}</label>
+            {/* biome-ignore lint/a11y/noAutofocus: the review note is the only field in the confirmation form the user just opened */}
             <textarea id="release-note" name="note" required minLength={10} maxLength={500} autoFocus />
             <button type="submit" disabled={busy}>{t("release.confirm", { action: t(actionKeys[action]) })}</button>
             <button type="button" disabled={busy} onClick={() => setAction(undefined)}>{t("common.cancel")}</button>
-          </form> : <button disabled={busy} onClick={() => {
+          </form> : <button type="button" disabled={busy} onClick={() => {
             setBatchId(batch.id);
             setAction(available);
           }}>{t(batchActionKeys[available])}</button>)}

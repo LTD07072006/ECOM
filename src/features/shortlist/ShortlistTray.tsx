@@ -83,12 +83,12 @@ export function ShortlistTray() {
   if (!ids.length) return null;
   return <>
       <section className="shortlist-tray" aria-label={t("shortlist.savedPlaces")}>
-      <div className="shortlist-heading"><div><span className="map-label">{t("shortlist.savedPlaces")}</span><strong>{t("shortlist.savedCount", { count: places.length })}</strong></div><div className="shortlist-actions">{ids.length >= 2 ? <button className="text-button" onClick={() => setComparisonIds(selectForComparison(ids))}>{t("shortlist.compare", { count: Math.min(ids.length, 3) })}</button> : null}<button className="text-button" onClick={() => download("json")}>{t("shortlist.downloadJson")}</button><button className="text-button" onClick={() => download("csv")}>{t("shortlist.downloadCsv")}</button></div></div>
+      <div className="shortlist-heading"><div><span className="map-label">{t("shortlist.savedPlaces")}</span><strong>{t("shortlist.savedCount", { count: places.length })}</strong></div><div className="shortlist-actions">{ids.length >= 2 ? <button type="button" className="text-button" onClick={() => setComparisonIds(selectForComparison(ids))}>{t("shortlist.compare", { count: Math.min(ids.length, 3) })}</button> : null}<button type="button" className="text-button" onClick={() => download("json")}>{t("shortlist.downloadJson")}</button><button type="button" className="text-button" onClick={() => download("csv")}>{t("shortlist.downloadCsv")}</button></div></div>
       {error ? <p className="state-message">{error}</p> : null}
-       <ul>{ids.map((id) => { const place = placesById.get(id); return <li key={id}><span>{place?.displayName ?? t("shortlist.removedPlace")}</span><button className="remove-button" onClick={() => remove(id)} aria-label={place ? t("shortlist.removeAria", { name: place.displayName }) : t("shortlist.unavailableAria")}>{t("common.remove")}</button></li>; })}</ul>
+       <ul>{ids.map((id) => { const place = placesById.get(id); return <li key={id}><span>{place?.displayName ?? t("shortlist.removedPlace")}</span><button type="button" className="remove-button" onClick={() => remove(id)} aria-label={place ? t("shortlist.removeAria", { name: place.displayName }) : t("shortlist.unavailableAria")}>{t("common.remove")}</button></li>; })}</ul>
        <details className="inquiry-entry">
          <summary>{t("shortlist.requestSupport")}</summary>
-         <InquiryForm geographyIds={ids} geographyLabels={places.map((place) => place.displayName)} />
+         <InquiryForm key={ids.join(",")} geographyIds={ids} geographyLabels={places.map((place) => place.displayName)} />
        </details>
      </section>
     {comparisonIds ? <ComparisonPanel ids={comparisonIds} onClose={() => setComparisonIds(null)} /> : null}

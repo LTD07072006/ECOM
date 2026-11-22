@@ -31,5 +31,5 @@ export function ShortlistButton({ geo }: { geo: Geography }) {
       window.dispatchEvent(new CustomEvent("investor-shortlist-change", { detail: next }));
     } catch { setStorageError(true); }
   }
-  return <><button className="shortlist-button" onClick={toggle} disabled={storageError || (!saved && ids.length >= 20)}>{saved ? t("shortlist.saved") : ids.length >= 20 ? t("shortlist.full") : t("shortlist.save")}</button>{storageError && <p role="alert">{t("shortlist.storageUnavailable")}</p>}</>;
+  return <><button type="button" className="shortlist-button" onClick={toggle} disabled={storageError || (!saved && ids.length >= 20)}>{saved ? t("shortlist.saved") : ids.length >= 20 ? t("shortlist.full") : t("shortlist.save")}</button>{storageError && <p role="alert">{t("shortlist.storageUnavailable")}</p>}</>;
 }

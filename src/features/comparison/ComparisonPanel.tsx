@@ -14,25 +14,32 @@ type Comparison = {
 
 export function ComparisonPanel({ ids, onClose }: { ids: string[]; onClose: () => void }) {
   const { t, tc, locale, formatNumber } = useI18n();
-  const [profiles, setProfiles] = useState<Profile[]>([]);
-  const [comparison, setComparison] = useState<Comparison | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const key = ids.join(",");
+  const [result, setResult] = useState<{ key: string; data: { profiles: Profile[]; comparison: Comparison } } | { key: string; error: string }>();
 
   useEffect(() => {
-    let active = true;
-    fetch(`/api/geographies/compare?ids=${ids.join(",")}`)
+    const controller = new AbortController();
+    const key = ids.join(",");
+    setResult(undefined);
+    fetch(`/api/geographies/compare?ids=${encodeURIComponent(key)}`, { signal: controller.signal })
       .then(async (response) => {
         const body = await response.json();
         if (!response.ok) throw new Error(body.error ?? t("comparison.unavailable"));
         return body.data;
       })
-      .then((data) => { if (active) { setProfiles(data.profiles); setComparison(data.comparison); } })
-      .catch((reason: unknown) => { if (active) setError(reason instanceof Error ? reason.message : t("comparison.unavailable")); });
-    return () => { active = false; };
+      .then((data) => { if (!controller.signal.aborted) setResult({ key, data }); })
+      .catch((reason: unknown) => {
+        if (!controller.signal.aborted) setResult({ key, error: reason instanceof Error ? reason.message : t("comparison.unavailable") });
+      });
+    return () => controller.abort();
   }, [ids, t]);
 
+  const current = result?.key === key ? result : undefined;
+  const error = current && "error" in current ? current.error : null;
+  const { profiles, comparison } = current && "data" in current ? current.data : { profiles: [], comparison: null };
+
   return <section className="comparison-panel" aria-label={t("comparison.aria")}>
-    <div className="comparison-heading"><div><span className="map-label">{t("comparison.eyebrow")}</span><h2>{t("comparison.title")}</h2></div><button className="text-button" onClick={onClose}>{t("common.close")}</button></div>
+    <div className="comparison-heading"><div><span className="map-label">{t("comparison.eyebrow")}</span><h2>{t("comparison.title")}</h2></div><button type="button" className="text-button" onClick={onClose}>{t("common.close")}</button></div>
     {error ? <p className="state-message">{error}</p> : !comparison ? <p className="state-message">{t("comparison.loading")}</p> : <>
       {!comparison.compatible ? <p className="state-message">{tc(comparison.reasonCode, comparison.reason)}</p> : <p className="comparison-note">{t("comparison.note")}</p>}
       <div className="comparison-table-wrap"><table className="comparison-table"><thead><tr><th scope="col">{t("comparison.indicator")}</th>{profiles.map((profile) => <th scope="col" key={profile.id}>{profile.displayName}</th>)}</tr></thead><tbody>{comparison.rows.map((row) => <tr key={row.indicator}><th scope="row">{indicatorLabel(locale, row.indicator, row.label)}<small>{unitLabel(locale, row.unit)}</small>{row.reason && <small>{tc(row.reasonCode, row.reason)}</small>}</th>{row.values.map((value, index) => <td key={`${row.indicator}-${profiles[index]?.id ?? index}`}>{value === null ? <span className="unavailable">{t("common.unavailable")}</span> : formatNumber(value)}</td>)}</tr>)}</tbody></table></div>

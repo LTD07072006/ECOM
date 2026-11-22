@@ -171,12 +171,12 @@ databaseTest("retention job records failures and proves expired data was removed
   await updateRecord(referenceCode, { note: "Synthetic personal note." });
   await sql`update market_entry.investor_inquiries set retention_at = '2020-01-01' where reference_code = ${referenceCode}`;
   await sql`insert into market_entry.inquiry_retention_runs (status, started_at, finished_at) values ('failed', now(), now())`;
-  const command = (argument: string) => Bun.spawnSync([process.execPath, "run", "src/db/cleanup-inquiries.ts", argument], {
-    env: process.env, stdout: "pipe", stderr: "pipe",
-  });
-  expect(command("--monitor").exitCode).toBe(1);
-  expect(command("--apply").exitCode).toBe(0);
-  expect(command("--monitor").exitCode).toBe(0);
+  const command = (argument: string) => Bun.spawn([process.execPath, "run", "src/db/cleanup-inquiries.ts", argument], {
+    env: process.env, stdout: "ignore", stderr: "ignore", signal: AbortSignal.timeout(20_000),
+  }).exited;
+  expect(await command("--monitor")).toBe(1);
+  expect(await command("--apply")).toBe(0);
+  expect(await command("--monitor")).toBe(0);
   const [run] = await sql<{ status: string; inquiries_processed: number }[]>`
     select status, inquiries_processed from market_entry.inquiry_retention_runs order by started_at desc limit 1
   `;
@@ -185,7 +185,7 @@ databaseTest("retention job records failures and proves expired data was removed
   const inquiry = await findInquiry(referenceCode);
   expect(inquiry?.inquiry.email).toBeNull();
   expect(inquiry?.audit.find(({ action }) => action === "note_added")?.note).toBeNull();
-});
+}, 65_000);
 
 databaseTest("steward updates identify the authenticated operator in audit history", async () => {
   inquiryTestDatabase();

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { colorScale, indicatorGroups, missingColor, sourcesAreComparable, type MapLayers, type StatisticalLayer } from "./layers";
+import type { LayerFilterSummary } from "./filters";
 import { useI18n } from "../../lib/i18n/provider";
 import { indicatorLabel, qualityLabel, scopeLabel, unitLabel } from "../../lib/i18n/data-labels";
 import type { MessageKey } from "../../lib/i18n";
@@ -78,7 +79,8 @@ function SourceComparison({ layers, active, province }: {
   </details>;
 }
 
-export function LayerControls({ data, layer, setLayer, airports, setAirports, province, provinceCount }: {
+export function LayerControls({ data, layer, setLayer, airports, setAirports, province, provinceCount,
+  filterMin, filterMax, onFilterChange, onClearFilter, filterSummary, filterInvalid, filterInverted }: {
   data: MapLayers;
   layer: StatisticalLayer | null;
   setLayer: (id: string) => void;
@@ -86,8 +88,26 @@ export function LayerControls({ data, layer, setLayer, airports, setAirports, pr
   setAirports: (enabled: boolean) => void;
   province: { id: string; name: string } | null;
   provinceCount: number;
+  filterMin: string;
+  filterMax: string;
+  onFilterChange: (min: string, max: string) => void;
+  onClearFilter: () => void;
+  filterSummary: LayerFilterSummary | null;
+  filterInvalid: boolean;
+  filterInverted: boolean;
 }) {
   const { t, locale, formatNumber } = useI18n();
+  const [shareStatus, setShareStatus] = useState<"share.copied" | "share.failed" | null>(null);
+
+  async function copyLink() {
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      setShareStatus("share.copied");
+    } catch {
+      setShareStatus("share.failed");
+    }
+  }
+
   const groups = new Map<string, StatisticalLayer[]>();
   for (const item of data.indicators) {
     const name = groupMessageKey(item.indicator);
@@ -98,6 +118,10 @@ export function LayerControls({ data, layer, setLayer, airports, setAirports, pr
   const covered = layer ? Object.values(layer.values).filter((value) => value != null).length : 0;
   const details = layer && province ? layer.valueDetails?.[province.id] : undefined;
   return <section className="layer-controls" aria-label={t("layers.aria")}>
+    <div className="layer-share">
+      <button type="button" className="text-button" onClick={() => void copyLink()}>{t("share.copy")}</button>
+      {shareStatus && <span role="status">{t(shareStatus)}</span>}
+    </div>
     <label>{t("layers.colourBy")}
       <select value={layer?.id ?? ""} onChange={(event) => setLayer(event.target.value)}>
         <option value="">{t("layers.boundaries")}</option>
@@ -106,7 +130,25 @@ export function LayerControls({ data, layer, setLayer, airports, setAirports, pr
         </optgroup>)}
       </select>
     </label>
-    {layer && <div className="layer-legend" aria-label={t("layers.legendAria")}>
+    {layer && <div className="layer-filter" role="group" aria-label={t("layers.filterTitle")}>
+      <p className="map-label">{t("layers.filterTitle")}</p>
+      <div className="layer-filter-row">
+        <label>{t("layers.filterMin")}
+          <input type="number" inputMode="decimal" value={filterMin} onChange={(event) => onFilterChange(event.target.value, filterMax)} />
+        </label>
+        <label>{t("layers.filterMax")}
+          <input type="number" inputMode="decimal" value={filterMax} onChange={(event) => onFilterChange(filterMin, event.target.value)} />
+        </label>
+        {(filterMin !== "" || filterMax !== "") && <button type="button" className="text-button" onClick={onClearFilter}>{t("layers.filterClear")}</button>}
+      </div>
+      {filterInvalid ? <p role="alert">{t("layers.filterInvalid")}</p>
+        : filterInverted ? <p role="alert">{t("layers.filterRange")}</p>
+          : filterSummary?.active ? <p role="status">{t("layers.filterSummary", {
+            matched: filterSummary.matched, total: filterSummary.total, missing: filterSummary.missing,
+          })}</p>
+            : null}
+    </div>}
+    {layer && <div className="layer-legend" role="group" aria-label={t("layers.legendAria")}>
       <p>{t("layers.legendSummary", { unit: unitLabel(locale, layer.unit), period: layer.period, covered, total: provinceCount })}</p>
       <ul>
         {colorScale(layer).map((bin, index) => <li key={bin.color}>

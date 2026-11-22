@@ -22,7 +22,7 @@ export function GeoProfilePanel({ profile }: { profile: Profile }) {
     <p className="muted">{t("profile.contextOnly")}</p>
     <details className="inquiry-entry">
       <summary>{t("profile.requestSupport")}</summary>
-      <InquiryForm geographyIds={[profile.id]} geographyLabels={[profile.displayName]} />
+      <InquiryForm key={profile.id} geographyIds={[profile.id]} geographyLabels={[profile.displayName]} />
     </details>
     <h3>{t("profile.investorOverview")}</h3>
     {([ ["profile.market", ["population", "economy"]], ["profile.investment", ["investment"]], ["profile.workforce", ["workforce"]], ["profile.otherIndicators", ["other"]] ] as const).map(([title, groups]) => {
@@ -53,7 +53,7 @@ export function GeoProfilePanel({ profile }: { profile: Profile }) {
     </div>)}
       </section>;
     })}
-    <section className="profile-category"><h4>{t("profile.industrialParks")}</h4><p className="muted">{t("profile.parksUnavailable")}</p></section>
+    <section className="profile-category"><h4>{t("profile.industrialParks")}</h4><p className="muted">{t("profile.parksUnavailable")}</p><p><a href="https://investvietnam.gov.vn/en/industrial-zones.pl.html">{t("profile.parksExternal")}</a></p></section>
     <p><a href="/investor-guide">{t("guide.link")}</a></p>
     {profile.administrativeDataset && <details className="catalog-provenance">
       <summary>{t("profile.adminSource")}</summary>

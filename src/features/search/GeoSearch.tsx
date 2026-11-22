@@ -67,7 +67,7 @@ export function GeoSearch({ onSelect }: { onSelect: (profile: Profile) => void }
         setStatus("");
       }} maxLength={120} placeholder={t("search.placeholder")} autoComplete="off" />
       <p className="search-status" role="status">{status}</p>
-      {results.length > 0 ? <ul className="search-results">{results.map((place) => <li key={place.id}><button onClick={() => select(place)}><strong>{place.displayName}</strong><span>{t("search.resultMeta", {
+      {results.length > 0 ? <ul className="search-results">{results.map((place) => <li key={place.id}><button type="button" onClick={() => select(place)}><strong>{place.displayName}</strong><span>{t("search.resultMeta", {
         level: levelLabel(locale, place.level),
         parent: place.parentName ?? t("common.vietnam"),
       })}</span></button></li>)}</ul> : null}

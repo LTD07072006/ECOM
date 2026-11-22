@@ -8,7 +8,7 @@
     "dev": "bun --bun next dev",
     "build": "bun --bun next build",
     "start": "bun --bun next start",
-    "lint": "tsc --noEmit && biome lint src/features/releases/authorization.ts src/features/decision/model.ts src/lib",
+    "lint": "tsc --noEmit && biome lint src tests scripts",
     "format:check": "biome format src/features/releases/authorization.ts src/features/decision/model.ts tests/features/operator-identity.test.ts",
     "format": "biome format --write src/features/releases/authorization.ts src/features/decision/model.ts tests/features/operator-identity.test.ts",
     "test": "bun test tests/api tests/db tests/features tests/smoke",

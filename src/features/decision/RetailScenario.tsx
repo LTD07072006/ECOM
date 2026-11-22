@@ -111,6 +111,7 @@ export function RetailScenario({ provinces }: { provinces: Profile[] }) {
       </section>}
       <section aria-labelledby="evidence-title">
         <h2 id="evidence-title">{t("retail.evidenceTitle")}</h2>
+        <p>{t("retail.evidenceContext")} <a href="https://www.nso.gov.vn/tin-tuc-thong-ke/2026/07/thong-cao-bao-chi-ket-qua-khao-sat-muc-song-dan-cu-2025/">{t("retail.evidenceSource")}</a></p>
         <p role="status">{t("retail.evidenceNone")}</p>
         <p>{t("retail.evidenceRequirement")}</p>
       </section>
