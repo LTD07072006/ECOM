@@ -207,7 +207,7 @@ function formatInquiryCsvRow(row: InquiryReportRow) {
 
 export function inquiryRowsCsv(rows: InquiryReportRow[]) {
 	const lines = rows.map(formatInquiryCsvRow);
-	return `${[INQUIRY_CSV_HEADER, ...lines].join("\r\n")}\r\n`;
+	return `\uFEFF${[INQUIRY_CSV_HEADER, ...lines].join("\r\n")}\r\n`;
 }
 
 export function inquiryRowsCsvStream(
@@ -221,7 +221,7 @@ export function inquiryRowsCsvStream(
 		pull(controller) {
 			if (!sentHeader) {
 				sentHeader = true;
-				controller.enqueue(encoder.encode(`${INQUIRY_CSV_HEADER}\r\n`));
+				controller.enqueue(encoder.encode(`\uFEFF${INQUIRY_CSV_HEADER}\r\n`));
 				if (rows.length === 0) controller.close();
 				return;
 			}

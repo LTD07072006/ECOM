@@ -174,6 +174,11 @@ test("weekly trends compute ISO weeks in Asia/Ho_Chi_Minh including midnight and
 });
 
 test("streaming CSV export matches buffered inquiryRowsCsv output (ECOM-10)", async () => {
-	const streamed = await new Response(inquiryRowsCsvStream(rows, 1)).text();
-	expect(streamed).toBe(inquiryRowsCsv(rows));
+	for (const data of [rows, []]) {
+		const streamed = new Uint8Array(
+			await new Response(inquiryRowsCsvStream(data, 1)).arrayBuffer(),
+		);
+		expect(Array.from(streamed.slice(0, 3))).toEqual([0xef, 0xbb, 0xbf]);
+		expect(streamed).toEqual(new TextEncoder().encode(inquiryRowsCsv(data)));
+	}
 });
