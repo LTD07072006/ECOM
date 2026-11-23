@@ -897,3 +897,162 @@ export const surveyAggregates = marketEntry.table(
 		),
 	],
 );
+
+export const investmentIncentives = marketEntry.table(
+	"investment_incentives",
+	{
+		incentiveId: uuid("incentive_id").defaultRandom().primaryKey(),
+		code: text("code").notNull().unique(),
+		legalReferenceId: uuid("legal_reference_id")
+			.notNull()
+			.references(() => legalReferences.legalReferenceId),
+		sector: text("sector"),
+		geoId: uuid("geo_id").references(() => geoUnits.geoId),
+		zoneTier: text("zone_tier").notNull().default("standard"),
+		incentiveType: text("incentive_type").notNull(),
+		investorType: text("investor_type").notNull().default("foreign_investor"),
+		displayOrder: integer("display_order").notNull().default(0),
+		titleVi: text("title_vi").notNull(),
+		titleEn: text("title_en").notNull(),
+		headlineBenefitVi: text("headline_benefit_vi").notNull(),
+		headlineBenefitEn: text("headline_benefit_en").notNull(),
+		descriptionVi: text("description_vi").notNull(),
+		descriptionEn: text("description_en").notNull(),
+		eligibilityNoteVi: text("eligibility_note_vi").notNull(),
+		eligibilityNoteEn: text("eligibility_note_en").notNull(),
+		validFrom: date("valid_from").notNull(),
+		validTo: date("valid_to"),
+		status: text("status").notNull().default("published"),
+	},
+	(table) => [
+		index("investment_incentives_sector_geo_idx").on(
+			table.sector,
+			table.geoId,
+			table.status,
+		),
+		check(
+			"investment_incentives_sector_check",
+			sql`${table.sector} is null or ${table.sector} in ('retail', 'manufacturing', 'logistics', 'enterprise')`,
+		),
+		check(
+			"investment_incentives_zone_tier_check",
+			sql`${table.zoneTier} in ('special_difficult_area', 'difficult_area', 'economic_zone_hightech', 'industrial_park', 'sector_encouraged', 'standard')`,
+		),
+		check(
+			"investment_incentives_type_check",
+			sql`${table.incentiveType} in ('cit_rate_holiday', 'land_rent_exemption', 'import_duty_exemption', 'rd_accelerated_depreciation')`,
+		),
+		check(
+			"investment_incentives_status_check",
+			sql`${table.status} in ('draft', 'review', 'published', 'expired')`,
+		),
+		check(
+			"investment_incentives_valid_dates_check",
+			sql`${table.validTo} is null or ${table.validTo} >= ${table.validFrom}`,
+		),
+	],
+);
+
+export const investmentContacts = marketEntry.table(
+	"investment_contacts",
+	{
+		contactId: uuid("contact_id").defaultRandom().primaryKey(),
+		code: text("code").notNull().unique(),
+		organizationVi: text("organization_vi").notNull(),
+		organizationEn: text("organization_en").notNull(),
+		departmentVi: text("department_vi").notNull(),
+		departmentEn: text("department_en").notNull(),
+		sector: text("sector"),
+		geoId: uuid("geo_id").references(() => geoUnits.geoId),
+		provinceCode: text("province_code"),
+		publicEmail: text("public_email").notNull(),
+		officialUrl: text("official_url").notNull(),
+		routingPriority: integer("routing_priority").notNull().default(100),
+		status: text("status").notNull().default("active"),
+	},
+	(table) => [
+		index("investment_contacts_routing_idx").on(
+			table.provinceCode,
+			table.sector,
+			table.routingPriority,
+		),
+		check(
+			"investment_contacts_sector_check",
+			sql`${table.sector} is null or ${table.sector} in ('retail', 'manufacturing', 'logistics', 'enterprise')`,
+		),
+		check(
+			"investment_contacts_priority_check",
+			sql`${table.routingPriority} > 0`,
+		),
+		check(
+			"investment_contacts_url_check",
+			sql`${table.officialUrl} ~ '^https://'`,
+		),
+		check(
+			"investment_contacts_status_check",
+			sql`${table.status} in ('active', 'inactive')`,
+		),
+	],
+);
+
+export const investmentOpportunities = marketEntry.table(
+	"investment_opportunities",
+	{
+		opportunityId: uuid("opportunity_id").defaultRandom().primaryKey(),
+		code: text("code").notNull().unique(),
+		geoId: uuid("geo_id").references(() => geoUnits.geoId),
+		provinceCode: text("province_code").notNull(),
+		sector: text("sector").notNull(),
+		opportunityType: text("opportunity_type").notNull(),
+		titleVi: text("title_vi").notNull(),
+		titleEn: text("title_en").notNull(),
+		descriptionVi: text("description_vi").notNull(),
+		descriptionEn: text("description_en").notNull(),
+		totalAreaHa: numeric("total_area_ha"),
+		availableAreaHa: numeric("available_area_ha"),
+		occupancyPercent: numeric("occupancy_percent"),
+		investmentMinUsdM: numeric("investment_min_usd_m"),
+		investmentMaxUsdM: numeric("investment_max_usd_m"),
+		powerCapacityMw: numeric("power_capacity_mw"),
+		wastewaterM3Day: numeric("wastewater_m3_day"),
+		readinessStatus: text("readiness_status").notNull().default("available"),
+		legalStatus: text("legal_status").notNull().default("source_recorded"),
+		officialUrl: text("official_url").notNull(),
+		status: text("status").notNull().default("published"),
+	},
+	(table) => [
+		index("investment_opportunities_prov_sector_idx").on(
+			table.provinceCode,
+			table.sector,
+			table.status,
+		),
+		check(
+			"investment_opportunities_sector_check",
+			sql`${table.sector} in ('retail', 'manufacturing', 'logistics', 'enterprise')`,
+		),
+		check(
+			"investment_opportunities_type_check",
+			sql`${table.opportunityType} in ('industrial_park', 'high_tech_park', 'logistics_hub', 'project')`,
+		),
+		check(
+			"investment_opportunities_occupancy_check",
+			sql`${table.occupancyPercent} is null or (${table.occupancyPercent} >= 0 and ${table.occupancyPercent} <= 100)`,
+		),
+		check(
+			"investment_opportunities_readiness_check",
+			sql`${table.readinessStatus} in ('early_stage', 'available', 'under_review', 'closed')`,
+		),
+		check(
+			"investment_opportunities_legal_check",
+			sql`${table.legalStatus} in ('not_reviewed', 'source_recorded', 'needs_check', 'verified_separately')`,
+		),
+		check(
+			"investment_opportunities_status_check",
+			sql`${table.status} in ('draft', 'review', 'published', 'expired', 'archived')`,
+		),
+		check(
+			"investment_opportunities_url_check",
+			sql`${table.officialUrl} ~ '^https://'`,
+		),
+	],
+);

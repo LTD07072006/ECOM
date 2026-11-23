@@ -1,5 +1,39 @@
 import type { ObservationPoint } from "../geography/types";
 
+/** History is already partitioned by source, indicator, unit and scope in the repository. */
+export function calculateCagr(
+	history: readonly ObservationPoint[],
+): number | null {
+	const ordered = [...history].sort((a, b) =>
+		a.periodEnd.localeCompare(b.periodEnd),
+	);
+	if (ordered.length < 2) return null;
+	const first = ordered[0];
+	const last = ordered[ordered.length - 1];
+	const startYear = Number(first.periodStart.slice(0, 4));
+	if (
+		!ordered.every((point, index) => {
+			const year = startYear + index;
+			return (
+				point.periodStart === `${year}-01-01` &&
+				point.periodEnd === `${year}-12-31` &&
+				point.quality !== "unavailable" &&
+				point.value !== null &&
+				Number.isFinite(point.value) &&
+				point.value > 0
+			);
+		}) ||
+		first.value === null ||
+		last.value === null
+	)
+		return null;
+	const result =
+		Math.expm1(
+			(Math.log(last.value) - Math.log(first.value)) / (ordered.length - 1),
+		) * 100;
+	return Number.isFinite(result) ? result : null;
+}
+
 export type UsablePoint = {
 	period: string;
 	periodEnd: string;

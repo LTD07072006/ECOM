@@ -269,6 +269,29 @@ paths:
         '400': {$ref: '#/components/responses/BadRequest'}
         '404': {$ref: '#/components/responses/NotFound'}
         '503': {$ref: '#/components/responses/Unavailable'}
+  /api/geographies/{geoId}/districts:
+    get:
+      summary: List current communes and advisory investment areas for a published province, or fetch one commune boundary
+      parameters:
+        - {name: geoId, in: path, required: true, schema: {type: string, format: uuid}}
+        - {name: unit, in: query, schema: {type: string, format: uuid}, description: Commune within the selected province. Returns null if no public boundary is available.}
+      responses:
+        '200':
+          description: Published catalogue children and advisory profiles, or the selected public GeoJSON Polygon or MultiPolygon (null when unavailable).
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    oneOf:
+                      - type: array
+                        items: {type: object, required: [id, code, provinceCode, scope, name, demographics]}
+                      - {type: object, nullable: true, required: [type, coordinates]}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '503': {$ref: '#/components/responses/Unavailable'}
   /api/geographies/compare:
     get:
       summary: Compare two or three published places using coherent common cohorts
@@ -314,6 +337,95 @@ paths:
             application/json:
               schema: {$ref: '#/components/schemas/SurveyEvidenceResponse'}
         '400': {$ref: '#/components/responses/BadRequest'}
+  /api/decision/incentives:
+    get:
+      summary: Query investment incentives and province zone tiers by sector and selected provinces
+      parameters:
+        - {name: sector, in: query, required: false, schema: {type: string, enum: [retail, manufacturing, logistics, enterprise]}}
+        - {name: geoIds, in: query, required: false, schema: {type: string}, description: Optional comma-separated province UUIDs (up to 10).}
+      responses:
+        '200':
+          description: Advisory sector and location investment incentives with legal references.
+          content:
+            application/json:
+              schema: {type: object}
+        '400': {$ref: '#/components/responses/BadRequest'}
+  /api/opportunities:
+    get:
+      summary: Query featured industrial parks and FDI investment opportunities by sector and province
+      parameters:
+        - {name: sector, in: query, required: false, schema: {type: string, enum: [retail, manufacturing, logistics, enterprise]}}
+        - {name: provinceCodes, in: query, required: false, schema: {type: string}, description: Comma-separated 2-digit province codes.}
+      responses:
+        '200':
+          description: Matching industrial parks and investment opportunity profiles.
+          content:
+            application/json:
+              schema: {type: object}
+        '400': {$ref: '#/components/responses/BadRequest'}
+  /api/internal/surveys:
+    get:
+      summary: List all customer needs survey studies across draft, published, and retired states
+      security: [{operatorToken: []}, {cookieAuth: []}]
+      responses:
+        '200':
+          description: Survey study list.
+          content:
+            application/json:
+              schema: {type: object}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+    post:
+      summary: Create or update a customer needs survey study with questions and provincial aggregates
+      security: [{operatorToken: []}, {cookieAuth: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {type: object}
+      responses:
+        '201':
+          description: Survey study stored.
+          content:
+            application/json:
+              schema: {type: object}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+    patch:
+      summary: Publish or retire a customer needs survey study
+      security: [{operatorToken: []}, {cookieAuth: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [studyId, publicationStatus]
+              properties:
+                studyId: {type: string, format: uuid}
+                publicationStatus: {type: string, enum: [draft, published, retired]}
+      responses:
+        '200':
+          description: Survey status updated.
+          content:
+            application/json:
+              schema: {type: object}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '404': {$ref: '#/components/responses/NotFound'}
+  /api/map/proximity:
+    get:
+      summary: Filter provinces within a PostGIS ST_DWithin radius (km) of an infrastructure type
+      parameters:
+        - {name: kind, in: query, required: true, schema: {type: string, enum: [airport, seaport, industrial_park, icd, expressway_node]}}
+        - {name: maxKm, in: query, required: true, schema: {type: number, minimum: 1, maximum: 1500}}
+      responses:
+        '200':
+          description: Matched province IDs, nearest facility distances (km), and reference POIs.
+          content:
+            application/json:
+              schema: {type: object}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '503': {$ref: '#/components/responses/Unavailable'}
   /api/map/provinces:
     get:
       summary: Published provincial boundaries (GeoJSON)

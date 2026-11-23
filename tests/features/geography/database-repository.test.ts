@@ -198,6 +198,20 @@ databaseTest(
 		expect(comparable.availablePeriods).toContain("2025");
 		expect(comparable.geographies).toHaveLength(2);
 		expect(comparable.observations.length).toBeGreaterThan(0);
+		const historical = await loadComparableDatabaseCatalog(ids, "2025");
+		expect(historical.observations.length).toBeGreaterThan(0);
+		for (const observation of historical.observations) {
+			expect(observation.history?.at(-1)).toMatchObject({
+				periodEnd: observation.periodEnd,
+				value: observation.value,
+				quality: observation.quality,
+			});
+			expect(
+				observation.history?.every(
+					(point) => point.periodEnd <= observation.periodEnd,
+				),
+			).toBe(true);
+		}
 
 		const studies = await loadPublishedSurveyStudies("retail", ids);
 		expect(Array.isArray(studies)).toBe(true);

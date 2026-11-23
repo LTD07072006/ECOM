@@ -133,7 +133,7 @@ export function InquiryFilters({
 									onClick={() => onAddGeography(option)}
 								>
 									{option.displayName || option.name} ·{" "}
-									{levelLabel(locale, option.level)} ({option.code})
+									{levelLabel(locale, option.level, option)} ({option.code})
 								</button>
 							</li>
 						))}

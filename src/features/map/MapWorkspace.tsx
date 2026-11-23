@@ -5,7 +5,7 @@ import { GeoSearch } from "../search/GeoSearch";
 import { GeoProfilePanel } from "../profile/GeoProfilePanel";
 import { ShortlistButton } from "../shortlist/ShortlistButton";
 import { ShortlistTray } from "../shortlist/ShortlistTray";
-import { ProvinceMap } from "./ProvinceMap";
+import { ProvinceMap, type FocusedMicroLocation } from "./ProvinceMap";
 import { LayerControls } from "./LayerControls";
 import {
 	filterInfrastructureByKinds,
@@ -13,6 +13,15 @@ import {
 	type MapLayers,
 	type ProvinceInfrastructureItem,
 } from "./layers";
+import {
+	getProvinceMicroLocations,
+	toProvinceMicroLocationGeoJson,
+	toProvinceRoadNetworkGeoJson,
+	toProvinceZoneFootprintsGeoJson,
+	type MicroLocationCategory,
+} from "./province-detail-locations";
+import type { ProvinceProximityMatch } from "./proximity";
+import type { ProvinceDistrictProfile } from "./province-districts";
 import type { Profile } from "../geography/types";
 import { RegionPanel, type RegionIds } from "../regions/RegionPanel";
 import { readFilterInputs, summarizeLayerValues } from "./filters";
@@ -34,7 +43,7 @@ type Coverage = {
 type Props = { coverage: Coverage };
 
 export function MapWorkspace({ coverage }: Props) {
-	const { t } = useI18n();
+	const { t, locale } = useI18n();
 	const [profile, setProfile] = useState<Profile | null>(null);
 	const [requestedPlace, setRequestedPlace] = useState("");
 	const [profileError, setProfileError] = useState(false);
@@ -52,9 +61,32 @@ export function MapWorkspace({ coverage }: Props) {
 	}, []);
 	const [filterMin, setFilterMin] = useState("");
 	const [filterMax, setFilterMax] = useState("");
+	const [proximityKind, setProximityKind] = useState<"" | InfrastructureKind>(
+		"",
+	);
+	const [proximityKm, setProximityKm] = useState("100");
+	const [proximityResult, setProximityResult] = useState<{
+		matchedProvinceIds: string[];
+		matchedCount: number;
+		totalProvinces: number;
+		provinces: ProvinceProximityMatch[];
+	} | null>(null);
+	const [microCategoryFilter, setMicroCategoryFilter] = useState<
+		"all" | MicroLocationCategory
+	>("all");
+	const [focusedLocation, setFocusedLocation] =
+		useState<FocusedMicroLocation | null>(null);
+	const [detailExpanded, setDetailExpanded] = useState(false);
+	const [district, setDistrict] = useState<ProvinceDistrictProfile | null>(
+		null,
+	);
 	const [regionMode, setRegionMode] = useState(false);
 	const [activeRegion, setActiveRegion] = useState(0);
 	const [regions, setRegions] = useState<RegionIds>([[], []]);
+	const highlightedRegions = useMemo(
+		() => (regionMode ? regions.flat() : []),
+		[regionMode, regions],
+	);
 	const toggleRegion = useCallback(
 		(id: string) => {
 			setRegions((current) => {
@@ -89,6 +121,8 @@ export function MapWorkspace({ coverage }: Props) {
 	}, []);
 
 	const openProfile = useCallback((id: string) => {
+		setDistrict(null);
+		setFocusedLocation(null);
 		pending.current?.abort();
 		const request = new AbortController();
 		pending.current = request;
@@ -164,6 +198,42 @@ export function MapWorkspace({ coverage }: Props) {
 							: (profile.parentName ?? t("common.vietnam")),
 				}
 			: null;
+	useEffect(() => {
+		const km = Number(proximityKm);
+		if (!proximityKind || !Number.isFinite(km) || km < 1 || km > 1500) {
+			setProximityResult(null);
+			return;
+		}
+		const controller = new AbortController();
+		const params = new URLSearchParams({
+			kind: proximityKind,
+			maxKm: String(Math.round(km)),
+		});
+		void fetch(`/api/map/proximity?${params}`, { signal: controller.signal })
+			.then(async (response) => {
+				if (!response.ok) throw new Error("Proximity query failed");
+				const body: {
+					data: {
+						matchedProvinceIds: string[];
+						provinces: ProvinceProximityMatch[];
+					};
+					meta: { matchedCount: number; totalProvinces: number };
+				} = await response.json();
+				if (!controller.signal.aborted) {
+					setProximityResult({
+						matchedProvinceIds: body.data.matchedProvinceIds,
+						provinces: body.data.provinces,
+						matchedCount: body.meta.matchedCount,
+						totalProvinces: body.meta.totalProvinces,
+					});
+				}
+			})
+			.catch(() => {
+				if (!controller.signal.aborted) setProximityResult(null);
+			});
+		return () => controller.abort();
+	}, [proximityKind, proximityKm]);
+
 	const filterInputs = readFilterInputs(filterMin, filterMax);
 	const filterReady = !filterInputs.invalid && !filterInputs.inverted;
 	const filterSummary = useMemo(
@@ -176,8 +246,16 @@ export function MapWorkspace({ coverage }: Props) {
 				: null,
 		[activeLayer, filterMin, filterMax],
 	);
-	const matchIds =
+	const layerMatchIds =
 		filterSummary?.active && filterReady ? filterSummary.matchedIds : null;
+	const matchIds = useMemo(() => {
+		const proxIds = proximityResult?.matchedProvinceIds ?? null;
+		if (layerMatchIds && proxIds) {
+			const proxSet = new Set(proxIds);
+			return layerMatchIds.filter((id) => proxSet.has(id));
+		}
+		return layerMatchIds ?? proxIds;
+	}, [layerMatchIds, proximityResult]);
 
 	useEffect(() => {
 		if (!restored) return;
@@ -255,20 +333,61 @@ export function MapWorkspace({ coverage }: Props) {
 				: [],
 		[layers, selectedProvince],
 	);
+	const provinceMicroData = useMemo(() => {
+		if (!profile || regionMode) return null;
+		const allLocations = getProvinceMicroLocations(
+			profile,
+			provinceInfrastructure,
+		);
+		const filtered = district
+			? allLocations.filter((item) =>
+					district.linkedMicroLocationIds.includes(item.id),
+				)
+			: microCategoryFilter === "all"
+				? allLocations
+				: allLocations.filter((item) => item.category === microCategoryFilter);
+		return {
+			points: toProvinceMicroLocationGeoJson(filtered, locale),
+			zones: toProvinceZoneFootprintsGeoJson(filtered, locale),
+			roads: toProvinceRoadNetworkGeoJson(profile, filtered, locale),
+		};
+	}, [
+		profile,
+		regionMode,
+		provinceInfrastructure,
+		microCategoryFilter,
+		district,
+		locale,
+	]);
+
+	const resetProvinceSelection = useCallback(() => {
+		pending.current?.abort();
+		setProfile(null);
+		setRequestedPlace("");
+		setFocusedLocation(null);
+		setDistrict(null);
+		setDetailExpanded(false);
+	}, []);
 
 	return (
 		<section
-			className="workspace database-map-workspace"
+			className={`workspace database-map-workspace${detailExpanded && profile ? " detail-expanded" : ""}`}
 			aria-label={t("map.workspace")}
 		>
 			<div className="map-stage database-map-stage">
 				<ProvinceMap
 					selectedId={regionMode ? null : selectedProvince}
-					regionIds={regionMode ? regions.flat() : []}
+					regionIds={highlightedRegions}
 					onSelect={regionMode ? toggleRegion : openProfile}
 					layer={activeLayer}
 					matchIds={matchIds}
 					infrastructure={visibleInfrastructure}
+					microLocations={provinceMicroData?.points ?? null}
+					zoneFootprints={provinceMicroData?.zones ?? null}
+					roadNetwork={provinceMicroData?.roads ?? null}
+					focusedLocation={focusedLocation}
+					district={regionMode ? null : district}
+					onResetProvince={resetProvinceSelection}
 				/>
 			</div>
 			<div className="workspace-panel">
@@ -336,6 +455,13 @@ export function MapWorkspace({ coverage }: Props) {
 						filterSummary={filterSummary}
 						filterInvalid={filterInputs.invalid}
 						filterInverted={filterInputs.inverted}
+						proximityKind={proximityKind}
+						proximityKm={proximityKm}
+						proximityResult={proximityResult}
+						onProximityChange={(kind, maxKm) => {
+							setProximityKind(kind);
+							setProximityKm(maxKm);
+						}}
 					/>
 				)}
 				{profileError && (
@@ -345,8 +471,17 @@ export function MapWorkspace({ coverage }: Props) {
 				)}
 				{profile ? (
 					<GeoProfilePanel
+						key={profile.id}
 						profile={profile}
 						infrastructure={provinceInfrastructure}
+						activeCategoryFilter={microCategoryFilter}
+						onCategoryFilterChange={setMicroCategoryFilter}
+						onFocusMicroLocation={setFocusedLocation}
+						onDetailModeChange={setDetailExpanded}
+						onDistrictSelect={(item) => {
+							setFocusedLocation(null);
+							setDistrict(item);
+						}}
 					/>
 				) : (
 					<div className="profile-empty">

@@ -6,6 +6,7 @@ import type { Profile, Geography } from "../geography/types";
 import { indicatorGroups } from "../map/layers";
 import { useI18n } from "../../lib/i18n/provider";
 import {
+	formalPlaceName,
 	indicatorLabel,
 	levelLabel,
 	qualityLabel,
@@ -188,10 +189,10 @@ export function GeoSearch({
 					{results.map((place) => (
 						<li key={place.id}>
 							<button type="button" onClick={() => select(place)}>
-								<strong>{place.displayName}</strong>
+								<strong>{formalPlaceName(locale, place)}</strong>
 								<span>
 									{t("search.resultMeta", {
-										level: levelLabel(locale, place.level),
+										level: levelLabel(locale, place.level, place),
 										parent: place.parentName ?? t("common.vietnam"),
 									})}
 								</span>

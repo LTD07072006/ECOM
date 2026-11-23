@@ -5,7 +5,7 @@
 - **Canonical Runtime Schema:** [src/db/schema.ts](../src/db/schema.ts) + [drizzle/](../drizzle/) (applied via `bun run db:migrate`)
 - **Prototype Reference SQL:** [database/market-entry/](../database/market-entry/) *(design reference only — do not run against production)*
 
-## 1. Runtime Drizzle Tables (25) vs Prototype SQL Design
+## 1. Runtime Drizzle Tables (28) vs Prototype SQL Design
 
 | Runtime Table (`market_entry.*`) | Migration | Active Feature(s) | Prototype SQL Equivalent |
 | --- | --- | --- | --- |
@@ -16,7 +16,7 @@
 | `geo_boundaries` | `0001` | 34 provincial PostGIS polygons (`SRID 4326`) | `geo_boundaries` |
 | `indicator_definitions` | `0000` | Indicator metadata, units, `score_eligible` | `indicator_definitions` |
 | `observations` | `0000` | Statistical values, quality, time-series history | `observations` |
-| `infrastructure_pois` | `0002`, `0010` | Airports, seaports, industrial parks, ICDs, expressways | `infrastructure_pois` |
+| `infrastructure_pois` | `0002`, `0010` | Airports, seaports, industrial parks, ICDs, expressways + PostGIS `ST_DWithin` proximity | `infrastructure_pois` |
 | `release_batches`, `release_members`, `release_audit` | `0003` | Dual-role reviewer/steward release workflow | Governance extension |
 | `api_quotas`, `api_client_quotas` | `0003`, `0007` | Per-client HMAC quotas + global emergency ceilings | Operations extension |
 | `investor_inquiries`, `inquiry_audit` | `0004`, `0007` | Public inquiry submission, consent, status lookup, steward triage | `investment_inquiries` |
@@ -24,7 +24,10 @@
 | `inquiry_retention_runs` | `0008` | Scheduled retention cleanup proof & monitoring | Privacy extension |
 | `inquiry_report_snapshots`, `inquiry_report_snapshot_audit`, `inquiry_snapshot_privacy_key` | `0005`–`0007` | Immutable weekly snapshots, HMAC filter protection, diff/export audit | Reporting extension |
 | `legal_references`, `entry_requirements` | `0012` | Sector-specific advisory legal readiness checklist (`ECOM-17`) | `legal_references`, `entry_requirements` |
-| `survey_studies`, `survey_questions`, `survey_aggregates` | `0013` | Customer needs/wants evidence contract (`F04/T04`, `ECOM-12`) | `survey_studies`, `survey_questions`, `survey_aggregates` |
+| `survey_studies`, `survey_questions`, `survey_aggregates` | `0013` | Customer needs/wants evidence contract & Steward survey management (`/internal/surveys`) | `survey_studies`, `survey_questions`, `survey_aggregates` |
+| `investment_incentives` | `0014` | Sector × Location investment incentives lookup (`GET /api/decision/incentives`) | `investment_incentives` |
+| `investment_opportunities` | `0015` | Industrial park & FDI project micro-profiles (`GET /api/opportunities`) | `investment_opportunities` |
+| `investment_contacts` | `0015` | Provincial IPA & Industrial Zone Authority inquiry routing | `investment_contacts` |
 
 ### Prototype-Only Entities (Not in B-Lite Runtime)
 Full multi-tenant CRM/auth tables in `database/market-entry/` (`users`, `organizations`, `roles`, `investment_opportunities`, `investment_incentives`, `investment_contacts`, `investor_profiles`, `shortlist_items`, `conversion_events`, `decision_scenarios`) remain design references for future phases beyond B-Lite.

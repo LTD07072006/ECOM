@@ -3,19 +3,29 @@ import { getProfile } from "../../features/geography/domain";
 import { RetailScenario } from "../../features/decision/RetailScenario";
 import { decisionIndicatorCodes } from "../../features/decision/model";
 import { loadLegalChecklistBySector } from "../../features/decision/legal-readiness-repository";
+import { loadInvestmentIncentives } from "../../features/decision/investment-incentives-repository";
+import { loadInvestmentOpportunities } from "../../features/decision/investment-opportunities-repository";
 import { loadPublishedSurveyStudies } from "../../features/decision/survey-evidence-repository";
 import { getI18n } from "../../lib/i18n/server";
 
 export const dynamic = "force-dynamic";
 
 export default async function DecisionPage() {
-	const [{ t }, catalog, legalChecklistBySector, surveyStudies] =
-		await Promise.all([
-			getI18n(),
-			loadPublicCatalog(undefined, true, "province"),
-			loadLegalChecklistBySector(),
-			loadPublishedSurveyStudies(),
-		]);
+	const [
+		{ t },
+		catalog,
+		legalChecklistBySector,
+		surveyStudies,
+		investmentIncentives,
+		investmentOpportunities,
+	] = await Promise.all([
+		getI18n(),
+		loadPublicCatalog(undefined, true, "province"),
+		loadLegalChecklistBySector(),
+		loadPublishedSurveyStudies(),
+		loadInvestmentIncentives(),
+		loadInvestmentOpportunities(),
+	]);
 	const provinces = catalog.geographies
 		.filter((place) => place.level === "province")
 		.map((place) => getProfile(catalog, place.id))
@@ -39,6 +49,8 @@ export default async function DecisionPage() {
 					provinces={provinces}
 					legalChecklistBySector={legalChecklistBySector}
 					surveyStudies={surveyStudies}
+					investmentIncentives={investmentIncentives}
+					investmentOpportunities={investmentOpportunities}
 				/>
 			)}
 		</main>

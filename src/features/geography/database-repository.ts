@@ -125,6 +125,7 @@ export async function loadDatabaseCatalog(
 	geoIds?: string[],
 	includeObservations = true,
 	level?: Geography["level"],
+	parentId?: string,
 ): Promise<Catalog> {
 	return databasePool().begin(
 		"isolation level repeatable read read only",
@@ -167,6 +168,7 @@ export async function loadDatabaseCatalog(
           and (geo.valid_to is null or geo.valid_to >= current_date)
           and (${geoIds ?? null}::uuid[] is null or geo.geo_id = any(${geoIds ?? null}::uuid[]))
           and (${level ?? null}::text is null or geo.level = ${level ?? null})
+          and (${parentId ?? null}::uuid is null or geo.parent_geo_id = ${parentId ?? null})
         order by case geo.level when 'country' then 0 when 'province' then 1 else 2 end, geo.display_name, geo.admin_code
       `;
 
@@ -309,6 +311,32 @@ export async function loadDatabaseCatalog(
 					};
 				}),
 			};
+		},
+	);
+}
+
+export async function loadPublishedCommuneBoundary(
+	provinceId: string,
+	communeId: string,
+) {
+	return databasePool().begin(
+		"isolation level repeatable read read only",
+		async (sql) => {
+			const release = await loadPublishedGeography(sql);
+			if (!release) return null;
+			const [row] = await sql<{ geometry: Polygon | MultiPolygon }[]>`
+			select ST_AsGeoJSON(boundary.geom, 7)::json as geometry
+			from market_entry.geo_boundaries boundary
+			join market_entry.geo_units geo on geo.geo_id = boundary.geo_id
+			join market_entry.dataset_versions dataset on dataset.dataset_version_id = boundary.dataset_version_id
+			join market_entry.source_registry source on source.source_id = dataset.source_id
+			where geo.geo_id = ${communeId} and geo.parent_geo_id = ${provinceId}
+			  and geo.level = 'commune' and geo.geography_version_id = ${release.geography_version_id}
+			  and geo.valid_from <= current_date and (geo.valid_to is null or geo.valid_to >= current_date)
+			  and ${publicReleaseConditions(sql)}
+			order by dataset.published_at desc, dataset.dataset_version_id limit 1
+		`;
+			return row?.geometry ?? null;
 		},
 	);
 }
@@ -511,7 +539,9 @@ export async function loadComparableDatabaseCatalog(
         order by max(observation.period_end) desc, observation.period_label desc
       `;
 
-			const observations = await sql<ObservationRow[]>`
+			const observations = await sql<
+				(ObservationRow & { history: Observation["history"] })[]
+			>`
         with eligible as (
           select observation.observation_id, observation.geo_id, indicator.indicator_id, indicator.code as indicator, indicator.label,
             indicator.description as definition, indicator.score_eligible, observation.value_numeric, observation.unit,
@@ -544,11 +574,34 @@ export async function loadComparableDatabaseCatalog(
             period_end desc,
             published_at desc,
             dataset_id, period_start desc, scope, unit
+        ), selected as (
+          select distinct on (e.geo_id, e.indicator_id) e.* from eligible e
+          join chosen c on c.indicator_id = e.indicator_id and c.level = e.level and c.dataset_id = e.dataset_id
+            and c.period_start = e.period_start and c.period_end = e.period_end and c.scope = e.scope and c.unit = e.unit
+          order by e.geo_id, e.indicator_id, e.observation_id
         )
-        select distinct on (e.geo_id, e.indicator_id) e.* from eligible e
-        join chosen c on c.indicator_id = e.indicator_id and c.level = e.level and c.dataset_id = e.dataset_id
-          and c.period_start = e.period_start and c.period_end = e.period_end and c.scope = e.scope and c.unit = e.unit
-        order by e.geo_id, e.indicator_id, e.observation_id
+        select e.*, coalesce(trend.history, '[]'::json) as history
+        from selected e
+        left join lateral (
+          select json_agg(json_build_object(
+            'period', h.period_label, 'periodStart', h.period_start, 'periodEnd', h.period_end,
+            'value', h.value_numeric, 'quality', h.quality_status, 'datasetVersion', h.version_label
+          ) order by h.period_end) as history
+          from (
+            select distinct on (o.period_end) o.period_label, o.period_start, o.period_end,
+              o.value_numeric, o.quality_status, dataset.version_label
+            from market_entry.observations o
+            join market_entry.dataset_versions dataset on dataset.dataset_version_id = o.dataset_version_id
+            join market_entry.source_registry source on source.source_id = dataset.source_id
+            where o.geo_id = e.geo_id and o.indicator_id = e.indicator_id and o.source_id = e.source_id
+              and o.unit = e.unit and o.scope = e.scope
+              and o.period_end <= e.period_end::date and ${publicReleaseConditions(sql)}
+            order by o.period_end desc, (o.observation_id = e.observation_id) desc,
+              dataset.published_at desc, o.observation_id
+            limit 12
+          ) h
+        ) trend on true
+        order by e.geo_id, e.indicator_id
       `;
 
 			const releaseDataset = toDataset(release);
@@ -576,6 +629,7 @@ export async function loadComparableDatabaseCatalog(
 				observations: observations.map((row) => {
 					const rowDataset = toDataset(row);
 					return {
+						history: row.history,
 						id: row.observation_id,
 						geoId: row.geo_id,
 						indicator: row.indicator,

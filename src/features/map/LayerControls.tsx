@@ -13,6 +13,7 @@ import {
 	type StatisticalLayer,
 } from "./layers";
 import type { LayerFilterSummary } from "./filters";
+import type { ProvinceProximityMatch } from "./proximity";
 import { useI18n } from "../../lib/i18n/provider";
 import {
 	indicatorLabel,
@@ -190,6 +191,10 @@ export function LayerControls({
 	filterSummary,
 	filterInvalid,
 	filterInverted,
+	proximityKind = "",
+	proximityKm = "100",
+	proximityResult = null,
+	onProximityChange,
 }: {
 	data: MapLayers;
 	layer: StatisticalLayer | null;
@@ -207,6 +212,14 @@ export function LayerControls({
 	filterSummary: LayerFilterSummary | null;
 	filterInvalid: boolean;
 	filterInverted: boolean;
+	proximityKind?: "" | InfrastructureKind;
+	proximityKm?: string;
+	proximityResult?: {
+		matchedCount: number;
+		totalProvinces: number;
+		provinces: ProvinceProximityMatch[];
+	} | null;
+	onProximityChange?: (kind: "" | InfrastructureKind, maxKm: string) => void;
 }) {
 	const { t, locale, formatNumber } = useI18n();
 	const [shareStatus, setShareStatus] = useState<
@@ -449,6 +462,89 @@ export function LayerControls({
 						</div>
 					);
 				})()}
+			{onProximityChange && (
+				<div
+					className="layer-filter proximity-filter"
+					role="group"
+					aria-label={t("proximity.title")}
+				>
+					<p className="map-label">{t("proximity.title")}</p>
+					<div className="layer-filter-row">
+						<label>
+							{t("proximity.kindLabel")}
+							<select
+								value={proximityKind}
+								onChange={(event) =>
+									onProximityChange(
+										event.target.value as "" | InfrastructureKind,
+										proximityKm,
+									)
+								}
+							>
+								<option value="">{t("proximity.none")}</option>
+								{infrastructureKindOrder.map((kind) => (
+									<option key={kind} value={kind}>
+										{t(`infra.${kind}` as MessageKey)}
+									</option>
+								))}
+							</select>
+						</label>
+						{proximityKind && (
+							<label>
+								{t("proximity.radiusKm")}
+								<input
+									type="number"
+									min="1"
+									max="1500"
+									inputMode="numeric"
+									value={proximityKm}
+									onChange={(event) =>
+										onProximityChange(proximityKind, event.target.value)
+									}
+								/>
+							</label>
+						)}
+						{proximityKind && (
+							<button
+								type="button"
+								className="text-button"
+								onClick={() => onProximityChange("", "100")}
+							>
+								{t("layers.filterClear")}
+							</button>
+						)}
+					</div>
+					{proximityKind && proximityResult && (
+						<div aria-live="polite">
+							<p role="status">
+								{t("proximity.summary", {
+									matched: proximityResult.matchedCount,
+									total: proximityResult.totalProvinces,
+									km: proximityKm,
+									kind: t(`infra.${proximityKind}` as MessageKey),
+								})}
+							</p>
+							{province &&
+								(() => {
+									const match = proximityResult.provinces.find(
+										(item) => item.geoId === province.id,
+									);
+									if (!match) return null;
+									return (
+										<p className="muted">
+											{t("proximity.nearestFacility", {
+												province: match.name,
+												facility: match.nearestPoiName,
+												code: match.nearestPoiCode,
+												km: formatNumber(match.distanceKm),
+											})}
+										</p>
+									);
+								})()}
+						</div>
+					)}
+				</div>
+			)}
 			<SourceComparison
 				layers={data.indicators}
 				active={layer}

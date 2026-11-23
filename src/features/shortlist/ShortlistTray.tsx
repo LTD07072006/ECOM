@@ -11,6 +11,7 @@ import { ComparisonPanel } from "../comparison/ComparisonPanel";
 import { InquiryForm } from "../inquiries/InquiryForm";
 import { readCompareIds } from "../map/url-state";
 import { useI18n } from "../../lib/i18n/provider";
+import { formalPlaceName } from "../../lib/i18n/data-labels";
 
 function syncCompareUrl(ids: string[] | null) {
 	if (typeof window === "undefined") return;
@@ -22,7 +23,7 @@ function syncCompareUrl(ids: string[] | null) {
 }
 
 export function ShortlistTray() {
-	const { t } = useI18n();
+	const { t, locale } = useI18n();
 	const [ids, setIds] = useState<string[]>([]);
 	const [places, setPlaces] = useState<Geography[]>([]);
 	const [comparisonIds, setComparisonIds] = useState<string[] | null>(null);
@@ -197,7 +198,9 @@ export function ShortlistTray() {
 							return (
 								<li key={id}>
 									<span>
-										{place?.displayName ?? t("shortlist.removedPlace")}
+										{place
+											? formalPlaceName(locale, place)
+											: t("shortlist.removedPlace")}
 									</span>
 									<button
 										type="button"

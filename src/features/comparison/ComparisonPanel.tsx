@@ -3,8 +3,13 @@
 import { useEffect, useState } from "react";
 import type { Profile } from "../geography/types";
 import { useI18n } from "../../lib/i18n/provider";
-import { indicatorLabel, unitLabel } from "../../lib/i18n/data-labels";
+import {
+	formalPlaceName,
+	indicatorLabel,
+	unitLabel,
+} from "../../lib/i18n/data-labels";
 import { computeComparisonRowMetrics } from "./metrics";
+import { IndicatorTrend } from "../profile/IndicatorTrend";
 
 type Comparison = {
 	compatible: boolean;
@@ -155,7 +160,7 @@ export function ComparisonPanel({
 								>
 									{profiles.map((profile) => (
 										<option key={profile.id} value={profile.id}>
-											{profile.displayName}
+											{formalPlaceName(locale, profile)}
 										</option>
 									))}
 								</select>
@@ -185,7 +190,7 @@ export function ComparisonPanel({
 									<th scope="col">{t("comparison.indicator")}</th>
 									{profiles.map((profile) => (
 										<th scope="col" key={profile.id}>
-											{profile.displayName}
+											{formalPlaceName(locale, profile)}
 										</th>
 									))}
 								</tr>
@@ -225,6 +230,9 @@ export function ComparisonPanel({
 												)}
 											</th>
 											{row.values.map((value, index) => {
+												const observation = profiles[index]?.observations.find(
+													(item) => item.indicator === row.indicator,
+												);
 												const stat = stats?.[index];
 												const deltaClass =
 													stat?.delta == null
@@ -254,6 +262,9 @@ export function ComparisonPanel({
 														) : (
 															<div className="compare-cell">
 																<span>{formatNumber(value)}</span>
+																{!row.reason && observation && (
+																	<IndicatorTrend observation={observation} />
+																)}
 																{stat && stat.barPercent > 0 && (
 																	<div
 																		className="compare-bar-track"

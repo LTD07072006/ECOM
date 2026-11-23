@@ -1,6 +1,44 @@
 import type { MessageKey } from "./en";
 
 export const vi: Record<MessageKey, string> = {
+	"district.tab": "Quận / Khu vực trực thuộc",
+	"district.current": "Đơn vị cấp xã hiện hành",
+	"district.advisory":
+		"Khu vực tham khảo · không phải đơn vị hành chính hiện hành",
+	"district.noMembership":
+		"Chưa có đối chiếu phường, xã hiện hành cho khu vực tham khảo này.",
+	"district.explainer":
+		"Khám phá phường, xã đã công bố. Khu vực tham khảo không phải địa giới hành chính.",
+	"district.missing": "Chưa có dữ liệu",
+	"district.error": "Không tải được danh sách khu vực.",
+	"district.retry": "Thử lại",
+	"district.loading": "Đang tải khu vực…",
+	"district.back": "Quay lại danh sách khu vực",
+	"district.role": "Vai trò kinh tế",
+	"district.population": "Dân số",
+	"district.density": "Mật độ dân số (người/km²)",
+	"district.purchasingPower": "Sức mua",
+	"district.urbanization": "Đô thị hóa",
+	"district.connections": "Kết nối giao thông",
+	"district.rent": "Giá thuê tham khảo",
+	"district.locations": "Địa điểm liên kết",
+	"district.zoneCount": "KCN và khu dân cư đã liên kết",
+	"district.sectors": "Ngành đầu tư",
+	"district.retail": "Bán lẻ",
+	"district.manufacturing": "Sản xuất",
+	"district.logistics": "Logistics",
+	"district.enterprise": "Doanh nghiệp",
+	"district.search": "Tìm khu vực",
+	"district.category": "Loại khu vực",
+	"district.all": "Tất cả",
+	"district.urban": "Khu vực nội đô",
+	"district.industrial": "Khu vực công nghiệp",
+	"district.gateway": "Cửa ngõ logistics",
+	"district.ward_cluster": "Phường, xã hiện hành",
+	"district.compare": "So sánh",
+	"district.compareHint":
+		"Chọn hai hoặc ba khu vực để so sánh. Số lượng chỉ tính các địa điểm đã liên kết.",
+	"district.empty": "Không có khu vực phù hợp. Hãy thử đổi bộ lọc.",
 	"retail.evidenceContext":
 		"Tham khảo bối cảnh toàn quốc: Khảo sát mức sống dân cư năm 2025 có thông tin chi tiêu hộ gia đình. Đây chưa phải nghiên cứu nhu cầu khách hàng bán lẻ của các tỉnh đã chọn và không đủ điều kiện để bật chấm điểm.",
 	"retail.evidenceSource": "Cục Thống kê: thông cáo khảo sát năm 2025",
@@ -115,26 +153,26 @@ export const vi: Record<MessageKey, string> = {
 
 	"map.workspace": "Không gian bản đồ Việt Nam",
 	"map.coverage": "Đã công bố {ready}/{total} ranh giới tỉnh.",
-	"map.coverageNone": "Chưa công bố ranh giới tỉnh nào.",
+	"map.coverageNone": "Chưa công bố ranh giới tỉnh / thành phố nào.",
 	"map.coverageAria": "Độ phủ hình học",
 	"map.layersUnavailable": "Lớp chỉ tiêu tạm thời không khả dụng.",
 	"map.profileError": "Không tải được hồ sơ. Chọn lại địa bàn để thử lại.",
 	"map.emptyPrompt":
-		"Chọn một tỉnh trên bản đồ hoặc tìm theo tên hoặc mã địa bàn.",
-	"map.aria": "Bản đồ tương tác ranh giới tỉnh",
-	"map.loading": "Đang tải ranh giới tỉnh…",
+		"Chọn một tỉnh / thành phố trên bản đồ hoặc tìm theo tên hoặc mã địa bàn.",
+	"map.aria": "Bản đồ tương tác ranh giới tỉnh / thành phố",
+	"map.loading": "Đang tải ranh giới tỉnh / thành phố…",
 	"map.empty":
-		"Chưa công bố ranh giới tỉnh. Dùng tìm kiếm địa bàn để xem danh mục.",
+		"Chưa công bố ranh giới tỉnh / thành phố. Dùng tìm kiếm địa bàn để xem danh mục.",
 	"map.unavailable":
 		"Bản đồ tạm thời không khả dụng. Dùng tìm kiếm địa bàn để mở hồ sơ.",
-	"map.simplified": "Ranh giới tỉnh đã đơn giản hóa",
+	"map.simplified": "Ranh giới tỉnh / thành phố đã đơn giản hóa",
 	"map.airportRecord": "Bản ghi sân bay",
 
 	"layers.aria": "Lớp bản đồ",
-	"layers.colourBy": "Tô màu tỉnh theo",
+	"layers.colourBy": "Tô màu tỉnh / thành phố theo",
 	"layers.boundaries": "Ranh giới hành chính",
 	"layers.legendAria": "Chú giải chỉ tiêu",
-	"layers.legendSummary": "{unit} · {period} · {covered}/{total} tỉnh",
+	"layers.legendSummary": "{unit} · {period} · {covered}/{total} tỉnh/thành",
 	"layers.unavailable": "Không có dữ liệu",
 	"layers.quality": "Chất lượng: {quality}",
 	"layers.source": "Nguồn: {publisher} · {title} · {license}",
@@ -146,7 +184,7 @@ export const vi: Record<MessageKey, string> = {
 	"layers.compareIncompatible":
 		"So sánh số học cần cùng chỉ tiêu, định nghĩa, đơn vị, kỳ, phạm vi và phiên bản địa giới.",
 	"layers.compareSelectProvince":
-		"Chọn một tỉnh để so sánh giá trị đã công bố.",
+		"Chọn một tỉnh / thành phố để so sánh giá trị đã công bố.",
 	"layers.compareNeedsBoth": "Cả hai nguồn cần có giá trị cho {name}.",
 	"layers.compareResult":
 		"{name} — {first} {firstUnit} so với {second} {secondUnit}. Nguồn hai trừ nguồn một: {delta} {unit}.",
@@ -157,13 +195,13 @@ export const vi: Record<MessageKey, string> = {
 	"layers.unit": "Đơn vị",
 	"layers.scope": "Phạm vi",
 	"layers.coverage": "Độ phủ",
-	"layers.covered": "Số tỉnh có giá trị: {count}",
-	"layers.filterTitle": "Lọc tỉnh theo giá trị",
+	"layers.covered": "Số tỉnh / thành phố có giá trị: {count}",
+	"layers.filterTitle": "Lọc tỉnh / thành phố theo giá trị",
 	"layers.filterMin": "Tối thiểu",
 	"layers.filterMax": "Tối đa",
 	"layers.filterClear": "Bỏ lọc",
 	"layers.filterSummary":
-		"{matched}/{total} tỉnh phù hợp · {missing} tỉnh không có dữ liệu",
+		"{matched}/{total} tỉnh/thành phù hợp · {missing} địa bàn không có dữ liệu",
 	"layers.filterInvalid": "Nhập số cho các ngưỡng giá trị.",
 	"layers.filterRange": "Ngưỡng tối thiểu không được lớn hơn ngưỡng tối đa.",
 	"share.copy": "Sao chép liên kết",
@@ -193,7 +231,13 @@ export const vi: Record<MessageKey, string> = {
 	"search.resultMeta": "{level} · {parent}",
 	"level.country": "quốc gia",
 	"level.province": "tỉnh",
-	"level.commune": "xã/phường",
+	"level.municipality": "thành phố trực thuộc trung ương",
+	"level.provinceOrCity": "tỉnh / thành phố trực thuộc TW",
+	"level.commune": "xã",
+	"level.ward": "phường",
+	"level.township": "thị trấn",
+	"level.specialZone": "đặc khu",
+	"level.communeOrWard": "xã / phường / đặc khu",
 
 	"profile.contextOnly":
 		"Chỉ là dữ liệu bối cảnh. Các số liệu này không xác lập nhu cầu, lợi nhuận hay điều kiện đủ.",
@@ -655,6 +699,44 @@ export const vi: Record<MessageKey, string> = {
 	"trend.yoyPct": "{delta}% YoY",
 	"trend.yoyPp": "{delta} điểm % YoY",
 	"trend.singlePeriod": "1 kỳ đã công bố",
+	"trend.cagr": "{start} → {end} · CAGR {rate}%/năm",
+	"cost.title": "Mô phỏng chi phí đầu tư và vận hành 5 năm",
+	"cost.warning":
+		"Chỉ dùng để lập kế hoạch sơ bộ. Không phải báo giá thuê hay quyết định ưu đãi có tính ràng buộc.",
+	"cost.assumptions": "Giả định của nhà đầu tư",
+	"cost.area": "Diện tích thuê",
+	"cost.areaUnit": "Đơn vị diện tích",
+	"cost.workers": "Số lao động",
+	"cost.usage": "Điện tiêu thụ (MWh/năm)",
+	"cost.margin": "Biên lợi nhuận trước thuế, sau chi phí vận hành (%)",
+	"cost.baseline": "Thuế suất TNDN cơ sở giả định (%)",
+	"cost.revenue": "Doanh thu năm {year} (VND)",
+	"cost.method":
+		"Chọn vùng lương theo địa chỉ dự án trong phụ lục Nghị định 293/2025/NĐ-CP (hiệu lực 01/01/2026). Nếu bỏ trống lương, mô hình dùng mức tối thiểu vùng. Giá thuê và điện do nhà đầu tư nhập, không phải báo giá thị trường. Đơn giá giữ nguyên, không chiết khấu hay chuyển lỗ. Ưu đãi khớp chỉ để sàng lọc; hãy nhập lịch áp dụng của dự án để mô phỏng.",
+	"cost.region": "Vùng lương của địa điểm",
+	"cost.wage": "Lương tháng mỗi lao động (VND, không bắt buộc)",
+	"cost.rentRate": "Đơn giá thuê năm (VND/m²)",
+	"cost.powerRate": "Đơn giá điện (VND/kWh)",
+	"cost.upfront": "Chi phí đầu tư ban đầu (VND)",
+	"cost.citOption": "Ưu đãi TNDN tiềm năng",
+	"cost.landOption": "Ưu đãi tiền thuê đất tiềm năng",
+	"cost.noRelief": "Không mô phỏng ưu đãi",
+	"cost.citRate": "Thuế suất TNDN thực tế giả định năm {year} (%)",
+	"cost.eligible":
+		"Tiền thuê đất Nhà nước đủ điều kiện, đã tính trong tiền thuê (VND/năm)",
+	"cost.years": "Số năm được miễn trong 5 năm đầu",
+	"cost.summary": "So sánh chi phí 5 năm (VND)",
+	"cost.line": "Khoản chi phí",
+	"cost.rent": "Tiền thuê trước miễn giảm",
+	"cost.labor": "Lương cơ bản",
+	"cost.power": "Tiền điện",
+	"cost.citPaid": "Thuế TNDN ước tính phải trả",
+	"cost.citSavings": "Thuế TNDN tiết kiệm so với cơ sở",
+	"cost.landSavings": "Tiền thuê đất tiết kiệm theo giả định",
+	"cost.net": "Chi phí ròng (gồm TNDN phải trả)",
+	"cost.incomplete":
+		"Hoàn thành hoặc kiểm tra giả định cho mỗi địa điểm. Lương không được dưới mức tối thiểu đã chọn; miễn giảm không được vượt thuế cơ sở hoặc tiền thuê đã nhập.",
+	"cost.export": "Tải giả định và kết quả (JSON)",
 	"trend.periods": "{count} kỳ ({start}–{end})",
 
 	"retail.logistics": "Logistics & kho vận",
@@ -781,4 +863,106 @@ export const vi: Record<MessageKey, string> = {
 		"Có cơ sở hỗ trợ: tổng hợp/đối soát từ nguồn chính thức (hiển thị độ mờ nhẹ hơn trên bản đồ).",
 	"layers.qualityUnavailableNote":
 		"Chưa có số liệu: địa bàn không có số liệu công bố (tách biệt hoàn toàn với giá trị 0).",
+
+	"proximity.title": "Lọc bán kính không gian (PostGIS ST_DWithin)",
+	"proximity.kindLabel": "Loại hạ tầng",
+	"proximity.none": "Không lọc bán kính",
+	"proximity.radiusKm": "Bán kính tối đa (km)",
+	"proximity.summary":
+		"{matched} / {total} tỉnh nằm trong bán kính {km} km tính từ {kind}.",
+	"proximity.nearestFacility":
+		"Gần {province} nhất: {facility} ({code}) · {km} km",
+
+	"incentives.title": "Ưu đãi đầu tư theo Ngành × Địa bàn",
+	"incentives.advisoryBadge": "Khung ưu đãi tham khảo",
+	"incentives.advisoryDisclaimer":
+		"Khung ưu đãi tổng hợp theo Luật Đầu tư 2020 và Nghị định 31/2021/NĐ-CP. Mức hưởng thực tế được xác định trên Giấy chứng nhận đăng ký đầu tư (IRC) và văn bản của cơ quan Thuế/Hải quan theo mã ngành và vị trí lô đất.",
+	"incentives.provinceZonesTitle": "Phân loại địa bàn ưu đãi của tỉnh đã chọn",
+	"incentives.eligibilityLabel": "Điều kiện & trường hợp loại trừ",
+	"incentives.typeCit": "Thuế TNDN (CIT)",
+	"incentives.typeLand": "Miễn tiền thuê đất",
+	"incentives.typeImport": "Miễn thuế nhập khẩu",
+	"incentives.typeRd": "R&D & Công nghệ số",
+	"incentives.tierEzHightech": "Khu kinh tế / Khu Công nghệ cao",
+	"incentives.tierSpecialDifficult": "Địa bàn đặc biệt khó khăn",
+	"incentives.tierDifficult": "Địa bàn KT-XH khó khăn",
+	"incentives.tierIndustrialPark": "Khu công nghiệp tập trung",
+	"incentives.tierSectorEncouraged": "Ngành ưu đãi (mọi tỉnh)",
+	"incentives.tierStandard": "Địa bàn tiêu chuẩn",
+
+	"opportunities.title": "Khu công nghiệp & Dự án kêu gọi đầu tư tiêu biểu",
+	"opportunities.note":
+		"Hồ sơ chi tiết diện tích đất trống, tỷ lệ lấp đầy, công suất điện/xử lý nước thải và quy mô vốn kêu gọi.",
+	"opportunities.empty":
+		"Chưa có KCN hoặc dự án mẫu khớp trực tiếp với bộ lọc tỉnh/ngành hiện tại.",
+	"opportunities.readyAvailable": "Sẵn sàng tiếp nhận",
+	"opportunities.readyEarly": "Đang chuẩn bị / quy hoạch",
+	"opportunities.areaMeta":
+		"Đất trống: {available} / {total} ha (Lấp đầy: {occupancy}%)",
+	"opportunities.capitalMeta": "Quy mô vốn: {min} – {max} triệu USD",
+	"opportunities.utilitiesMeta":
+		"Điện: {power} MW · Xử lý nước thải: {water} m³/ngày",
+
+	"ipa.title": "Đầu mối Xúc tiến Đầu tư địa phương (IPA / Ban Quản lý KCN-KKT)",
+	"ipa.note":
+		"Yêu cầu của bạn sẽ được định tuyến tới cơ quan xúc tiến đầu tư phụ trách các tỉnh đã chọn.",
+
+	"brief.exportMarkdown": "Xuất Executive Brief (.md)",
+	"brief.printA4": "In / Lưu Executive Brief (PDF A4)",
+	"brief.exported":
+		"Đã xuất báo cáo tóm tắt điều hành Executive Location Brief (.md).",
+
+	"surveys.pageTitle": "Quản lý khảo sát nhu cầu khách hàng (F04/T04)",
+	"surveys.pageLede":
+		"Không gian dành cho Steward đăng ký, công bố hoặc thu hồi dữ liệu khảo sát nhu cầu phục vụ chấm điểm kịch bản.",
+	"surveys.authTitle": "Xác thực quyền Steward",
+	"surveys.loadButton": "Tải danh sách khảo sát",
+	"surveys.loadFailed": "Không tải được danh sách khảo sát.",
+	"surveys.loadedCount": "Đã tải {count} hồ sơ khảo sát.",
+	"surveys.createTitle": "Đăng ký hoặc cập nhật nghiên cứu khảo sát",
+	"surveys.code": "Mã nghiên cứu",
+	"surveys.titleVi": "Tiêu đề (Tiếng Việt)",
+	"surveys.titleEn": "Tiêu đề (Tiếng Anh)",
+	"surveys.periodStart": "Ngày bắt đầu",
+	"surveys.periodEnd": "Ngày kết thúc",
+	"surveys.isDemoLabel": "Đánh dấu là dữ liệu mẫu (DEMO)",
+	"surveys.coveredProvinces": "Các tỉnh có mẫu khảo sát",
+	"surveys.publishNew": "Lưu & công bố khảo sát",
+	"surveys.saved": "Đã lưu và công bố nghiên cứu khảo sát.",
+	"surveys.saveFailed": "Không thể lưu nghiên cứu khảo sát.",
+	"surveys.listTitle": "Danh sách nghiên cứu khảo sát",
+	"surveys.empty": "Chưa có nghiên cứu khảo sát nào được tải.",
+	"surveys.actionPublish": "Công bố",
+	"surveys.actionRetire": "Thu hồi",
+
+	"micro.tabsAria": "Chế độ xem hồ sơ địa phương",
+	"micro.tabOverview": "Tổng quan & Chỉ tiêu",
+	"micro.tabDetail": "Chi tiết KCN & Khu dân cư",
+	"micro.calloutTitle":
+		"Đã gắn tọa độ {iz} Khu công nghiệp · {rz} Khu dân cư & Đô thị",
+	"micro.calloutNote":
+		"Chuyển sang tab Chi tiết để xem toàn bộ KCN, khu dân cư thương mại, hạ tầng điện/nước, bảng tổng hợp chỉ tiêu và định vị từng điểm trên bản đồ.",
+	"micro.openFullDetail": "Xem toàn bộ chi tiết địa phương & bản đồ điểm",
+	"micro.mapFilterTitle": "Bộ lọc vị trí chi tiết trên bản đồ",
+	"micro.mapFilterNote":
+		"Chọn nhóm bên dưới để lọc ghim trên bản đồ hoặc bấm 'Định vị trên bản đồ' ở từng thẻ để bay tới đúng tọa độ.",
+	"micro.filterAll": "Tất cả vị trí",
+	"micro.badgeIndustrial": "KCN / Khu CNC",
+	"micro.badgeResidential": "Khu dân cư / Đô thị",
+	"micro.badgeLogistics": "Cảng / Sân bay / Logistics",
+	"micro.sectionIndustrial":
+		"Chi tiết Khu công nghiệp, Khu công nghệ cao & Khu kinh tế",
+	"micro.sectionResidential":
+		"Chi tiết Khu dân cư, Khu đô thị mới & Tâm điểm thương mại",
+	"micro.sectionLogistics":
+		"Đầu mối Cảng biển, Sân bay & Logistics đa phương thức",
+	"micro.sectionAllIndicators": "Bảng tổng hợp toàn bộ chỉ tiêu của địa phương",
+	"micro.colValue": "Giá trị công bố",
+	"micro.locateOnMap": "Định vị trên bản đồ",
+	"micro.targetFitLabel": "Phù hợp đầu tư",
+	"micro.resetVietnamMap": "Toàn bản đồ Việt Nam",
+	"micro.streetModeActive": "Chế độ: Đường giao thông & Khu nhà/KCN",
+	"micro.choroplethModeActive": "Chế độ: Bản đồ vùng Choropleth",
+	"micro.badgeRoadBlocks": "Trục đường & Phân khu nhà xưởng/khu dân cư",
+	"micro.legendAria": "Chú giải vị trí chi tiết trên bản đồ",
 };

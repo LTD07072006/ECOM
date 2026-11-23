@@ -17,13 +17,39 @@ import {
 	type LegalChecklistBySector,
 } from "./legal-readiness";
 import { LegalReadinessChecklist } from "./LegalReadinessChecklist";
+import { CapexOpexSimulator } from "./CapexOpexSimulator";
+import {
+	canonicalInvestmentIncentives,
+	type InvestmentIncentiveItem,
+} from "./investment-incentives";
+import { InvestmentIncentivesPanel } from "./InvestmentIncentivesPanel";
+import {
+	canonicalInvestmentOpportunities,
+	type InvestmentOpportunityItem,
+} from "./investment-opportunities";
+import { InvestmentOpportunitiesPanel } from "./InvestmentOpportunitiesPanel";
+import { buildExecutiveBriefMarkdown } from "./executive-brief";
 import {
 	buildDecisionScenarioExport,
 	decisionScenarioToCsv,
 } from "./scenario-export";
 import type { PublishedSurveyStudy } from "./survey-evidence-repository";
+import { resolveIpaContactsForInquiry } from "../inquiries/ipa-directory";
+import {
+	infrastructureKindOrder,
+	type InfrastructureKind,
+} from "../map/layers";
+import {
+	canonicalInfrastructurePois,
+	computeProximityForProvinces,
+} from "../map/proximity";
 import { useI18n } from "../../lib/i18n/provider";
-import { qualityLabel, unitLabel } from "../../lib/i18n/data-labels";
+import type { MessageKey } from "../../lib/i18n";
+import {
+	formalPlaceName,
+	qualityLabel,
+	unitLabel,
+} from "../../lib/i18n/data-labels";
 
 const SCENARIO_STORAGE_KEY = "ecom:decision-scenario:v1";
 
@@ -82,16 +108,24 @@ export function RetailScenario({
 	provinces,
 	legalChecklistBySector = defaultLegalChecklistBySector,
 	surveyStudies = [],
+	investmentIncentives = canonicalInvestmentIncentives,
+	investmentOpportunities = canonicalInvestmentOpportunities,
 }: {
 	provinces: Profile[];
 	legalChecklistBySector?: LegalChecklistBySector;
 	surveyStudies?: PublishedSurveyStudy[];
+	investmentIncentives?: readonly InvestmentIncentiveItem[];
+	investmentOpportunities?: readonly InvestmentOpportunityItem[];
 }) {
 	const { t, tc, locale, formatNumber } = useI18n();
 	const [sector, setSector] = useState<"" | SectorId>("");
 	const [targetSegment, setTargetSegment] = useState("");
 	const [hypotheses, setHypotheses] = useState("");
 	const [minimums, setMinimums] = useState<string[]>(["", ""]);
+	const [proximityKind, setProximityKind] = useState<"" | InfrastructureKind>(
+		"",
+	);
+	const [proximityKm, setProximityKm] = useState("100");
 	const [selected, setSelected] = useState<string[]>([]);
 	const [weights, setWeights] = useState<string[]>(["60", "40"]);
 	const [showResult, setShowResult] = useState(false);
@@ -235,23 +269,47 @@ export function RetailScenario({
 		const raw = minimums[index] ?? "";
 		return raw.trim() === "" ? null : Number(raw);
 	});
-	const invalid = thresholds.some(
-		(value) => value !== null && (!Number.isFinite(value) || value < 0),
-	);
-	const candidates = provinces.filter((profile) =>
-		activeCriteria.every((criterion, index) => {
-			const threshold = thresholds[index];
-			if (threshold === null) return true;
-			const item = profile.observations.find(
-				(row) => row.indicator === criterion.code,
-			);
-			return (
-				item &&
-				item.quality !== "unavailable" &&
-				item.value !== null &&
-				item.value >= threshold
-			);
-		}),
+	const proximityMaxKm =
+		proximityKind && proximityKm.trim() !== "" ? Number(proximityKm) : null;
+	const invalid =
+		thresholds.some(
+			(value) => value !== null && (!Number.isFinite(value) || value < 0),
+		) ||
+		(proximityMaxKm !== null &&
+			(!Number.isFinite(proximityMaxKm) ||
+				proximityMaxKm < 1 ||
+				proximityMaxKm > 1500));
+	const proximityEval =
+		proximityKind &&
+		proximityMaxKm !== null &&
+		Number.isFinite(proximityMaxKm) &&
+		proximityMaxKm >= 1
+			? computeProximityForProvinces(
+					provinces,
+					canonicalInfrastructurePois,
+					proximityKind,
+					proximityMaxKm,
+				)
+			: null;
+	const proximityAllowedSet = proximityEval
+		? new Set(proximityEval.matchedProvinceIds)
+		: null;
+	const candidates = provinces.filter(
+		(profile) =>
+			(!proximityAllowedSet || proximityAllowedSet.has(profile.id)) &&
+			activeCriteria.every((criterion, index) => {
+				const threshold = thresholds[index];
+				if (threshold === null) return true;
+				const item = profile.observations.find(
+					(row) => row.indicator === criterion.code,
+				);
+				return (
+					item &&
+					item.quality !== "unavailable" &&
+					item.value !== null &&
+					item.value >= threshold
+				);
+			}),
 	);
 	const chosen = candidates.filter((profile) => selected.includes(profile.id));
 	const comparison = chosen.length >= 2 ? compareProfiles(chosen) : null;
@@ -353,6 +411,33 @@ export function RetailScenario({
 		);
 	}
 
+	function exportExecutiveBrief() {
+		if (!activeScenario || !sector || chosen.length === 0) return;
+		const md = buildExecutiveBriefMarkdown({
+			locale,
+			sector,
+			sectorLabel: t(activeScenario.labelKey),
+			targetSegment,
+			hypotheses,
+			criteria: activeCriteria,
+			weights: numericWeights,
+			profiles: chosen,
+			evidence,
+			officialResult: result,
+			whatIfResult,
+			incentives: investmentIncentives,
+			opportunities: investmentOpportunities,
+			legalChecklist: legalChecklistBySector[sector] ?? [],
+		});
+		const stamp = new Date().toISOString().slice(0, 10);
+		downloadScenarioFile(
+			md,
+			`executive-location-brief-${sector}-${stamp}.md`,
+			"text/markdown;charset=utf-8",
+		);
+		setScenarioExportStatus(t("brief.exported"));
+	}
+
 	return (
 		<div className="decision-flow">
 			{activeScenario && (
@@ -451,7 +536,55 @@ export function RetailScenario({
 									/>
 								</label>
 							))}
+							<label>
+								{t("proximity.kindLabel")}
+								<select
+									value={proximityKind}
+									onChange={(event) => {
+										setProximityKind(
+											event.target.value as "" | InfrastructureKind,
+										);
+										setSelected([]);
+										setShowResult(false);
+										setShowWhatIf(false);
+									}}
+								>
+									<option value="">{t("proximity.none")}</option>
+									{infrastructureKindOrder.map((kind) => (
+										<option key={kind} value={kind}>
+											{t(`infra.${kind}` as MessageKey)}
+										</option>
+									))}
+								</select>
+							</label>
+							{proximityKind && (
+								<label>
+									{t("proximity.radiusKm")}
+									<input
+										type="number"
+										min="1"
+										max="1500"
+										value={proximityKm}
+										onChange={(event) => {
+											setProximityKm(event.target.value);
+											setSelected([]);
+											setShowResult(false);
+											setShowWhatIf(false);
+										}}
+									/>
+								</label>
+							)}
 						</div>
+						{proximityKind && proximityEval && (
+							<p className="muted" role="status">
+								{t("proximity.summary", {
+									matched: proximityEval.matchedCount,
+									total: proximityEval.totalProvinces,
+									km: proximityKm,
+									kind: t(`infra.${proximityKind}` as MessageKey),
+								})}
+							</p>
+						)}
 						<p>{t("retail.missingExcluded")}</p>
 						{invalid ? (
 							<p role="alert">{t("retail.invalid")}</p>
@@ -511,7 +644,7 @@ export function RetailScenario({
 											}
 											onChange={() => toggle(profile.id)}
 										/>
-										{profile.displayName}
+										{formalPlaceName(locale, profile)}
 									</label>
 								))}
 							</fieldset>
@@ -530,7 +663,7 @@ export function RetailScenario({
 										<option value="">{t("retail.baselinePlaceholder")}</option>
 										{chosen.map((profile) => (
 											<option key={profile.id} value={profile.id}>
-												{profile.displayName}
+												{formalPlaceName(locale, profile)}
 											</option>
 										))}
 									</select>
@@ -544,7 +677,7 @@ export function RetailScenario({
 											<th scope="col">{t("retail.indicatorCol")}</th>
 											{chosen.map((profile) => (
 												<th scope="col" key={profile.id}>
-													{profile.displayName}
+													{formalPlaceName(locale, profile)}
 												</th>
 											))}
 										</tr>
@@ -961,6 +1094,20 @@ export function RetailScenario({
 									>
 										{t("decision.exportScenarioCsv")}
 									</button>
+									<button
+										type="button"
+										className="text-button"
+										onClick={exportExecutiveBrief}
+									>
+										{t("brief.exportMarkdown")}
+									</button>
+									<button
+										type="button"
+										className="text-button"
+										onClick={() => window.print()}
+									>
+										{t("brief.printA4")}
+									</button>
 								</>
 							)}
 						</div>
@@ -1094,6 +1241,29 @@ export function RetailScenario({
 						<section aria-labelledby="contact-title">
 							<h2 id="contact-title">{t("retail.contactTitle")}</h2>
 							<p>{t("retail.contactBody")}</p>
+							<div className="ipa-routing-box">
+								<h3>{t("ipa.title")}</h3>
+								<p className="muted">{t("ipa.note")}</p>
+								<ul>
+									{resolveIpaContactsForInquiry({
+										provinceCodes: chosen.map((profile) => profile.code),
+										provinceNames: chosen.map((profile) => profile.displayName),
+										sector: sector || undefined,
+									}).map((contact) => (
+										<li key={contact.code}>
+											<strong>{contact.organization[locale]}</strong> (
+											{contact.department[locale]}) ·{" "}
+											<a
+												href={contact.officialUrl}
+												target="_blank"
+												rel="noreferrer"
+											>
+												{contact.publicEmail}
+											</a>
+										</li>
+									))}
+								</ul>
+							</div>
 							<InquiryForm
 								key={`${sector}-${chosen.map((profile) => profile.id).join(",")}`}
 								geographyIds={chosen.map((profile) => profile.id)}
@@ -1103,15 +1273,39 @@ export function RetailScenario({
 						</section>
 					)}
 					{sector && (
-						<LegalReadinessChecklist
-							sector={sector}
-							sectorLabel={t(activeScenario.labelKey)}
-							items={legalChecklistBySector[sector] ?? []}
-							selectedProvinces={chosen.map((profile) => ({
-								id: profile.id,
-								name: profile.displayName,
-							}))}
-						/>
+						<>
+							<InvestmentOpportunitiesPanel
+								sector={sector}
+								provinceCodes={chosen.map((profile) => profile.code)}
+								opportunities={investmentOpportunities}
+							/>
+							{chosen.length >= 2 && chosen.length <= 3 && (
+								<CapexOpexSimulator
+									key={sector}
+									provinces={chosen}
+									sector={sector}
+									incentives={investmentIncentives}
+								/>
+							)}
+							<InvestmentIncentivesPanel
+								sector={sector}
+								selectedProvinces={chosen.map((profile) => ({
+									id: profile.id,
+									code: profile.code,
+									displayName: profile.displayName,
+								}))}
+								incentives={investmentIncentives}
+							/>
+							<LegalReadinessChecklist
+								sector={sector}
+								sectorLabel={t(activeScenario.labelKey)}
+								items={legalChecklistBySector[sector] ?? []}
+								selectedProvinces={chosen.map((profile) => ({
+									id: profile.id,
+									name: profile.displayName,
+								}))}
+							/>
+						</>
 					)}
 				</>
 			)}

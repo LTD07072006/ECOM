@@ -3,11 +3,12 @@
 import type { Observation } from "../geography/types";
 import { useI18n } from "../../lib/i18n/provider";
 import { indicatorLabel } from "../../lib/i18n/data-labels";
-import { summarizeTrend } from "./trend";
+import { calculateCagr, summarizeTrend } from "./trend";
 
 export function IndicatorTrend({ observation }: { observation: Observation }) {
 	const { t, locale, formatNumber } = useI18n();
 	const trend = summarizeTrend(observation.history, observation.unit);
+	const cagr = calculateCagr(observation.history ?? []);
 
 	if (trend.points.length === 0) return null;
 
@@ -77,11 +78,17 @@ export function IndicatorTrend({ observation }: { observation: Observation }) {
 				</span>
 			)}
 			<span className="trend-range">
-				{t("trend.periods", {
-					count: trend.points.length,
-					start: first.period,
-					end: last.period,
-				})}
+				{cagr !== null
+					? t("trend.cagr", {
+							start: first.period,
+							end: last.period,
+							rate: `${cagr > 0 ? "+" : ""}${formatNumber(Number(cagr.toFixed(1)))}`,
+						})
+					: t("trend.periods", {
+							count: trend.points.length,
+							start: first.period,
+							end: last.period,
+						})}
 			</span>
 		</div>
 	);

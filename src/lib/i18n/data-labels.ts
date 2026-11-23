@@ -39,6 +39,127 @@ const scopeLabelsVi: Record<string, string> = {
 	trained_workers_age_15_plus: "lao động đã qua đào tạo từ 15 tuổi",
 };
 
+/**
+ * Official 6 Centrally-Governed Cities (Thành phố trực thuộc Trung ương) of Vietnam:
+ * - 01: Thành phố Hà Nội
+ * - 31: Thành phố Hải Phòng
+ * - 46: Thành phố Huế
+ * - 48: Thành phố Đà Nẵng
+ * - 79: Thành phố Hồ Chí Minh
+ * - 92: Thành phố Cần Thơ
+ */
+const CENTRALLY_GOVERNED_CITY_CODES = new Set([
+	"01",
+	"31",
+	"46",
+	"48",
+	"79",
+	"92",
+	"DEMO-HN",
+	"DEMO-HP",
+	"DEMO-HUE",
+	"DEMO-DN",
+	"DEMO-HCM",
+	"DEMO-CT",
+]);
+
+const CENTRALLY_GOVERNED_CITY_NAMES = new Set([
+	"ha noi",
+	"hanoi",
+	"thanh pho ha noi",
+	"hai phong",
+	"haiphong",
+	"thanh pho hai phong",
+	"hue",
+	"thanh pho hue",
+	"da nang",
+	"danang",
+	"thanh pho da nang",
+	"ho chi minh",
+	"tp. ho chi minh",
+	"tp ho chi minh",
+	"thanh pho ho chi minh",
+	"ho chi minh city",
+	"can tho",
+	"cantho",
+	"thanh pho can tho",
+]);
+
+function normalizeAdminText(raw: string): string {
+	return raw
+		.normalize("NFD")
+		.replace(/\p{Diacritic}/gu, "")
+		.replace(/đ/gi, "d")
+		.toLowerCase()
+		.trim();
+}
+
+export type PlaceIdentityInput = {
+	level?: string | null;
+	code?: string | null;
+	name?: string | null;
+	displayName?: string | null;
+};
+
+export function isCentrallyGovernedCity(
+	place?: PlaceIdentityInput | null,
+): boolean {
+	if (!place) return false;
+	if (place.code && CENTRALLY_GOVERNED_CITY_CODES.has(place.code.trim())) {
+		return true;
+	}
+	for (const candidate of [place.displayName, place.name]) {
+		if (!candidate) continue;
+		const normalized = normalizeAdminText(candidate);
+		if (CENTRALLY_GOVERNED_CITY_NAMES.has(normalized)) {
+			return true;
+		}
+	}
+	return false;
+}
+
+function stripAdminPrefixOrSuffix(raw: string): string {
+	return raw
+		.replace(/^(Thành phố|TP\.|TP|Tỉnh)\s+/i, "")
+		.replace(/\s+(City|Province)$/i, "")
+		.trim();
+}
+
+/**
+ * Formats a place's display name according to Vietnam's official administrative conventions:
+ * - 6 Centrally-governed cities -> "Thành phố Hà Nội", "Thành phố Hải Phòng", "Thành phố Huế", "Thành phố Đà Nẵng", "Thành phố Hồ Chí Minh", "Thành phố Cần Thơ" (or "<Name> City" in English)
+ * - 28 Provinces -> "Tỉnh Bắc Ninh", "Tỉnh Đồng Nai", "Tỉnh Quảng Ninh"... (or "<Name> Province" in English)
+ * - Communes/Wards -> preserves or prefixes "Phường" / "Xã"
+ */
+export function formalPlaceName(
+	locale: Locale,
+	place: {
+		level?: string | null;
+		code?: string | null;
+		name?: string | null;
+		displayName: string;
+	},
+): string {
+	const raw = place.displayName.trim();
+	if (!raw) return raw;
+	const level = place.level ?? "province";
+
+	if (level === "country") {
+		return locale === "vi" ? "Việt Nam" : "Vietnam";
+	}
+
+	if (level === "province") {
+		const coreName = stripAdminPrefixOrSuffix(raw);
+		const isCity = isCentrallyGovernedCity(place);
+		if (locale === "vi") {
+			return isCity ? `Thành phố ${coreName}` : `Tỉnh ${coreName}`;
+		}
+		return isCity ? `${coreName} City` : `${coreName} Province`;
+	}
+
+	return raw;
+}
+
 export function indicatorLabel(
 	locale: Locale,
 	code: string,
@@ -67,9 +188,37 @@ export function qualityLabel(locale: Locale, quality: string): string {
 	return quality;
 }
 
-export function levelLabel(locale: Locale, level: string): string {
-	if (level === "country" || level === "province" || level === "commune") {
-		return translate(locale, `level.${level}`);
+export function levelLabel(
+	locale: Locale,
+	level: string,
+	place?: PlaceIdentityInput | null,
+): string {
+	if (level === "country") {
+		return translate(locale, "level.country");
+	}
+	if (level === "province") {
+		if (!place) {
+			return translate(locale, "level.provinceOrCity");
+		}
+		return isCentrallyGovernedCity(place)
+			? translate(locale, "level.municipality")
+			: translate(locale, "level.province");
+	}
+	if (level === "commune") {
+		if (!place) {
+			return translate(locale, "level.communeOrWard");
+		}
+		const nameNorm = normalizeAdminText(place.displayName ?? place.name ?? "");
+		if (nameNorm.startsWith("phuong ") || nameNorm.startsWith("ben nghe")) {
+			return translate(locale, "level.ward");
+		}
+		if (nameNorm.startsWith("dac khu ")) {
+			return translate(locale, "level.specialZone");
+		}
+		if (nameNorm.startsWith("thi tran ")) {
+			return translate(locale, "level.township");
+		}
+		return translate(locale, "level.commune");
 	}
 	return level;
 }

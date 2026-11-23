@@ -1,13 +1,31 @@
+"use client";
+
+import { useState } from "react";
 import type { DatasetMetadata, Profile } from "../geography/types";
 import {
 	haversineKm,
 	indicatorGroups,
 	type ProvinceInfrastructureItem,
 } from "../map/layers";
+import {
+	getProvinceMicroLocations,
+	type MicroLocationCategory,
+	type ProvinceMicroLocation,
+} from "../map/province-detail-locations";
+import type { FocusedMicroLocation } from "../map/ProvinceMap";
 import { InquiryForm } from "../inquiries/InquiryForm";
+import { resolveIpaContactsForInquiry } from "../inquiries/ipa-directory";
+import { describeProvinceIncentiveZones } from "../decision/investment-incentives";
+import {
+	canonicalInvestmentOpportunities,
+	filterOpportunities,
+} from "../decision/investment-opportunities";
 import { IndicatorTrend } from "./IndicatorTrend";
+import { DistrictPanel } from "./DistrictPanel";
+import type { ProvinceDistrictProfile } from "../map/province-districts";
 import { useI18n } from "../../lib/i18n/provider";
 import {
+	formalPlaceName,
 	indicatorLabel,
 	levelLabel,
 	qualityLabel,
@@ -52,11 +70,56 @@ function DatasetDetails({ dataset }: { dataset: DatasetMetadata }) {
 export function GeoProfilePanel({
 	profile,
 	infrastructure = [],
+	activeCategoryFilter = "all",
+	onCategoryFilterChange,
+	onFocusMicroLocation,
+	onDetailModeChange,
+	onDistrictSelect,
 }: {
 	profile: Profile;
 	infrastructure?: ProvinceInfrastructureItem[];
+	activeCategoryFilter?: "all" | MicroLocationCategory;
+	onCategoryFilterChange?: (category: "all" | MicroLocationCategory) => void;
+	onFocusMicroLocation?: (location: FocusedMicroLocation) => void;
+	onDetailModeChange?: (isDetail: boolean) => void;
+	onDistrictSelect?: (district: ProvinceDistrictProfile | null) => void;
 }) {
 	const { t, locale, formatNumber } = useI18n();
+	const [activeTab, setActiveTab] = useState<
+		"overview" | "districts" | "detail"
+	>("overview");
+	const [localCategory, setLocalCategory] = useState<
+		"all" | MicroLocationCategory
+	>("all");
+
+	const categoryFilter = onCategoryFilterChange
+		? activeCategoryFilter
+		: localCategory;
+	const setCategoryFilter = (next: "all" | MicroLocationCategory) => {
+		setLocalCategory(next);
+		onCategoryFilterChange?.(next);
+	};
+
+	const switchTab = (tab: "overview" | "districts" | "detail") => {
+		setActiveTab(tab);
+		if (tab !== "districts") onDistrictSelect?.(null);
+		onDetailModeChange?.(tab !== "overview");
+	};
+
+	const pick = (pair: { vi: string; en: string }) =>
+		locale === "vi" ? pair.vi : pair.en;
+
+	const microLocations = getProvinceMicroLocations(profile, infrastructure);
+	const izLocations = microLocations.filter(
+		(item) => item.category === "industrial_zone",
+	);
+	const rzLocations = microLocations.filter(
+		(item) => item.category === "residential_zone",
+	);
+	const logisticsLocations = microLocations.filter(
+		(item) => item.category === "logistics_hub",
+	);
+
 	const industrialParks = infrastructure.filter(
 		(item) => item.kind === "industrial_park",
 	);
@@ -64,7 +127,10 @@ export function GeoProfilePanel({
 		(item) => item.kind !== "industrial_park",
 	);
 
-	function distanceNote(item: ProvinceInfrastructureItem): string | null {
+	function distanceNote(item: {
+		latitude: number;
+		longitude: number;
+	}): string | null {
 		if (profile.latitude === null || profile.longitude === null) return null;
 		const km = haversineKm(
 			profile.latitude,
@@ -75,12 +141,90 @@ export function GeoProfilePanel({
 		return t("infra.distanceKm", { km: formatNumber(km) });
 	}
 
+	function focusOnMap(loc: ProvinceMicroLocation) {
+		onFocusMicroLocation?.({
+			id: loc.id,
+			code: loc.code,
+			category: loc.category,
+			name: pick(loc.name),
+			district: pick(loc.district),
+			province: loc.provinceName,
+			scaleSummary: pick(loc.scaleSummary),
+			highlightMetric: pick(loc.highlightMetric),
+			targetFit: pick(loc.targetFit),
+			url: loc.officialUrl,
+			latitude: loc.latitude,
+			longitude: loc.longitude,
+		});
+	}
+
+	const zoneProfile = describeProvinceIncentiveZones(profile);
+	const provinceOpps = filterOpportunities(canonicalInvestmentOpportunities, {
+		provinceCodes: [profile.code],
+	});
+	const ipaContacts = resolveIpaContactsForInquiry({
+		provinceCodes: [profile.code],
+		provinceNames: [profile.displayName],
+	});
+
+	function renderMicroCard(loc: ProvinceMicroLocation) {
+		const dist = distanceNote(loc);
+		return (
+			<li key={loc.id} className={`micro-location-card ${loc.category}`}>
+				<div className="micro-card-header">
+					<div>
+						<span className={`micro-popup-badge ${loc.category}`}>
+							{loc.category === "industrial_zone"
+								? t("micro.badgeIndustrial")
+								: loc.category === "residential_zone"
+									? t("micro.badgeResidential")
+									: t("micro.badgeLogistics")}
+						</span>
+						<h5>
+							{pick(loc.name)} <small>({loc.code})</small>
+						</h5>
+					</div>
+					<button
+						type="button"
+						className="micro-locate-btn"
+						onClick={() => focusOnMap(loc)}
+					>
+						{t("micro.locateOnMap")}
+					</button>
+				</div>
+				<p className="micro-card-district">
+					{pick(loc.district)}
+					{dist ? ` · ${dist}` : ""} ·{" "}
+					<code>
+						{loc.latitude.toFixed(4)}°N, {loc.longitude.toFixed(4)}°E
+					</code>
+				</p>
+				<p className="micro-card-scale">
+					<strong>{pick(loc.scaleSummary)}</strong>
+				</p>
+				<p className="micro-card-highlight">{pick(loc.highlightMetric)}</p>
+				<p className="micro-card-fit">
+					<span>{t("micro.targetFitLabel")}:</span> {pick(loc.targetFit)}
+				</p>
+				{loc.officialUrl && (
+					<div className="micro-card-footer">
+						<a href={loc.officialUrl} target="_blank" rel="noopener noreferrer">
+							{t("infra.sourceRecord")}
+						</a>
+					</div>
+				)}
+			</li>
+		);
+	}
+
 	return (
 		<article className="profile-panel" data-testid="geo-profile">
 			<div className="profile-heading">
 				<div>
-					<span className="map-label">{levelLabel(locale, profile.level)}</span>
-					<h2>{profile.displayName}</h2>
+					<span className="map-label">
+						{levelLabel(locale, profile.level, profile)}
+					</span>
+					<h2>{formalPlaceName(locale, profile)}</h2>
 					<p>
 						{profile.parentName ?? t("common.vietnam")} ·{" "}
 						{profile.geographyVersion}
@@ -88,6 +232,183 @@ export function GeoProfilePanel({
 				</div>
 				<span className="profile-code">{profile.code}</span>
 			</div>
+
+			<div
+				className="profile-view-tabs"
+				role="tablist"
+				aria-label={t("micro.tabsAria")}
+			>
+				<button
+					type="button"
+					role="tab"
+					aria-selected={activeTab === "overview"}
+					className={activeTab === "overview" ? "active" : ""}
+					onClick={() => switchTab("overview")}
+				>
+					{t("micro.tabOverview")}
+				</button>
+				{profile.level === "province" && (
+					<button
+						type="button"
+						role="tab"
+						aria-selected={activeTab === "districts"}
+						className={activeTab === "districts" ? "active" : ""}
+						onClick={() => switchTab("districts")}
+					>
+						{t("district.tab")}
+					</button>
+				)}
+				<button
+					type="button"
+					role="tab"
+					aria-selected={activeTab === "detail"}
+					className={activeTab === "detail" ? "active" : ""}
+					onClick={() => switchTab("detail")}
+				>
+					{t("micro.tabDetail")} ({microLocations.length})
+				</button>
+			</div>
+
+			{activeTab === "districts" && (
+				<div role="tabpanel" aria-label={t("district.tab")}>
+					<DistrictPanel
+						province={profile}
+						locations={microLocations}
+						onSelect={onDistrictSelect}
+						onLocate={focusOnMap}
+					/>
+				</div>
+			)}
+			{activeTab === "overview" && (
+				<div className="micro-overview-callout">
+					<div>
+						<strong>
+							{t("micro.calloutTitle", {
+								iz: formatNumber(izLocations.length),
+								rz: formatNumber(rzLocations.length),
+							})}
+						</strong>
+						<p className="muted">{t("micro.calloutNote")}</p>
+					</div>
+					<button
+						type="button"
+						className="micro-open-detail-btn"
+						onClick={() => switchTab("detail")}
+					>
+						{t("micro.openFullDetail")} →
+					</button>
+				</div>
+			)}
+
+			{activeTab === "detail" && (
+				<div className="province-deep-dive" data-testid="province-detail-tab">
+					<section className="profile-category">
+						<h4>{t("micro.mapFilterTitle")}</h4>
+						<p className="muted">{t("micro.mapFilterNote")}</p>
+						<div className="micro-filter-pills">
+							{(
+								[
+									["all", t("micro.filterAll"), microLocations.length],
+									[
+										"industrial_zone",
+										t("micro.badgeIndustrial"),
+										izLocations.length,
+									],
+									[
+										"residential_zone",
+										t("micro.badgeResidential"),
+										rzLocations.length,
+									],
+									[
+										"logistics_hub",
+										t("micro.badgeLogistics"),
+										logisticsLocations.length,
+									],
+								] as const
+							).map(([cat, label, count]) => (
+								<button
+									key={cat}
+									type="button"
+									aria-pressed={categoryFilter === cat}
+									className={categoryFilter === cat ? "active" : ""}
+									onClick={() => setCategoryFilter(cat)}
+								>
+									{label} ({count})
+								</button>
+							))}
+						</div>
+					</section>
+
+					{(categoryFilter === "all" ||
+						categoryFilter === "industrial_zone") && (
+						<section className="profile-category">
+							<h4>
+								{t("micro.sectionIndustrial")} ({izLocations.length})
+							</h4>
+							<ul className="micro-location-list">
+								{izLocations.map((loc) => renderMicroCard(loc))}
+							</ul>
+						</section>
+					)}
+
+					{(categoryFilter === "all" ||
+						categoryFilter === "residential_zone") && (
+						<section className="profile-category">
+							<h4>
+								{t("micro.sectionResidential")} ({rzLocations.length})
+							</h4>
+							<ul className="micro-location-list">
+								{rzLocations.map((loc) => renderMicroCard(loc))}
+							</ul>
+						</section>
+					)}
+
+					{(categoryFilter === "all" || categoryFilter === "logistics_hub") &&
+						logisticsLocations.length > 0 && (
+							<section className="profile-category">
+								<h4>
+									{t("micro.sectionLogistics")} ({logisticsLocations.length})
+								</h4>
+								<ul className="micro-location-list">
+									{logisticsLocations.map((loc) => renderMicroCard(loc))}
+								</ul>
+							</section>
+						)}
+
+					<section className="profile-category">
+						<h4>{t("micro.sectionAllIndicators")}</h4>
+						<div className="decision-table-wrap">
+							<table>
+								<thead>
+									<tr>
+										<th>{t("comparison.indicator")}</th>
+										<th>{t("micro.colValue")}</th>
+										<th>{t("profile.period")}</th>
+										<th>{t("search.quality")}</th>
+									</tr>
+								</thead>
+								<tbody>
+									{profile.observations.map((obs) => (
+										<tr key={obs.id}>
+											<th>
+												{indicatorLabel(locale, obs.indicator, obs.label)}
+											</th>
+											<td>
+												{obs.value === null
+													? t("common.noData")
+													: `${formatNumber(obs.value)} ${unitLabel(locale, obs.unit)}`}
+											</td>
+											<td>{obs.period}</td>
+											<td>{qualityLabel(locale, obs.quality)}</td>
+										</tr>
+									))}
+								</tbody>
+							</table>
+						</div>
+					</section>
+				</div>
+			)}
+
 			<p className="muted">{t("profile.contextOnly")}</p>
 			<details className="inquiry-entry">
 				<summary>{t("profile.requestSupport")}</summary>
@@ -252,6 +573,52 @@ export function GeoProfilePanel({
 						})}
 					</ul>
 				</section>
+			)}
+			{profile.level === "province" && (
+				<>
+					<section className="profile-category">
+						<h4>{t("incentives.title")}</h4>
+						<p className="muted">{pick(zoneProfile.keyZones)}</p>
+						<p className="muted">{pick(zoneProfile.authorityNote)}</p>
+					</section>
+					{provinceOpps.length > 0 && (
+						<section className="profile-category">
+							<h4>{t("opportunities.title")}</h4>
+							<ul className="profile-infra-list">
+								{provinceOpps.map((opp) => (
+									<li key={opp.id}>
+										<strong>{pick(opp.title)}</strong> ·{" "}
+										{t("opportunities.areaMeta", {
+											available: formatNumber(opp.availableAreaHa),
+											total: formatNumber(opp.totalAreaHa),
+											occupancy: formatNumber(opp.occupancyPercent),
+										})}
+									</li>
+								))}
+							</ul>
+						</section>
+					)}
+					{ipaContacts.length > 0 && (
+						<section className="profile-category">
+							<h4>{t("ipa.title")}</h4>
+							<ul className="profile-infra-list">
+								{ipaContacts.map((contact) => (
+									<li key={contact.code}>
+										<strong>{pick(contact.organization)}</strong> ·{" "}
+										{pick(contact.department)} ·{" "}
+										<a
+											href={contact.officialUrl}
+											target="_blank"
+											rel="noopener noreferrer"
+										>
+											{contact.publicEmail}
+										</a>
+									</li>
+								))}
+							</ul>
+						</section>
+					)}
+				</>
 			)}
 			<p>
 				<a href="/investor-guide">{t("guide.link")}</a>

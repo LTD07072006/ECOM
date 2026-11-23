@@ -36,6 +36,7 @@ export type PublishedSurveyStudy = {
 	sourceName: string;
 	sourceUrl: string | null;
 	isDemo: boolean;
+	publicationStatus?: "draft" | "published" | "retired";
 	coveredGeoIds: string[];
 	questions: PublishedSurveyQuestion[];
 	aggregates: PublishedSurveyAggregate[];
@@ -56,6 +57,7 @@ type StudyRow = {
 	source_name: string;
 	source_url: string | null;
 	is_demo: boolean;
+	publication_status: "draft" | "published" | "retired";
 };
 
 type QuestionRow = {
@@ -168,6 +170,7 @@ export async function loadPublishedSurveyStudies(
 					sourceName: study.source_name,
 					sourceUrl: study.source_url ? safeSourceUrl(study.source_url) : null,
 					isDemo: study.is_demo,
+					publicationStatus: study.publication_status ?? "published",
 					coveredGeoIds,
 					questions: questionsByStudy.get(study.study_id) ?? [],
 					aggregates: studyAggregates,
@@ -180,5 +183,151 @@ export async function loadPublishedSurveyStudies(
 			);
 	} catch {
 		return [];
+	}
+}
+
+export async function listAllSurveyStudies(): Promise<PublishedSurveyStudy[]> {
+	try {
+		const sql = databasePool();
+		const studies = await sql<StudyRow[]>`
+      select study_id, code, sector, title_vi, title_en, segment, method, sample_size,
+        period_start::text, period_end::text, period_label, source_name, source_url, is_demo, publication_status
+      from market_entry.survey_studies
+      order by created_at desc, code asc
+    `;
+		return studies.map((study) => ({
+			studyId: study.study_id,
+			code: study.code,
+			sector: study.sector,
+			title: { vi: study.title_vi, en: study.title_en },
+			segment: study.segment,
+			method: study.method,
+			sampleSize: study.sample_size,
+			periodStart: study.period_start,
+			periodEnd: study.period_end,
+			periodLabel: study.period_label,
+			sourceName: study.source_name,
+			sourceUrl: study.source_url ? safeSourceUrl(study.source_url) : null,
+			isDemo: study.is_demo,
+			publicationStatus: study.publication_status,
+			coveredGeoIds: [],
+			questions: [],
+			aggregates: [],
+		}));
+	} catch {
+		return [];
+	}
+}
+
+export async function createSurveyStudyRecord(input: {
+	code: string;
+	sector: SectorId;
+	titleVi: string;
+	titleEn: string;
+	segment: string;
+	method: string;
+	sampleSize: number;
+	periodStart: string;
+	periodEnd: string;
+	periodLabel: string;
+	sourceName: string;
+	sourceUrl?: string;
+	isDemo: boolean;
+	publicationStatus: "draft" | "published" | "retired";
+	questionCode: string;
+	promptVi: string;
+	promptEn: string;
+	aggregates: Array<{
+		geoId: string;
+		sampleSize: number;
+		optionLabel: string;
+		valuePercent: number;
+	}>;
+}) {
+	try {
+		const sql = databasePool();
+		return await sql.begin(async (tx) => {
+			const [study] = await tx<{ study_id: string; code: string }[]>`
+        insert into market_entry.survey_studies (
+          code, sector, title_vi, title_en, segment, method, sample_size,
+          period_start, period_end, period_label, source_name, source_url, is_demo, publication_status
+        )
+        values (
+          ${input.code}, ${input.sector}, ${input.titleVi}, ${input.titleEn},
+          ${input.segment}, ${input.method}, ${input.sampleSize},
+          ${input.periodStart}::date, ${input.periodEnd}::date, ${input.periodLabel},
+          ${input.sourceName}, ${input.sourceUrl ?? null}, ${input.isDemo}, ${input.publicationStatus}
+        )
+        on conflict (code) do update set
+          sector = excluded.sector,
+          title_vi = excluded.title_vi,
+          title_en = excluded.title_en,
+          segment = excluded.segment,
+          method = excluded.method,
+          sample_size = excluded.sample_size,
+          period_start = excluded.period_start,
+          period_end = excluded.period_end,
+          period_label = excluded.period_label,
+          source_name = excluded.source_name,
+          source_url = excluded.source_url,
+          is_demo = excluded.is_demo,
+          publication_status = excluded.publication_status
+        returning study_id, code
+      `;
+			if (!study) return null;
+
+			const [question] = await tx<{ question_id: string }[]>`
+        insert into market_entry.survey_questions (
+          study_id, question_code, prompt_vi, prompt_en, response_type
+        )
+        values (
+          ${study.study_id}, ${input.questionCode}, ${input.promptVi}, ${input.promptEn}, 'single_choice'
+        )
+        on conflict (study_id, question_code) do update set
+          prompt_vi = excluded.prompt_vi,
+          prompt_en = excluded.prompt_en
+        returning question_id
+      `;
+			if (!question) return null;
+
+			await tx`delete from market_entry.survey_aggregates where study_id = ${study.study_id}`;
+			for (const agg of input.aggregates) {
+				await tx`
+          insert into market_entry.survey_aggregates (
+            study_id, question_id, geo_id, sample_size, option_label, value_percent, unit, quality_status
+          )
+          values (
+            ${study.study_id}, ${question.question_id}, ${agg.geoId}::uuid,
+            ${agg.sampleSize}, ${agg.optionLabel}, ${agg.valuePercent}, '%', 'verified'
+          )
+        `;
+			}
+			return {
+				studyId: study.study_id,
+				code: study.code,
+				publicationStatus: input.publicationStatus,
+			};
+		});
+	} catch {
+		return null;
+	}
+}
+
+export async function updateSurveyStudyStatus(
+	studyId: string,
+	publicationStatus: "draft" | "published" | "retired",
+) {
+	try {
+		const [updated] = await databasePool()<
+			{ study_id: string; code: string; publication_status: string }[]
+		>`
+      update market_entry.survey_studies
+      set publication_status = ${publicationStatus}
+      where study_id = ${studyId}::uuid
+      returning study_id, code, publication_status
+    `;
+		return updated ?? null;
+	} catch {
+		return null;
 	}
 }
