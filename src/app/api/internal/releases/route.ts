@@ -5,7 +5,7 @@ import {
 	releaseOverview,
 } from "../../../../features/releases/operations";
 import { boundedQuery, observeApi } from "../../../../lib/api-operations";
-import { error, json } from "../../../../lib/http";
+import { error, json, readBoundedJson } from "../../../../lib/http";
 
 export const dynamic = "force-dynamic";
 
@@ -46,40 +46,9 @@ export function POST(request: Request) {
 			const { role, actor } = identity;
 			if (!boundedQuery(request))
 				return error("Unexpected release parameters.", 400);
-			if (
-				request.headers.get("content-type")?.split(";")[0].trim() !==
-				"application/json"
-			) {
-				return error("A JSON request is required.", 415);
-			}
-			const reader = request.body?.getReader();
-			if (!reader)
-				return error("A release action and a review note are required.", 400);
-			const decoder = new TextDecoder();
-			let body = "";
-			let size = 0;
-			try {
-				for (;;) {
-					const { value, done } = await reader.read();
-					if (done) break;
-					size += value.byteLength;
-					if (size > 4096) {
-						await reader.cancel();
-						return error("The release action is too large.", 413);
-					}
-					body += decoder.decode(value, { stream: true });
-				}
-				body += decoder.decode();
-			} finally {
-				reader.releaseLock();
-			}
-			let payload: unknown;
-			try {
-				payload = JSON.parse(body);
-			} catch {
-				return error("Invalid JSON.", 400);
-			}
-			const parsed = actionSchema.safeParse(payload);
+			const body = await readBoundedJson(request, 4096);
+			if (!body.ok) return error(body.message, body.status);
+			const parsed = actionSchema.safeParse(body.value);
 			if (!parsed.success)
 				return error(
 					"Provide a release action and a note of 10 to 500 characters.",

@@ -7,6 +7,21 @@ const apply = process.argv.includes("--apply");
 const monitor = process.argv.includes("--monitor");
 const sql = databasePool();
 
+function errorCode(cause: unknown): string {
+	if (typeof cause === "object" && cause !== null) {
+		if ("code" in cause && typeof cause.code === "string" && cause.code) {
+			return cause.code;
+		}
+		if (cause instanceof Error && cause.name) {
+			return cause.name;
+		}
+		if ("name" in cause && typeof cause.name === "string" && cause.name) {
+			return cause.name;
+		}
+	}
+	return "UnknownError";
+}
+
 try {
 	if (monitor) {
 		const [health] = await sql<{ status: string; recent: boolean }[]>`
@@ -66,8 +81,10 @@ try {
 			lock.release();
 		}
 	}
-} catch {
-	console.error(JSON.stringify({ event: "retention_failed" }));
+} catch (cause) {
+	console.error(
+		JSON.stringify({ event: "retention_failed", code: errorCode(cause) }),
+	);
 	process.exitCode = 1;
 } finally {
 	await sql.end({ timeout: 5 });

@@ -34,7 +34,6 @@
     "mail:scheduler": "bun run src/db/mail-scheduler.ts"
   },
   "dependencies": {
-    "@neondatabase/serverless": "^1.0.2",
     "drizzle-orm": "^0.45.4",
     "maplibre-gl": "^6.4.1",
     "next": "^15.5.6",

@@ -47,6 +47,7 @@ services:
       context: .
       target: maintenance
     restart: unless-stopped
+    stop_grace_period: 60s
     command: ["bun", "run", "db:retention:scheduler"]
     environment:
       ECOM_RETENTION_DB_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in the ignored .env file}
@@ -65,6 +66,7 @@ services:
       context: .
       target: maintenance
     restart: unless-stopped
+    stop_grace_period: 60s
     command: ["bun", "run", "mail:scheduler"]
     environment:
       DATABASE_URL: postgres://market_entry:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in the ignored .env file}@db:5432/market_entry

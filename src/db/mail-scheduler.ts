@@ -1,4 +1,4 @@
-import { spawn } from "node:child_process";
+import { type ChildProcess, spawn } from "node:child_process";
 
 const defaultIntervalMs = 60_000;
 const defaultErrorBackoffMs = 300_000;
@@ -18,20 +18,35 @@ const errorBackoffMs = parseInterval(
 );
 
 let stopping = false;
-process.on("SIGINT", () => {
+let activeChild: ChildProcess | null = null;
+
+function handleSignal() {
 	stopping = true;
-});
-process.on("SIGTERM", () => {
-	stopping = true;
-});
+	if (!activeChild) {
+		process.exit(0);
+	}
+}
+
+process.on("SIGINT", handleSignal);
+process.on("SIGTERM", handleSignal);
 
 async function runFlush() {
 	return new Promise<number>((resolve) => {
 		const child = spawn(process.execPath, ["run", "src/db/flush-mail.ts"], {
 			stdio: "inherit",
 		});
-		child.on("error", () => resolve(1));
-		child.on("exit", (code) => resolve(code ?? 1));
+		activeChild = child;
+		let settled = false;
+		const finish = (code: number) => {
+			if (settled) return;
+			settled = true;
+			if (activeChild === child) {
+				activeChild = null;
+			}
+			resolve(code);
+		};
+		child.on("error", () => finish(1));
+		child.on("exit", (code) => finish(code ?? 1));
 	});
 }
 

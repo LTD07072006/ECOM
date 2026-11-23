@@ -164,6 +164,21 @@ async function takeQuota(route: QuotaRoute, request: Request) {
 	};
 }
 
+function errorCode(cause: unknown): string {
+	if (typeof cause === "object" && cause !== null) {
+		if ("code" in cause && typeof cause.code === "string" && cause.code) {
+			return cause.code;
+		}
+		if (cause instanceof Error && cause.name) {
+			return cause.name;
+		}
+		if ("name" in cause && typeof cause.name === "string" && cause.name) {
+			return cause.name;
+		}
+	}
+	return "UnknownError";
+}
+
 export async function observeApi(
 	route: Route,
 	request: Request,
@@ -184,7 +199,16 @@ export async function observeApi(
 		} else {
 			response = await handler();
 		}
-	} catch {
+	} catch (cause) {
+		if (process.env.NODE_ENV !== "test") {
+			console.error(
+				JSON.stringify({
+					event: "api_error",
+					route,
+					code: errorCode(cause),
+				}),
+			);
+		}
 		response = error("The service is temporarily unavailable.", 503);
 	}
 	if (privateResponse) {
