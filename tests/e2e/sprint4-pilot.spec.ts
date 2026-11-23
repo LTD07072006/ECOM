@@ -110,7 +110,9 @@ test("the internal page keeps data behind its role gate and supports reviewer ke
 		page.getByRole("heading", { name: "Độ mới của bộ dữ liệu" }),
 	).toBeVisible();
 	await expect(page.getByText(/Đăng nhập với .*reviewer/i)).toBeVisible();
-	await expect(page.getByText("VN_ADMIN_CATALOG")).toBeVisible();
+	await expect(
+		page.locator("strong", { hasText: "VN_ADMIN_CATALOG" }),
+	).toBeVisible();
 	await page.getByRole("button", { name: "Đăng xuất" }).click();
 	await expect(field).toBeVisible();
 	await expect(field).toHaveValue("");

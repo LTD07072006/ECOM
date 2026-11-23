@@ -347,7 +347,9 @@ test("i. destructive actions are secondary/destructive styled and require confir
 	page,
 }) => {
 	await page.goto(`${baseUrl}/decision`);
-	await page.getByRole("combobox", { name: "Sector" }).selectOption("retail");
+	await page
+		.getByRole("combobox", { name: "Sector", exact: true })
+		.selectOption("retail");
 	const resetBtn = page.getByRole("button", { name: "Reset saved scenario" });
 	await expect(resetBtn).not.toHaveClass(/\bbtn-primary\b/);
 	await expect(resetBtn).toHaveClass(/\bbtn-destructive\b/);
@@ -396,7 +398,9 @@ test("k. /decision assess button is disabled upfront with visible eligibility re
 	page,
 }) => {
 	await page.goto(`${baseUrl}/decision`);
-	await page.getByRole("combobox", { name: "Sector" }).selectOption("retail");
+	await page
+		.getByRole("combobox", { name: "Sector", exact: true })
+		.selectOption("retail");
 	const assessBtn = page.getByRole("button", {
 		name: "Assess evidence and calculate",
 	});
