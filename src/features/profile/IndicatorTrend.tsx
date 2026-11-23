@@ -3,6 +3,7 @@
 import type { Observation } from "../geography/types";
 import { useI18n } from "../../lib/i18n/provider";
 import { indicatorLabel } from "../../lib/i18n/data-labels";
+import { chartColors } from "../map/layers";
 import { calculateCagr, summarizeTrend } from "./trend";
 
 export function IndicatorTrend({ observation }: { observation: Observation }) {
@@ -10,15 +11,7 @@ export function IndicatorTrend({ observation }: { observation: Observation }) {
 	const trend = summarizeTrend(observation.history, observation.unit);
 	const cagr = calculateCagr(observation.history ?? []);
 
-	if (trend.points.length === 0) return null;
-
-	if (trend.points.length === 1) {
-		return (
-			<div className="indicator-trend">
-				<span className="trend-badge neutral">{t("trend.singlePeriod")}</span>
-			</div>
-		);
-	}
+	if (trend.points.length <= 1) return null;
 
 	const first = trend.points[0];
 	const last = trend.points[trend.points.length - 1];
@@ -29,12 +22,12 @@ export function IndicatorTrend({ observation }: { observation: Observation }) {
 	);
 	const badgeClass =
 		trend.yoy === null
-			? "neutral"
+			? "status-badge"
 			: trend.yoy.delta > 0
-				? "positive"
+				? "status-badge status-badge--success"
 				: trend.yoy.delta < 0
-					? "negative"
-					: "neutral";
+					? "status-badge status-badge--error"
+					: "status-badge";
 	const formattedDelta =
 		trend.yoy === null
 			? null
@@ -55,7 +48,7 @@ export function IndicatorTrend({ observation }: { observation: Observation }) {
 			>
 				<polyline
 					fill="none"
-					stroke="#0f5c5a"
+					stroke={chartColors.primary}
 					strokeWidth="2"
 					strokeLinecap="round"
 					strokeLinejoin="round"
@@ -66,12 +59,12 @@ export function IndicatorTrend({ observation }: { observation: Observation }) {
 						cx={trend.lastPoint.x}
 						cy={trend.lastPoint.y}
 						r="3"
-						fill="#c46d42"
+						fill={chartColors.accent}
 					/>
 				)}
 			</svg>
 			{trend.yoy && formattedDelta && (
-				<span className={`trend-badge ${badgeClass}`}>
+				<span className={badgeClass}>
 					{t(trend.yoy.kind === "pp" ? "trend.yoyPp" : "trend.yoyPct", {
 						delta: formattedDelta,
 					})}

@@ -1,6 +1,7 @@
 import "dotenv/config";
 import { cleanupExpiredInquiries } from "../features/inquiries/repository";
 import { cleanupExpiredInquiryReportSnapshots } from "../features/inquiries/snapshots";
+import { errorCode } from "../lib/api-operations";
 import { databasePool } from "./pool";
 
 const apply = process.argv.includes("--apply");
@@ -9,16 +10,52 @@ const sql = databasePool();
 
 try {
 	if (monitor) {
-		const [health] = await sql<{ status: string; recent: boolean }[]>`
-      select status, finished_at >= now() - interval '30 hours' as recent
-      from market_entry.inquiry_retention_runs order by started_at desc limit 1
+		const [health] = await sql<
+			{ last_status: string | null; healthy: boolean }[]
+		>`
+      with latest_run as (
+        select status
+        from market_entry.inquiry_retention_runs
+        order by started_at desc
+        limit 1
+      ),
+      latest_succeeded as (
+        select started_at, finished_at
+        from market_entry.inquiry_retention_runs
+        where status = 'succeeded'
+        order by finished_at desc nulls last, started_at desc
+        limit 1
+      )
+      select
+        (select status from latest_run) as last_status,
+        coalesce(
+          (
+            select finished_at is not null
+              and finished_at >= now() - interval '30 hours'
+            from latest_succeeded
+          ),
+          false
+        )
+          and not exists (
+            select 1
+            from market_entry.inquiry_retention_runs failed
+            cross join latest_succeeded
+            where failed.status = 'failed'
+              and failed.started_at > latest_succeeded.started_at
+          )
+          and not exists (
+            select 1
+            from market_entry.inquiry_retention_runs running
+            where running.status = 'running'
+              and running.started_at < now() - interval '15 minutes'
+          ) as healthy
     `;
-		const healthy = health?.status === "succeeded" && health.recent;
+		const healthy = Boolean(health?.healthy);
 		console.log(
 			JSON.stringify({
 				event: "retention_health",
-				healthy: Boolean(healthy),
-				lastStatus: health?.status ?? null,
+				healthy,
+				lastStatus: health?.last_status ?? null,
 			}),
 		);
 		if (!healthy) process.exitCode = 1;
@@ -66,8 +103,10 @@ try {
 			lock.release();
 		}
 	}
-} catch {
-	console.error(JSON.stringify({ event: "retention_failed" }));
+} catch (cause) {
+	console.error(
+		JSON.stringify({ event: "retention_failed", code: errorCode(cause) }),
+	);
 	process.exitCode = 1;
 } finally {
 	await sql.end({ timeout: 5 });

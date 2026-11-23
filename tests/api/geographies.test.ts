@@ -107,16 +107,34 @@ test("GET /api/geographies supports indicator numeric filtering and rejects inve
 	expect(Array.isArray(body.data)).toBe(true);
 });
 
-test("GET /api/geographies/batch returns multiple profiles in one request and validates input", async () => {
+test("GET /api/geographies/batch returns multiple profiles in one request, allows partial matches, and validates input", async () => {
 	const id1 = "10000000-0000-4000-8000-000000000002";
 	const id2 = "10000000-0000-4000-8000-000000000003";
+	const missingId = "99999999-9999-4999-8999-999999999999";
 	const ok = await batchGeographies(
 		new Request(`http://localhost/api/geographies/batch?ids=${id1},${id2}`),
 	);
 	expect(ok.status).toBe(200);
 	const body = await ok.json();
 	expect(body.data).toHaveLength(2);
+	expect(body.meta.requested).toBe(2);
 	expect(body.meta.found).toBe(2);
+
+	const partial = await batchGeographies(
+		new Request(
+			`http://localhost/api/geographies/batch?ids=${id1},${missingId}`,
+		),
+	);
+	expect(partial.status).toBe(200);
+	const partialBody = await partial.json();
+	expect(partialBody.data).toHaveLength(1);
+	expect(partialBody.meta.requested).toBe(2);
+	expect(partialBody.meta.found).toBe(1);
+
+	const noneFound = await batchGeographies(
+		new Request(`http://localhost/api/geographies/batch?ids=${missingId}`),
+	);
+	expect(noneFound.status).toBe(404);
 
 	const dup = await batchGeographies(
 		new Request(`http://localhost/api/geographies/batch?ids=${id1},${id1}`),
@@ -188,7 +206,7 @@ test("GET /api/map/provinces emits ETag + Cache-Control and honors If-None-Match
 		);
 		expect(first.status).toBe(200);
 		const etag = first.headers.get("etag");
-		expect(etag).toBe('W/"provinces-gov-v1-ds-v1"');
+		expect(etag).toBe('W/"provinces-g6-gov-v1-ds-v1"');
 		expect(first.headers.get("cache-control")).toContain("public, max-age=300");
 
 		const cached = await mapProvinces(

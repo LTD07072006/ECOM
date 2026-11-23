@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import {
 	boolean,
 	check,
@@ -15,7 +16,6 @@ import {
 	unique,
 	uuid,
 } from "drizzle-orm/pg-core";
-import { sql } from "drizzle-orm";
 
 export const marketEntry = pgSchema("market_entry");
 
@@ -154,13 +154,46 @@ export const inquiryAudit = marketEntry.table(
 	],
 );
 
+export const inquiryAccessAudit = marketEntry.table(
+	"inquiry_access_audit",
+	{
+		accessId: uuid("access_id").defaultRandom().primaryKey(),
+		actor: text("actor").notNull(),
+		action: text("action").notNull(),
+		inquiryId: uuid("inquiry_id"),
+		rowCount: integer("row_count"),
+		ticketRef: text("ticket_ref"),
+		happenedAt: timestamp("happened_at", { withTimezone: true })
+			.default(sql`clock_timestamp()`)
+			.notNull(),
+	},
+	(table) => [
+		foreignKey({
+			name: "inquiry_access_audit_inquiry_fkey",
+			columns: [table.inquiryId],
+			foreignColumns: [investorInquiries.inquiryId],
+		}).onDelete("set null"),
+		index("inquiry_access_audit_happened_idx").on(table.happenedAt),
+		check(
+			"inquiry_access_audit_action_check",
+			sql`${table.action} in ('viewed_detail', 'exported_live_csv', 'erased_by_request', 'consent_withdrawn')`,
+		),
+		check(
+			"inquiry_access_audit_row_count_check",
+			sql`${table.rowCount} is null or ${table.rowCount} >= 0`,
+		),
+		check(
+			"inquiry_access_audit_ticket_ref_check",
+			sql`${table.ticketRef} is null or char_length(${table.ticketRef}) between 3 and 64`,
+		),
+	],
+);
+
 export const inquiryNotifications = marketEntry.table(
 	"inquiry_notifications",
 	{
 		notificationId: uuid("notification_id").defaultRandom().primaryKey(),
-		inquiryId: uuid("inquiry_id")
-			.notNull()
-			.references(() => investorInquiries.inquiryId, { onDelete: "cascade" }),
+		inquiryId: uuid("inquiry_id").notNull(),
 		kind: text("kind").notNull(),
 		locale: text("locale").notNull().default("en"),
 		status: text("status").notNull().default("pending"),
@@ -172,6 +205,11 @@ export const inquiryNotifications = marketEntry.table(
 		sentAt: timestamp("sent_at", { withTimezone: true }),
 	},
 	(table) => [
+		foreignKey({
+			name: "inquiry_notifications_inquiry_fkey",
+			columns: [table.inquiryId],
+			foreignColumns: [investorInquiries.inquiryId],
+		}).onDelete("cascade"),
 		unique("inquiry_notifications_inquiry_kind_key").on(
 			table.inquiryId,
 			table.kind,
@@ -254,9 +292,7 @@ export const inquiryReportSnapshotAudit = marketEntry.table(
 	"inquiry_report_snapshot_audit",
 	{
 		eventId: uuid("event_id").defaultRandom().primaryKey(),
-		snapshotId: uuid("snapshot_id")
-			.notNull()
-			.references(() => inquiryReportSnapshots.snapshotId),
+		snapshotId: uuid("snapshot_id").notNull(),
 		actor: text("actor").notNull(),
 		action: text("action").notNull(),
 		happenedAt: timestamp("happened_at", { withTimezone: true })
@@ -264,6 +300,11 @@ export const inquiryReportSnapshotAudit = marketEntry.table(
 			.notNull(),
 	},
 	(table) => [
+		foreignKey({
+			name: "inquiry_report_snapshot_audit_snapshot_fk",
+			columns: [table.snapshotId],
+			foreignColumns: [inquiryReportSnapshots.snapshotId],
+		}),
 		index("inquiry_report_snapshot_audit_snapshot_idx").on(
 			table.snapshotId,
 			table.happenedAt,
@@ -384,11 +425,16 @@ export const releaseMembers = marketEntry.table(
 		batchId: uuid("batch_id")
 			.notNull()
 			.references(() => releaseBatches.id),
-		datasetId: uuid("dataset_version_id")
-			.notNull()
-			.references(() => datasetVersions.datasetVersionId),
+		datasetId: uuid("dataset_version_id").notNull(),
 	},
-	(table) => [primaryKey({ columns: [table.batchId, table.datasetId] })],
+	(table) => [
+		primaryKey({ columns: [table.batchId, table.datasetId] }),
+		foreignKey({
+			name: "release_members_dataset_version_fkey",
+			columns: [table.datasetId],
+			foreignColumns: [datasetVersions.datasetVersionId],
+		}),
+	],
 );
 
 export const releaseAudit = marketEntry.table(
@@ -420,9 +466,7 @@ export const geographyVersions = marketEntry.table(
 		geographyVersionId: uuid("geography_version_id")
 			.defaultRandom()
 			.primaryKey(),
-		authoritySourceId: uuid("authority_source_id")
-			.notNull()
-			.references(() => sourceRegistry.sourceId),
+		authoritySourceId: uuid("authority_source_id").notNull(),
 		datasetVersionId: uuid("dataset_version_id"),
 		code: text("code").notNull().unique(),
 		name: text("name").notNull(),
@@ -440,6 +484,11 @@ export const geographyVersions = marketEntry.table(
 			sql`${table.effectiveTo} is null or ${table.effectiveTo} >= ${table.effectiveFrom}`,
 		),
 		foreignKey({
+			name: "geography_versions_authority_source_fkey",
+			columns: [table.authoritySourceId],
+			foreignColumns: [sourceRegistry.sourceId],
+		}),
+		foreignKey({
 			name: "geography_dataset_source_fkey",
 			columns: [table.datasetVersionId, table.authoritySourceId],
 			foreignColumns: [
@@ -454,9 +503,7 @@ export const geoUnits = marketEntry.table(
 	"geo_units",
 	{
 		geoId: uuid("geo_id").defaultRandom().primaryKey(),
-		geographyVersionId: uuid("geography_version_id")
-			.notNull()
-			.references(() => geographyVersions.geographyVersionId),
+		geographyVersionId: uuid("geography_version_id").notNull(),
 		adminCode: text("admin_code").notNull(),
 		name: text("name").notNull(),
 		displayName: text("display_name").notNull(),
@@ -510,6 +557,11 @@ export const geoUnits = marketEntry.table(
 			sql`${table.geom} IS NULL OR (ST_SRID(${table.geom}) = 4326 AND ST_IsValid(${table.geom}))`,
 		),
 		foreignKey({
+			name: "geo_units_geography_version_fkey",
+			columns: [table.geographyVersionId],
+			foreignColumns: [geographyVersions.geographyVersionId],
+		}),
+		foreignKey({
 			name: "geo_units_parent_fkey",
 			columns: [table.parentGeoId, table.geographyVersionId, table.parentLevel],
 			foreignColumns: [table.geoId, table.geographyVersionId, table.level],
@@ -523,13 +575,16 @@ export const geoBoundaries = marketEntry.table(
 		geoId: uuid("geo_id")
 			.notNull()
 			.references(() => geoUnits.geoId),
-		datasetVersionId: uuid("dataset_version_id")
-			.notNull()
-			.references(() => datasetVersions.datasetVersionId),
+		datasetVersionId: uuid("dataset_version_id").notNull(),
 		geom: geometry("geom").notNull(),
 	},
 	(table) => [
 		primaryKey({ columns: [table.geoId, table.datasetVersionId] }),
+		foreignKey({
+			name: "geo_boundaries_dataset_version_fkey",
+			columns: [table.datasetVersionId],
+			foreignColumns: [datasetVersions.datasetVersionId],
+		}),
 		check(
 			"geo_boundaries_geometry_check",
 			sql`ST_SRID(${table.geom}) = 4326 AND ST_NDims(${table.geom}) = 2
@@ -653,9 +708,7 @@ export const observations = marketEntry.table(
 		sourceId: uuid("source_id")
 			.notNull()
 			.references(() => sourceRegistry.sourceId),
-		datasetVersionId: uuid("dataset_version_id")
-			.notNull()
-			.references(() => datasetVersions.datasetVersionId),
+		datasetVersionId: uuid("dataset_version_id").notNull(),
 		qualityStatus: text("quality_status").notNull(),
 		missingReason: text("missing_reason"),
 		verifiedAt: timestamp("verified_at", { withTimezone: true }),
@@ -689,6 +742,11 @@ export const observations = marketEntry.table(
 			sql`${table.periodEnd} >= ${table.periodStart}`,
 		),
 		check("observation_scope_check", sql`btrim(${table.scope}) <> ''`),
+		foreignKey({
+			name: "observations_dataset_version_fkey",
+			columns: [table.datasetVersionId],
+			foreignColumns: [datasetVersions.datasetVersionId],
+		}),
 		foreignKey({
 			name: "observations_indicator_fkey",
 			columns: [table.indicatorId, table.unit, table.valueType],
@@ -761,9 +819,7 @@ export const entryRequirements = marketEntry.table(
 	{
 		requirementId: uuid("requirement_id").defaultRandom().primaryKey(),
 		code: text("code").notNull().unique(),
-		legalReferenceId: uuid("legal_reference_id")
-			.notNull()
-			.references(() => legalReferences.legalReferenceId),
+		legalReferenceId: uuid("legal_reference_id").notNull(),
 		sector: text("sector").notNull(),
 		geoId: uuid("geo_id").references(() => geoUnits.geoId),
 		investorType: text("investor_type").notNull().default("foreign_investor"),
@@ -778,6 +834,11 @@ export const entryRequirements = marketEntry.table(
 		advisoryNoteEn: text("advisory_note_en"),
 	},
 	(table) => [
+		foreignKey({
+			name: "entry_requirements_legal_reference_fkey",
+			columns: [table.legalReferenceId],
+			foreignColumns: [legalReferences.legalReferenceId],
+		}),
 		index("entry_requirements_sector_geo_idx").on(table.sector, table.geoId),
 		check(
 			"entry_requirements_sector_check",

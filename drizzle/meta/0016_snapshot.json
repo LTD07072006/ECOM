@@ -1,6 +1,6 @@
 {
-  "id": "05459c39-acc6-4a27-83e5-96da9819ae28",
-  "prevId": "8a91c3a1-4fec-4bbe-b500-616d1ae15a86",
+  "id": "eb12cdc6-f797-4aa4-8345-91e9c867fdf3",
+  "prevId": "a0c78e6b-1718-4420-82e7-cb3d6b573e60",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -351,20 +351,6 @@
         }
       },
       "foreignKeys": {
-        "entry_requirements_legal_reference_id_legal_references_legal_reference_id_fk": {
-          "name": "entry_requirements_legal_reference_id_legal_references_legal_reference_id_fk",
-          "tableFrom": "entry_requirements",
-          "tableTo": "legal_references",
-          "schemaTo": "market_entry",
-          "columnsFrom": [
-            "legal_reference_id"
-          ],
-          "columnsTo": [
-            "legal_reference_id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
         "entry_requirements_geo_id_geo_units_geo_id_fk": {
           "name": "entry_requirements_geo_id_geo_units_geo_id_fk",
           "tableFrom": "entry_requirements",
@@ -375,6 +361,20 @@
           ],
           "columnsTo": [
             "geo_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "entry_requirements_legal_reference_fkey": {
+          "name": "entry_requirements_legal_reference_fkey",
+          "tableFrom": "entry_requirements",
+          "tableTo": "legal_references",
+          "schemaTo": "market_entry",
+          "columnsFrom": [
+            "legal_reference_id"
+          ],
+          "columnsTo": [
+            "legal_reference_id"
           ],
           "onDelete": "no action",
           "onUpdate": "no action"
@@ -446,8 +446,8 @@
           "onDelete": "no action",
           "onUpdate": "no action"
         },
-        "geo_boundaries_dataset_version_id_dataset_versions_dataset_version_id_fk": {
-          "name": "geo_boundaries_dataset_version_id_dataset_versions_dataset_version_id_fk",
+        "geo_boundaries_dataset_version_fkey": {
+          "name": "geo_boundaries_dataset_version_fkey",
           "tableFrom": "geo_boundaries",
           "tableTo": "dataset_versions",
           "schemaTo": "market_entry",
@@ -614,8 +614,8 @@
         }
       },
       "foreignKeys": {
-        "geo_units_geography_version_id_geography_versions_geography_version_id_fk": {
-          "name": "geo_units_geography_version_id_geography_versions_geography_version_id_fk",
+        "geo_units_geography_version_fkey": {
+          "name": "geo_units_geography_version_fkey",
           "tableFrom": "geo_units",
           "tableTo": "geography_versions",
           "schemaTo": "market_entry",
@@ -753,8 +753,8 @@
       },
       "indexes": {},
       "foreignKeys": {
-        "geography_versions_authority_source_id_source_registry_source_id_fk": {
-          "name": "geography_versions_authority_source_id_source_registry_source_id_fk",
+        "geography_versions_authority_source_fkey": {
+          "name": "geography_versions_authority_source_fkey",
           "tableFrom": "geography_versions",
           "tableTo": "source_registry",
           "schemaTo": "market_entry",
@@ -1062,6 +1062,107 @@
       },
       "isRLSEnabled": false
     },
+    "market_entry.inquiry_access_audit": {
+      "name": "inquiry_access_audit",
+      "schema": "market_entry",
+      "columns": {
+        "access_id": {
+          "name": "access_id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "actor": {
+          "name": "actor",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "action": {
+          "name": "action",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "inquiry_id": {
+          "name": "inquiry_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "row_count": {
+          "name": "row_count",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "ticket_ref": {
+          "name": "ticket_ref",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "happened_at": {
+          "name": "happened_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "clock_timestamp()"
+        }
+      },
+      "indexes": {
+        "inquiry_access_audit_happened_idx": {
+          "name": "inquiry_access_audit_happened_idx",
+          "columns": [
+            {
+              "expression": "happened_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "inquiry_access_audit_inquiry_fkey": {
+          "name": "inquiry_access_audit_inquiry_fkey",
+          "tableFrom": "inquiry_access_audit",
+          "tableTo": "investor_inquiries",
+          "schemaTo": "market_entry",
+          "columnsFrom": [
+            "inquiry_id"
+          ],
+          "columnsTo": [
+            "inquiry_id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "inquiry_access_audit_action_check": {
+          "name": "inquiry_access_audit_action_check",
+          "value": "\"market_entry\".\"inquiry_access_audit\".\"action\" in ('viewed_detail', 'exported_live_csv', 'erased_by_request', 'consent_withdrawn')"
+        },
+        "inquiry_access_audit_row_count_check": {
+          "name": "inquiry_access_audit_row_count_check",
+          "value": "\"market_entry\".\"inquiry_access_audit\".\"row_count\" is null or \"market_entry\".\"inquiry_access_audit\".\"row_count\" >= 0"
+        },
+        "inquiry_access_audit_ticket_ref_check": {
+          "name": "inquiry_access_audit_ticket_ref_check",
+          "value": "\"market_entry\".\"inquiry_access_audit\".\"ticket_ref\" is null or char_length(\"market_entry\".\"inquiry_access_audit\".\"ticket_ref\") between 3 and 64"
+        }
+      },
+      "isRLSEnabled": false
+    },
     "market_entry.inquiry_audit": {
       "name": "inquiry_audit",
       "schema": "market_entry",
@@ -1265,8 +1366,8 @@
         }
       },
       "foreignKeys": {
-        "inquiry_notifications_inquiry_id_investor_inquiries_inquiry_id_fk": {
-          "name": "inquiry_notifications_inquiry_id_investor_inquiries_inquiry_id_fk",
+        "inquiry_notifications_inquiry_fkey": {
+          "name": "inquiry_notifications_inquiry_fkey",
           "tableFrom": "inquiry_notifications",
           "tableTo": "investor_inquiries",
           "schemaTo": "market_entry",
@@ -1373,8 +1474,8 @@
         }
       },
       "foreignKeys": {
-        "inquiry_report_snapshot_audit_snapshot_id_inquiry_report_snapshots_snapshot_id_fk": {
-          "name": "inquiry_report_snapshot_audit_snapshot_id_inquiry_report_snapshots_snapshot_id_fk",
+        "inquiry_report_snapshot_audit_snapshot_fk": {
+          "name": "inquiry_report_snapshot_audit_snapshot_fk",
           "tableFrom": "inquiry_report_snapshot_audit",
           "tableTo": "inquiry_report_snapshots",
           "schemaTo": "market_entry",
@@ -2740,8 +2841,8 @@
           "onDelete": "no action",
           "onUpdate": "no action"
         },
-        "observations_dataset_version_id_dataset_versions_dataset_version_id_fk": {
-          "name": "observations_dataset_version_id_dataset_versions_dataset_version_id_fk",
+        "observations_dataset_version_fkey": {
+          "name": "observations_dataset_version_fkey",
           "tableFrom": "observations",
           "tableTo": "dataset_versions",
           "schemaTo": "market_entry",
@@ -3000,8 +3101,8 @@
           "onDelete": "no action",
           "onUpdate": "no action"
         },
-        "release_members_dataset_version_id_dataset_versions_dataset_version_id_fk": {
-          "name": "release_members_dataset_version_id_dataset_versions_dataset_version_id_fk",
+        "release_members_dataset_version_fkey": {
+          "name": "release_members_dataset_version_fkey",
           "tableFrom": "release_members",
           "tableTo": "dataset_versions",
           "schemaTo": "market_entry",

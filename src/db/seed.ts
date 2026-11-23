@@ -79,7 +79,11 @@ async function seed() {
 
 seed()
 	.catch((error) => {
-		console.error(error);
+		console.error(
+			error instanceof Error && error.name !== "PostgresError"
+				? error.message
+				: "Database seed failed.",
+		);
 		process.exitCode = 1;
 	})
 	.finally(() => sql.end());

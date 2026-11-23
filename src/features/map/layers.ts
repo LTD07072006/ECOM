@@ -12,6 +12,54 @@ export const indicatorGroups: Record<string, string> = {
 	TRAINED_LABOR_RATE: "workforce",
 };
 
+export type IndicatorFamily =
+	| "population"
+	| "economy"
+	| "investment"
+	| "workforce";
+
+export const familyOrder: readonly IndicatorFamily[] = [
+	"population",
+	"economy",
+	"investment",
+	"workforce",
+];
+
+// MapLibre GL canvas paint expressions and SVG data visualizations require literal color strings matching CSS tokens.
+export const familyRamps: Record<
+	IndicatorFamily,
+	readonly [string, string, string, string, string]
+> = {
+	population: ["#F4D8CD", "#E8AE97", "#D57B5E", "#B5432F", "#7E2A1C"],
+	economy: ["#F7EBC8", "#EDD38C", "#E0AE3A", "#B8861D", "#7D590E"],
+	investment: ["#DCE3F0", "#A9BBE0", "#6884B8", "#26406B", "#162642"],
+	workforce: ["#D9EBE4", "#9FC9BA", "#66A28D", "#3E7C67", "#234B3D"],
+};
+
+export const familyLeadColors: Record<IndicatorFamily, string> = {
+	population: "#B5432F",
+	economy: "#E0AE3A",
+	investment: "#26406B",
+	workforce: "#3E7C67",
+};
+
+export const mapCanvasColors = {
+	ground: "#F2F3F0",
+	surface: "#FAFAF7",
+	ink: "#1C1C1A",
+	selectedStroke: "#E0AE3A",
+	baseFill: "#D9D9D3",
+	regionFill: "#26406B",
+} as const;
+
+export const chartColors = {
+	primary: "#26406B",
+	internal: "#3E7C67",
+	accent: "#B5432F",
+	ink: "#1C1C1A",
+	muted: "#4A4A46",
+} as const;
+
 export type StatisticalLayer = {
 	id: string;
 	indicator: string;
@@ -54,11 +102,11 @@ export const infrastructureKindOrder: readonly InfrastructureKind[] = [
 ];
 
 export const infrastructureKindColors: Record<InfrastructureKind, string> = {
-	airport: "#73d8f5",
-	seaport: "#f2c14e",
-	industrial_park: "#f78154",
-	icd: "#b5838d",
-	expressway_node: "#90be6d",
+	airport: "#26406B",
+	seaport: "#3E7C67",
+	industrial_park: "#B5432F",
+	icd: "#E0AE3A",
+	expressway_node: "#1C1C1A",
 };
 
 export type InfrastructurePointProperties = {
@@ -120,23 +168,94 @@ export type MapLayers = {
 	infrastructure: InfrastructureLayer | null;
 };
 
-export const mapRamp = ["#35621f", "#639239", "#9abb52", "#d8e684"] as const;
-export const missingColor = "#667b76";
+export const mapRamp = familyRamps.population;
+export const missingColor = "#D9D9D3";
+
+export function layerFamily(indicator: string): IndicatorFamily {
+	const group = indicatorGroups[indicator];
+	if (
+		group === "population" ||
+		group === "economy" ||
+		group === "investment" ||
+		group === "workforce"
+	) {
+		return group;
+	}
+	return "population";
+}
+
+function pickRampColor(
+	ramp: readonly string[],
+	index: number,
+	binCount: number,
+): string {
+	if (binCount <= 1) return ramp[Math.floor(ramp.length / 2)];
+	const scaled = Math.round((index * (ramp.length - 1)) / (binCount - 1));
+	return ramp[scaled] ?? ramp[ramp.length - 1];
+}
 
 export function colorScale(layer: StatisticalLayer) {
+	const ramp = familyRamps[layerFamily(layer.indicator)];
 	const values = Object.values(layer.values)
-		.filter((value): value is number => value !== null)
+		.filter(
+			(value): value is number => value !== null && Number.isFinite(value),
+		)
 		.sort((a, b) => a - b);
-	const min = values[0];
-	const max = values.at(-1);
-	if (min === undefined || max === undefined) return [];
-	if (min === max) return [{ min, max, color: mapRamp[1] }];
-	const width = (max - min) / mapRamp.length;
-	return mapRamp.map((color, index) => ({
-		min: min + width * index,
-		max: index === 3 ? max : min + width * (index + 1),
-		color,
-	}));
+	if (values.length === 0) return [];
+
+	const groups: Array<{ value: number; count: number }> = [];
+	for (const value of values) {
+		const last = groups[groups.length - 1];
+		if (last && last.value === value) {
+			last.count += 1;
+		} else {
+			groups.push({ value, count: 1 });
+		}
+	}
+
+	if (groups.length === 1) {
+		const only = groups[0].value;
+		return [{ min: only, max: only, color: ramp[2] }];
+	}
+
+	const binCount = Math.min(ramp.length, groups.length);
+	const bins: Array<{ min: number; max: number; color: string }> = [];
+	let start = 0;
+	let consumed = 0;
+
+	for (let binIndex = 0; binIndex < binCount; binIndex += 1) {
+		const remainingBins = binCount - binIndex;
+		if (remainingBins === 1) {
+			bins.push({
+				min: groups[start].value,
+				max: groups[groups.length - 1].value,
+				color: pickRampColor(ramp, binIndex, binCount),
+			});
+			break;
+		}
+		const target = (values.length - consumed) / remainingBins;
+		const maxEnd = groups.length - (remainingBins - 1);
+		let end = start + 1;
+		let bucketCount = groups[start].count;
+		while (end < maxEnd) {
+			const nextCount = bucketCount + groups[end].count;
+			if (Math.abs(nextCount - target) <= Math.abs(bucketCount - target)) {
+				bucketCount = nextCount;
+				end += 1;
+			} else {
+				break;
+			}
+		}
+		bins.push({
+			min: groups[start].value,
+			max: groups[end - 1].value,
+			color: pickRampColor(ramp, binIndex, binCount),
+		});
+		consumed += bucketCount;
+		start = end;
+	}
+
+	return bins;
 }
 
 export function layerColor(
@@ -145,7 +264,7 @@ export function layerColor(
 ) {
 	if (value === null) return missingColor;
 	return (
-		bins.find((bin, index) => value < bin.max || index === bins.length - 1)
+		bins.find((bin, index) => value <= bin.max || index === bins.length - 1)
 			?.color ?? missingColor
 	);
 }

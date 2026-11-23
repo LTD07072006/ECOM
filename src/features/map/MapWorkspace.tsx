@@ -5,10 +5,15 @@ import { GeoSearch } from "../search/GeoSearch";
 import { GeoProfilePanel } from "../profile/GeoProfilePanel";
 import { ShortlistButton } from "../shortlist/ShortlistButton";
 import { ShortlistTray } from "../shortlist/ShortlistTray";
+import { readShortlist } from "../shortlist/store";
 import { ProvinceMap, type FocusedMicroLocation } from "./ProvinceMap";
-import { LayerControls } from "./LayerControls";
+import { LayerControls, LayerLegend } from "./LayerControls";
 import {
+	familyLeadColors,
+	familyOrder,
+	layerFamily,
 	filterInfrastructureByKinds,
+	type IndicatorFamily,
 	type InfrastructureKind,
 	type MapLayers,
 	type ProvinceInfrastructureItem,
@@ -27,16 +32,19 @@ import {
 	type ProvinceProximityMatch,
 } from "./proximity";
 import type { ProvinceDistrictProfile } from "./province-districts";
-import type { Profile } from "../geography/types";
+import type { Geography, Profile } from "../geography/types";
 import { RegionPanel, type RegionIds } from "../regions/RegionPanel";
 import { readFilterInputs, summarizeLayerValues } from "./filters";
 import {
+	BOUNDARIES_LAYER,
 	mapStateQuery,
 	readMapState,
 	readRegionIds,
 	regionQueryParams,
 } from "./url-state";
 import { useI18n } from "../../lib/i18n/provider";
+import { indicatorLabel, unitLabel } from "../../lib/i18n/data-labels";
+import type { MessageKey } from "../../lib/i18n";
 
 type Coverage = {
 	total: number;
@@ -45,12 +53,17 @@ type Coverage = {
 	publicBoundaryAvailable: boolean;
 };
 
-type Props = { coverage: Coverage };
+type Props = {
+	coverage: Coverage;
+	provinces: Geography[];
+};
 
-export function MapWorkspace({ coverage }: Props) {
-	const { t, locale } = useI18n();
+export function MapWorkspace({ coverage, provinces }: Props) {
+	const { t, locale, formatNumber } = useI18n();
 	const [profile, setProfile] = useState<Profile | null>(null);
 	const [requestedPlace, setRequestedPlace] = useState("");
+	const [hoveredId, setHoveredId] = useState<string | null>(null);
+	const [shortlistIds, setShortlistIds] = useState<string[]>([]);
 	const [profileError, setProfileError] = useState(false);
 	const [layers, setLayers] = useState<MapLayers | null>(null);
 	const [layerError, setLayerError] = useState(false);
@@ -114,10 +127,6 @@ export function MapWorkspace({ coverage }: Props) {
 	);
 	const [activeRegion, setActiveRegion] = useState(0);
 	const [regions, setRegions] = useState<RegionIds>([[], []]);
-	const highlightedRegions = useMemo(
-		() => (regionMode ? regions.flat() : []),
-		[regionMode, regions],
-	);
 	const toggleRegion = useCallback(
 		(id: string) => {
 			setRegions((current) => {
@@ -136,6 +145,25 @@ export function MapWorkspace({ coverage }: Props) {
 	);
 	const pending = useRef<AbortController | null>(null);
 	useEffect(() => () => pending.current?.abort(), []);
+
+	useEffect(() => {
+		const syncShortlist = () => {
+			try {
+				setShortlistIds(
+					readShortlist(localStorage.getItem("investor-shortlist")),
+				);
+			} catch {
+				setShortlistIds([]);
+			}
+		};
+		syncShortlist();
+		window.addEventListener("investor-shortlist-change", syncShortlist);
+		window.addEventListener("storage", syncShortlist);
+		return () => {
+			window.removeEventListener("investor-shortlist-change", syncShortlist);
+			window.removeEventListener("storage", syncShortlist);
+		};
+	}, []);
 
 	useEffect(() => {
 		const request = new AbortController();
@@ -219,7 +247,23 @@ export function MapWorkspace({ coverage }: Props) {
 				? profile.parentId
 				: null;
 	const activeLayer =
-		layers?.indicators.find((layer) => layer.id === layerId) ?? null;
+		layerId && layerId !== BOUNDARIES_LAYER
+			? (layers?.indicators.find((layer) => layer.id === layerId) ?? null)
+			: null;
+	const displayLayer = useMemo(() => {
+		if (layerId === BOUNDARIES_LAYER) return null;
+		if (activeLayer) return activeLayer;
+		return (
+			layers?.indicators.find((item) => item.indicator === "POP_AVG") ??
+			layers?.indicators[0] ??
+			null
+		);
+	}, [activeLayer, layerId, layers]);
+
+	const activeFamily: IndicatorFamily | null = displayLayer
+		? layerFamily(displayLayer.indicator)
+		: null;
+
 	const province =
 		selectedProvince && profile
 			? {
@@ -270,13 +314,13 @@ export function MapWorkspace({ coverage }: Props) {
 	const filterReady = !filterInputs.invalid && !filterInputs.inverted;
 	const filterSummary = useMemo(
 		() =>
-			activeLayer
+			displayLayer
 				? summarizeLayerValues(
-						activeLayer.values,
+						displayLayer.values,
 						readFilterInputs(filterMin, filterMax).filter,
 					)
 				: null,
-		[activeLayer, filterMin, filterMax],
+		[displayLayer, filterMin, filterMax],
 	);
 	const layerMatchIds =
 		filterSummary?.active && filterReady ? filterSummary.matchedIds : null;
@@ -292,13 +336,17 @@ export function MapWorkspace({ coverage }: Props) {
 	useEffect(() => {
 		if (!restored) return;
 		const inputs = readFilterInputs(filterMin, filterMax);
+		const validFilter =
+			inputs.invalid || inputs.inverted
+				? { min: null, max: null }
+				: inputs.filter;
+		const hasFilterBound = validFilter.min !== null || validFilter.max !== null;
+		const urlLayer =
+			layerId || (hasFilterBound && displayLayer ? displayLayer.id : "");
 		const query = mapStateQuery({
-			layer: layerId,
+			layer: urlLayer,
 			province: requestedPlace || selectedProvince || "",
-			filter:
-				inputs.invalid || inputs.inverted
-					? { min: null, max: null }
-					: inputs.filter,
+			filter: validFilter,
 			airports: showAirports,
 		});
 		const url = new URL(window.location.href);
@@ -318,6 +366,7 @@ export function MapWorkspace({ coverage }: Props) {
 	}, [
 		restored,
 		layerId,
+		displayLayer,
 		requestedPlace,
 		selectedProvince,
 		filterMin,
@@ -331,6 +380,20 @@ export function MapWorkspace({ coverage }: Props) {
 		setFilterMin("");
 		setFilterMax("");
 	}, []);
+	const selectFamily = useCallback(
+		(family: IndicatorFamily) => {
+			if (!layers) return;
+			const match = layers.indicators.find(
+				(item) => layerFamily(item.indicator) === family,
+			);
+			if (match) {
+				setLayerId(match.id);
+				setFilterMin("");
+				setFilterMax("");
+			}
+		},
+		[layers],
+	);
 	const changeFilter = useCallback((min: string, max: string) => {
 		setFilterMin(min);
 		setFilterMax(max);
@@ -402,41 +465,138 @@ export function MapWorkspace({ coverage }: Props) {
 		setDetailExpanded(false);
 	}, []);
 
+	const regionIds = useMemo(
+		() => (regionMode ? regions.flat() : []),
+		[regionMode, regions],
+	);
+
+	const maxLayerValue = useMemo(() => {
+		if (!displayLayer) return 0;
+		return Object.values(displayLayer.values).reduce<number>(
+			(max, val) => (typeof val === "number" && val > max ? val : max),
+			0,
+		);
+	}, [displayLayer]);
+
+	const coveredCount = displayLayer
+		? Object.values(displayLayer.values).filter((value) => value != null).length
+		: 0;
+
 	return (
 		<section
 			className={`workspace database-map-workspace${detailExpanded && profile ? " detail-expanded" : ""}`}
 			aria-label={t("map.workspace")}
 		>
-			<div className="map-stage database-map-stage">
-				<ProvinceMap
-					selectedId={regionMode ? null : selectedProvince}
-					regionIds={highlightedRegions}
-					onSelect={regionMode ? toggleRegion : openProfile}
-					layer={activeLayer}
-					matchIds={matchIds}
-					infrastructure={visibleInfrastructure}
-					microLocations={provinceMicroData?.points ?? null}
-					zoneFootprints={provinceMicroData?.zones ?? null}
-					roadNetwork={provinceMicroData?.roads ?? null}
-					focusedLocation={focusedLocation}
-					catchment={catchment}
-					onSiteSelect={(site) => {
-						setFocusedLocation(null);
-						setPickedSite(site);
-					}}
-					district={regionMode ? null : district}
-					onResetProvince={resetProvinceSelection}
-				/>
+			<div className="stage-head">
+				<h2 className="stage-indicator-title overprint-transition">
+					{displayLayer
+						? `${indicatorLabel(locale, displayLayer.indicator, displayLayer.label)}, ${displayLayer.period}`
+						: t("layers.boundaries")}
+				</h2>
+				<div className="stage-sub">
+					{displayLayer && (
+						<span>
+							{unitLabel(locale, displayLayer.unit)} ·{" "}
+							{t("layers.covered", { count: coveredCount })} ·{" "}
+						</span>
+					)}
+					<aside
+						className="stage-coverage-aside"
+						aria-label={t("map.coverageAria")}
+					>
+						{coverage.publicBoundaryAvailable
+							? t("map.coverage", {
+									ready: coverage.boundaryReady,
+									total: coverage.total,
+								})
+							: t("map.coverageNone")}
+					</aside>
+				</div>
 			</div>
-			<div className="workspace-panel">
+
+			<div className="workspace-search">
 				<GeoSearch onSelect={selectSearchResult} />
-				<button
-					type="button"
-					onClick={() => setRegionMode((value) => !value)}
-					aria-expanded={regionMode}
+			</div>
+
+			<div className="stage-family-slot">
+				<div
+					className="family-switch"
+					role="group"
+					aria-label={t("layers.familyAria")}
 				>
-					{t(regionMode ? "region.close" : "region.details")}
-				</button>
+					{familyOrder.map((family) => {
+						const active = activeFamily === family;
+						const available =
+							layers?.indicators.some(
+								(item) => layerFamily(item.indicator) === family,
+							) ?? true;
+						return (
+							<button
+								key={family}
+								type="button"
+								className="family-switch-btn"
+								aria-pressed={active}
+								disabled={!available}
+								onClick={() => selectFamily(family)}
+							>
+								<span
+									className="family-swatch"
+									style={{ backgroundColor: familyLeadColors[family] }}
+									aria-hidden="true"
+								/>
+								<span>{t(`layers.family.${family}` as MessageKey)}</span>
+							</button>
+						);
+					})}
+				</div>
+			</div>
+
+			<div className="map-stage-body">
+				<div className="map-stage database-map-stage">
+					<ProvinceMap
+						selectedId={regionMode ? null : selectedProvince}
+						hoveredId={hoveredId}
+						shortlistIds={shortlistIds}
+						regionIds={regionIds}
+						onSelect={regionMode ? toggleRegion : openProfile}
+						layer={displayLayer}
+						matchIds={matchIds}
+						infrastructure={visibleInfrastructure}
+						microLocations={provinceMicroData?.points ?? null}
+						zoneFootprints={provinceMicroData?.zones ?? null}
+						roadNetwork={provinceMicroData?.roads ?? null}
+						focusedLocation={focusedLocation}
+						catchment={catchment}
+						onSiteSelect={(site) => {
+							setFocusedLocation(null);
+							setPickedSite(site);
+						}}
+						district={regionMode ? null : district}
+						onResetProvince={resetProvinceSelection}
+					/>
+				</div>
+				<div className="stage-legend-column">
+					{(displayLayer || layers) && (
+						<LayerLegend
+							layer={displayLayer}
+							province={province}
+							provinceCount={coverage.total}
+						/>
+					)}
+				</div>
+			</div>
+
+			<aside className="workspace-panel" aria-label={t("map.railAria")}>
+				<div className="action-row">
+					<button
+						type="button"
+						className="btn btn-secondary btn-sm"
+						onClick={() => setRegionMode((value) => !value)}
+						aria-expanded={regionMode}
+					>
+						{t(regionMode ? "region.close" : "region.details")}
+					</button>
+				</div>
 				{regionMode && (
 					<RegionPanel
 						regions={regions}
@@ -462,16 +622,114 @@ export function MapWorkspace({ coverage }: Props) {
 						}
 					/>
 				)}
-				<aside aria-label={t("map.coverageAria")} className="muted">
-					{coverage.publicBoundaryAvailable
-						? t("map.coverage", {
-								ready: coverage.boundaryReady,
-								total: coverage.total,
-							})
-						: t("map.coverageNone")}
-				</aside>
+
+				{profileError && (
+					<p className="banner banner--error" role="status">
+						{t("map.profileError")}
+					</p>
+				)}
+				{profile ? (
+					<div className="form-stack">
+						<GeoProfilePanel
+							key={profile.id}
+							profile={profile}
+							infrastructure={provinceInfrastructure}
+							activeCategoryFilter={microCategoryFilter}
+							onCategoryFilterChange={setMicroCategoryFilter}
+							onFocusMicroLocation={setFocusedLocation}
+							onDetailModeChange={setDetailExpanded}
+							onDistrictSelect={(item) => {
+								setFocusedLocation(null);
+								setPickedSite(null);
+								setDistrict(item);
+							}}
+						/>
+						<ShortlistButton geo={profile} />
+					</div>
+				) : (
+					<div className="banner banner--info">
+						<span>{t("map.emptyPrompt")}</span>
+					</div>
+				)}
+				<ShortlistTray />
+
+				{provinces.length > 0 && (
+					<section
+						className="province-list-section"
+						aria-label={t("map.provinceListAria")}
+					>
+						<div className="province-list-header">
+							<span>
+								{t("map.provinceListHeader", { count: provinces.length })}
+							</span>
+							<span>
+								{displayLayer ? unitLabel(locale, displayLayer.unit) : ""}
+							</span>
+						</div>
+						<ul className="province-list">
+							{provinces.map((item) => {
+								const rawValue = displayLayer?.values[item.id];
+								const pct =
+									typeof rawValue === "number" &&
+									rawValue > 0 &&
+									maxLayerValue > 0
+										? Math.min(
+												100,
+												Math.round((rawValue / maxLayerValue) * 100),
+											)
+										: 0;
+								const isCurrent = selectedProvince === item.id;
+								const isSaved = shortlistIds.includes(item.id);
+								return (
+									<li key={item.id}>
+										<button
+											type="button"
+											className="province-row"
+											aria-current={isCurrent ? "true" : undefined}
+											onMouseEnter={() => setHoveredId(item.id)}
+											onMouseLeave={() => setHoveredId(null)}
+											onFocus={() => setHoveredId(item.id)}
+											onBlur={() => setHoveredId(null)}
+											onClick={() => openProfile(item.id)}
+										>
+											<span className="province-row-name">
+												{isSaved && (
+													<span
+														className="province-saved-dot"
+														aria-hidden="true"
+														title={t("shortlist.saved")}
+													/>
+												)}
+												<span>{item.displayName}</span>
+											</span>
+											<span className="province-row-value tabular-nums">
+												{typeof rawValue === "number"
+													? formatNumber(rawValue)
+													: "—"}
+											</span>
+											{pct > 0 && (
+												<span
+													className="province-row-bar overprint-transition"
+													style={{
+														width: `${pct}%`,
+														backgroundColor:
+															familyLeadColors[activeFamily ?? "population"],
+													}}
+													aria-hidden="true"
+												/>
+											)}
+										</button>
+									</li>
+								);
+							})}
+						</ul>
+					</section>
+				)}
+			</aside>
+
+			<div className="stage-controls-slot">
 				{layerError && (
-					<p className="muted" role="status">
+					<p className="banner banner--error" role="status">
 						{t("map.layersUnavailable")}
 					</p>
 				)}
@@ -481,14 +739,14 @@ export function MapWorkspace({ coverage }: Props) {
 						catchmentCenter={center}
 						catchmentRadius={radius}
 						onCatchmentRadius={setRadius}
-						layer={activeLayer}
+						selectValue={layerId || displayLayer?.id || BOUNDARIES_LAYER}
+						layer={displayLayer}
 						setLayer={selectLayer}
 						airports={showAirports}
 						setAirports={setShowAirports}
 						enabledKinds={extraKinds}
 						onToggleKind={toggleExtraKind}
 						province={province}
-						provinceCount={coverage.total}
 						filterMin={filterMin}
 						filterMax={filterMax}
 						onFilterChange={changeFilter}
@@ -505,33 +763,6 @@ export function MapWorkspace({ coverage }: Props) {
 						}}
 					/>
 				)}
-				{profileError && (
-					<p className="muted" role="status">
-						{t("map.profileError")}
-					</p>
-				)}
-				{profile ? (
-					<GeoProfilePanel
-						key={profile.id}
-						profile={profile}
-						infrastructure={provinceInfrastructure}
-						activeCategoryFilter={microCategoryFilter}
-						onCategoryFilterChange={setMicroCategoryFilter}
-						onFocusMicroLocation={setFocusedLocation}
-						onDetailModeChange={setDetailExpanded}
-						onDistrictSelect={(item) => {
-							setFocusedLocation(null);
-							setPickedSite(null);
-							setDistrict(item);
-						}}
-					/>
-				) : (
-					<div className="profile-empty">
-						<p>{t("map.emptyPrompt")}</p>
-					</div>
-				)}
-				{profile ? <ShortlistButton geo={profile} /> : null}
-				<ShortlistTray />
 			</div>
 		</section>
 	);

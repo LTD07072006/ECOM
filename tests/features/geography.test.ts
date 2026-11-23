@@ -3,6 +3,7 @@ import { demoCatalog } from "../../src/db/seed-data";
 import {
 	normalizeSearch,
 	searchGeographies,
+	searchTerms,
 	getProfile,
 	getPublicCatalog,
 } from "../../src/features/geography/domain";
@@ -10,6 +11,54 @@ import {
 describe("geography exploration", () => {
 	test("normalizes Vietnamese accents and Đ without removing numbers", () => {
 		expect(normalizeSearch("  Đà Nẵng 01  ")).toBe("da nang 01");
+		expect(normalizeSearch("Sài Gòn")).toBe("sai gon");
+	});
+	test("expands search exonym aliases without replacing the literal query", () => {
+		expect(searchTerms("Saigon")).toEqual(["saigon", "ho chi minh"]);
+		expect(searchTerms("Sài Gòn")).toEqual(["sai gon", "ho chi minh"]);
+		expect(searchTerms("Hà Nội")).toEqual(["ha noi"]);
+
+		const sampleCatalog = {
+			...demoCatalog,
+			geographies: [
+				{
+					...demoCatalog.geographies[1],
+					id: "prov-hn",
+					code: "01",
+					name: "Thành phố Hà Nội",
+					displayName: "Hà Nội",
+					normalizedName: normalizeSearch("Thành phố Hà Nội"),
+					level: "province" as const,
+				},
+				{
+					...demoCatalog.geographies[1],
+					id: "prov-hcm",
+					code: "79",
+					name: "Thành phố Hồ Chí Minh",
+					displayName: "Hồ Chí Minh",
+					normalizedName: normalizeSearch("Thành phố Hồ Chí Minh"),
+					level: "province" as const,
+				},
+				{
+					...demoCatalog.geographies[1],
+					id: "commune-sg",
+					code: "26740",
+					name: "Phường Sài Gòn",
+					displayName: "Phường Sài Gòn",
+					normalizedName: normalizeSearch("Phường Sài Gòn"),
+					level: "commune" as const,
+					parentId: "prov-hcm",
+					parentName: "Hồ Chí Minh",
+				},
+			],
+		};
+
+		const saigonResults = searchGeographies(sampleCatalog, "Sài Gòn");
+		expect(saigonResults[0]?.code).toBe("79");
+		expect(saigonResults.some((item) => item.code === "26740")).toBe(true);
+
+		const hanoiResults = searchGeographies(sampleCatalog, "Hanoi");
+		expect(hanoiResults[0]?.code).toBe("01");
 	});
 	test("finds places by accented name, unaccented name, or sample code", () => {
 		for (const query of ["Hà Nội", "ha noi", "DEMO-HN"]) {

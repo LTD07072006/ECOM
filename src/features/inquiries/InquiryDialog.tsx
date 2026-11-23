@@ -11,10 +11,12 @@ export function InquiryDialog({
 	geographyIds,
 	geographyLabels,
 	trigger,
+	triggerClassName = "btn btn-cta",
 }: {
 	geographyIds: string[];
 	geographyLabels?: string[];
 	trigger?: string;
+	triggerClassName?: string;
 }) {
 	const { t } = useI18n();
 	const [open, setOpen] = useState(false);
@@ -62,13 +64,18 @@ export function InquiryDialog({
 
 	return (
 		<>
-			<button ref={triggerRef} type="button" onClick={() => setOpen(true)}>
+			<button
+				ref={triggerRef}
+				type="button"
+				className={triggerClassName}
+				onClick={() => setOpen(true)}
+			>
 				{trigger ?? t("profile.requestSupport")}
 			</button>
 			{open && (
 				// biome-ignore lint/a11y/noStaticElementInteractions: the backdrop only dismisses the dialog; Escape and the Close button provide keyboard equivalents
 				<div
-					className="inquiry-dialog-backdrop"
+					className="dialog-backdrop"
 					role="presentation"
 					onClick={(event) => {
 						if (event.target === event.currentTarget) setOpen(false);
@@ -76,16 +83,17 @@ export function InquiryDialog({
 				>
 					<section
 						ref={dialogRef}
-						className="inquiry-dialog"
+						className="dialog-surface"
 						role="dialog"
 						aria-modal="true"
 						aria-labelledby="inquiry-dialog-title"
 						tabIndex={-1}
 					>
-						<div className="inquiry-dialog-heading">
+						<div className="dialog-header">
 							<h2 id="inquiry-dialog-title">{t("profile.requestSupport")}</h2>
 							<button
 								type="button"
+								className="btn btn-secondary btn-sm"
 								onClick={() => setOpen(false)}
 								aria-label={t("inquiry.closeDialog")}
 							>

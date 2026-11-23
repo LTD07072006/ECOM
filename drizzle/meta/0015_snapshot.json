@@ -1,6 +1,6 @@
 {
-  "id": "8a91c3a1-4fec-4bbe-b500-616d1ae15a86",
-  "prevId": "a7a3e869-d221-4079-be56-5417103f017d",
+  "id": "a0c78e6b-1718-4420-82e7-cb3d6b573e60",
+  "prevId": "a37c9409-8423-43ee-b123-7e8298ad351c",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -351,20 +351,6 @@
         }
       },
       "foreignKeys": {
-        "entry_requirements_legal_reference_id_legal_references_legal_reference_id_fk": {
-          "name": "entry_requirements_legal_reference_id_legal_references_legal_reference_id_fk",
-          "tableFrom": "entry_requirements",
-          "tableTo": "legal_references",
-          "schemaTo": "market_entry",
-          "columnsFrom": [
-            "legal_reference_id"
-          ],
-          "columnsTo": [
-            "legal_reference_id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
         "entry_requirements_geo_id_geo_units_geo_id_fk": {
           "name": "entry_requirements_geo_id_geo_units_geo_id_fk",
           "tableFrom": "entry_requirements",
@@ -375,6 +361,20 @@
           ],
           "columnsTo": [
             "geo_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "entry_requirements_legal_reference_fkey": {
+          "name": "entry_requirements_legal_reference_fkey",
+          "tableFrom": "entry_requirements",
+          "tableTo": "legal_references",
+          "schemaTo": "market_entry",
+          "columnsFrom": [
+            "legal_reference_id"
+          ],
+          "columnsTo": [
+            "legal_reference_id"
           ],
           "onDelete": "no action",
           "onUpdate": "no action"
@@ -446,8 +446,8 @@
           "onDelete": "no action",
           "onUpdate": "no action"
         },
-        "geo_boundaries_dataset_version_id_dataset_versions_dataset_version_id_fk": {
-          "name": "geo_boundaries_dataset_version_id_dataset_versions_dataset_version_id_fk",
+        "geo_boundaries_dataset_version_fkey": {
+          "name": "geo_boundaries_dataset_version_fkey",
           "tableFrom": "geo_boundaries",
           "tableTo": "dataset_versions",
           "schemaTo": "market_entry",
@@ -614,8 +614,8 @@
         }
       },
       "foreignKeys": {
-        "geo_units_geography_version_id_geography_versions_geography_version_id_fk": {
-          "name": "geo_units_geography_version_id_geography_versions_geography_version_id_fk",
+        "geo_units_geography_version_fkey": {
+          "name": "geo_units_geography_version_fkey",
           "tableFrom": "geo_units",
           "tableTo": "geography_versions",
           "schemaTo": "market_entry",
@@ -753,8 +753,8 @@
       },
       "indexes": {},
       "foreignKeys": {
-        "geography_versions_authority_source_id_source_registry_source_id_fk": {
-          "name": "geography_versions_authority_source_id_source_registry_source_id_fk",
+        "geography_versions_authority_source_fkey": {
+          "name": "geography_versions_authority_source_fkey",
           "tableFrom": "geography_versions",
           "tableTo": "source_registry",
           "schemaTo": "market_entry",
@@ -1062,6 +1062,107 @@
       },
       "isRLSEnabled": false
     },
+    "market_entry.inquiry_access_audit": {
+      "name": "inquiry_access_audit",
+      "schema": "market_entry",
+      "columns": {
+        "access_id": {
+          "name": "access_id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "actor": {
+          "name": "actor",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "action": {
+          "name": "action",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "inquiry_id": {
+          "name": "inquiry_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "row_count": {
+          "name": "row_count",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "ticket_ref": {
+          "name": "ticket_ref",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "happened_at": {
+          "name": "happened_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "clock_timestamp()"
+        }
+      },
+      "indexes": {
+        "inquiry_access_audit_happened_idx": {
+          "name": "inquiry_access_audit_happened_idx",
+          "columns": [
+            {
+              "expression": "happened_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "inquiry_access_audit_inquiry_fkey": {
+          "name": "inquiry_access_audit_inquiry_fkey",
+          "tableFrom": "inquiry_access_audit",
+          "tableTo": "investor_inquiries",
+          "schemaTo": "market_entry",
+          "columnsFrom": [
+            "inquiry_id"
+          ],
+          "columnsTo": [
+            "inquiry_id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "inquiry_access_audit_action_check": {
+          "name": "inquiry_access_audit_action_check",
+          "value": "\"market_entry\".\"inquiry_access_audit\".\"action\" in ('viewed_detail', 'exported_live_csv', 'erased_by_request', 'consent_withdrawn')"
+        },
+        "inquiry_access_audit_row_count_check": {
+          "name": "inquiry_access_audit_row_count_check",
+          "value": "\"market_entry\".\"inquiry_access_audit\".\"row_count\" is null or \"market_entry\".\"inquiry_access_audit\".\"row_count\" >= 0"
+        },
+        "inquiry_access_audit_ticket_ref_check": {
+          "name": "inquiry_access_audit_ticket_ref_check",
+          "value": "\"market_entry\".\"inquiry_access_audit\".\"ticket_ref\" is null or char_length(\"market_entry\".\"inquiry_access_audit\".\"ticket_ref\") between 3 and 64"
+        }
+      },
+      "isRLSEnabled": false
+    },
     "market_entry.inquiry_audit": {
       "name": "inquiry_audit",
       "schema": "market_entry",
@@ -1265,8 +1366,8 @@
         }
       },
       "foreignKeys": {
-        "inquiry_notifications_inquiry_id_investor_inquiries_inquiry_id_fk": {
-          "name": "inquiry_notifications_inquiry_id_investor_inquiries_inquiry_id_fk",
+        "inquiry_notifications_inquiry_fkey": {
+          "name": "inquiry_notifications_inquiry_fkey",
           "tableFrom": "inquiry_notifications",
           "tableTo": "investor_inquiries",
           "schemaTo": "market_entry",
@@ -1373,8 +1474,8 @@
         }
       },
       "foreignKeys": {
-        "inquiry_report_snapshot_audit_snapshot_id_inquiry_report_snapshots_snapshot_id_fk": {
-          "name": "inquiry_report_snapshot_audit_snapshot_id_inquiry_report_snapshots_snapshot_id_fk",
+        "inquiry_report_snapshot_audit_snapshot_fk": {
+          "name": "inquiry_report_snapshot_audit_snapshot_fk",
           "tableFrom": "inquiry_report_snapshot_audit",
           "tableTo": "inquiry_report_snapshots",
           "schemaTo": "market_entry",
@@ -1619,615 +1720,6 @@
         "inquiry_snapshot_privacy_key_id_check": {
           "name": "inquiry_snapshot_privacy_key_id_check",
           "value": "\"market_entry\".\"inquiry_snapshot_privacy_key\".\"id\""
-        }
-      },
-      "isRLSEnabled": false
-    },
-    "market_entry.investment_contacts": {
-      "name": "investment_contacts",
-      "schema": "market_entry",
-      "columns": {
-        "contact_id": {
-          "name": "contact_id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "code": {
-          "name": "code",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "organization_vi": {
-          "name": "organization_vi",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "organization_en": {
-          "name": "organization_en",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "department_vi": {
-          "name": "department_vi",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "department_en": {
-          "name": "department_en",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "sector": {
-          "name": "sector",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "geo_id": {
-          "name": "geo_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "province_code": {
-          "name": "province_code",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "public_email": {
-          "name": "public_email",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "official_url": {
-          "name": "official_url",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "routing_priority": {
-          "name": "routing_priority",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "default": 100
-        },
-        "status": {
-          "name": "status",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'active'"
-        }
-      },
-      "indexes": {
-        "investment_contacts_routing_idx": {
-          "name": "investment_contacts_routing_idx",
-          "columns": [
-            {
-              "expression": "province_code",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "sector",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "routing_priority",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "investment_contacts_geo_id_geo_units_geo_id_fk": {
-          "name": "investment_contacts_geo_id_geo_units_geo_id_fk",
-          "tableFrom": "investment_contacts",
-          "tableTo": "geo_units",
-          "schemaTo": "market_entry",
-          "columnsFrom": [
-            "geo_id"
-          ],
-          "columnsTo": [
-            "geo_id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "investment_contacts_code_unique": {
-          "name": "investment_contacts_code_unique",
-          "nullsNotDistinct": false,
-          "columns": [
-            "code"
-          ]
-        }
-      },
-      "policies": {},
-      "checkConstraints": {
-        "investment_contacts_sector_check": {
-          "name": "investment_contacts_sector_check",
-          "value": "\"market_entry\".\"investment_contacts\".\"sector\" is null or \"market_entry\".\"investment_contacts\".\"sector\" in ('retail', 'manufacturing', 'logistics', 'enterprise')"
-        },
-        "investment_contacts_priority_check": {
-          "name": "investment_contacts_priority_check",
-          "value": "\"market_entry\".\"investment_contacts\".\"routing_priority\" > 0"
-        },
-        "investment_contacts_url_check": {
-          "name": "investment_contacts_url_check",
-          "value": "\"market_entry\".\"investment_contacts\".\"official_url\" ~ '^https://'"
-        },
-        "investment_contacts_status_check": {
-          "name": "investment_contacts_status_check",
-          "value": "\"market_entry\".\"investment_contacts\".\"status\" in ('active', 'inactive')"
-        }
-      },
-      "isRLSEnabled": false
-    },
-    "market_entry.investment_incentives": {
-      "name": "investment_incentives",
-      "schema": "market_entry",
-      "columns": {
-        "incentive_id": {
-          "name": "incentive_id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "code": {
-          "name": "code",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "legal_reference_id": {
-          "name": "legal_reference_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "sector": {
-          "name": "sector",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "geo_id": {
-          "name": "geo_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "zone_tier": {
-          "name": "zone_tier",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'standard'"
-        },
-        "incentive_type": {
-          "name": "incentive_type",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "investor_type": {
-          "name": "investor_type",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'foreign_investor'"
-        },
-        "display_order": {
-          "name": "display_order",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "default": 0
-        },
-        "title_vi": {
-          "name": "title_vi",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "title_en": {
-          "name": "title_en",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "headline_benefit_vi": {
-          "name": "headline_benefit_vi",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "headline_benefit_en": {
-          "name": "headline_benefit_en",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "description_vi": {
-          "name": "description_vi",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "description_en": {
-          "name": "description_en",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "eligibility_note_vi": {
-          "name": "eligibility_note_vi",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "eligibility_note_en": {
-          "name": "eligibility_note_en",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "valid_from": {
-          "name": "valid_from",
-          "type": "date",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "valid_to": {
-          "name": "valid_to",
-          "type": "date",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "status": {
-          "name": "status",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'published'"
-        }
-      },
-      "indexes": {
-        "investment_incentives_sector_geo_idx": {
-          "name": "investment_incentives_sector_geo_idx",
-          "columns": [
-            {
-              "expression": "sector",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "geo_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "status",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "investment_incentives_legal_reference_id_legal_references_legal_reference_id_fk": {
-          "name": "investment_incentives_legal_reference_id_legal_references_legal_reference_id_fk",
-          "tableFrom": "investment_incentives",
-          "tableTo": "legal_references",
-          "schemaTo": "market_entry",
-          "columnsFrom": [
-            "legal_reference_id"
-          ],
-          "columnsTo": [
-            "legal_reference_id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "investment_incentives_geo_id_geo_units_geo_id_fk": {
-          "name": "investment_incentives_geo_id_geo_units_geo_id_fk",
-          "tableFrom": "investment_incentives",
-          "tableTo": "geo_units",
-          "schemaTo": "market_entry",
-          "columnsFrom": [
-            "geo_id"
-          ],
-          "columnsTo": [
-            "geo_id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "investment_incentives_code_unique": {
-          "name": "investment_incentives_code_unique",
-          "nullsNotDistinct": false,
-          "columns": [
-            "code"
-          ]
-        }
-      },
-      "policies": {},
-      "checkConstraints": {
-        "investment_incentives_sector_check": {
-          "name": "investment_incentives_sector_check",
-          "value": "\"market_entry\".\"investment_incentives\".\"sector\" is null or \"market_entry\".\"investment_incentives\".\"sector\" in ('retail', 'manufacturing', 'logistics', 'enterprise')"
-        },
-        "investment_incentives_zone_tier_check": {
-          "name": "investment_incentives_zone_tier_check",
-          "value": "\"market_entry\".\"investment_incentives\".\"zone_tier\" in ('special_difficult_area', 'difficult_area', 'economic_zone_hightech', 'industrial_park', 'sector_encouraged', 'standard')"
-        },
-        "investment_incentives_type_check": {
-          "name": "investment_incentives_type_check",
-          "value": "\"market_entry\".\"investment_incentives\".\"incentive_type\" in ('cit_rate_holiday', 'land_rent_exemption', 'import_duty_exemption', 'rd_accelerated_depreciation')"
-        },
-        "investment_incentives_status_check": {
-          "name": "investment_incentives_status_check",
-          "value": "\"market_entry\".\"investment_incentives\".\"status\" in ('draft', 'review', 'published', 'expired')"
-        },
-        "investment_incentives_valid_dates_check": {
-          "name": "investment_incentives_valid_dates_check",
-          "value": "\"market_entry\".\"investment_incentives\".\"valid_to\" is null or \"market_entry\".\"investment_incentives\".\"valid_to\" >= \"market_entry\".\"investment_incentives\".\"valid_from\""
-        }
-      },
-      "isRLSEnabled": false
-    },
-    "market_entry.investment_opportunities": {
-      "name": "investment_opportunities",
-      "schema": "market_entry",
-      "columns": {
-        "opportunity_id": {
-          "name": "opportunity_id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "code": {
-          "name": "code",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "geo_id": {
-          "name": "geo_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "province_code": {
-          "name": "province_code",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "sector": {
-          "name": "sector",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "opportunity_type": {
-          "name": "opportunity_type",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "title_vi": {
-          "name": "title_vi",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "title_en": {
-          "name": "title_en",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "description_vi": {
-          "name": "description_vi",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "description_en": {
-          "name": "description_en",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "total_area_ha": {
-          "name": "total_area_ha",
-          "type": "numeric",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "available_area_ha": {
-          "name": "available_area_ha",
-          "type": "numeric",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "occupancy_percent": {
-          "name": "occupancy_percent",
-          "type": "numeric",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "investment_min_usd_m": {
-          "name": "investment_min_usd_m",
-          "type": "numeric",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "investment_max_usd_m": {
-          "name": "investment_max_usd_m",
-          "type": "numeric",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "power_capacity_mw": {
-          "name": "power_capacity_mw",
-          "type": "numeric",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "wastewater_m3_day": {
-          "name": "wastewater_m3_day",
-          "type": "numeric",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "readiness_status": {
-          "name": "readiness_status",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'available'"
-        },
-        "legal_status": {
-          "name": "legal_status",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'source_recorded'"
-        },
-        "official_url": {
-          "name": "official_url",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "status": {
-          "name": "status",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'published'"
-        }
-      },
-      "indexes": {
-        "investment_opportunities_prov_sector_idx": {
-          "name": "investment_opportunities_prov_sector_idx",
-          "columns": [
-            {
-              "expression": "province_code",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "sector",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "status",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "investment_opportunities_geo_id_geo_units_geo_id_fk": {
-          "name": "investment_opportunities_geo_id_geo_units_geo_id_fk",
-          "tableFrom": "investment_opportunities",
-          "tableTo": "geo_units",
-          "schemaTo": "market_entry",
-          "columnsFrom": [
-            "geo_id"
-          ],
-          "columnsTo": [
-            "geo_id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "investment_opportunities_code_unique": {
-          "name": "investment_opportunities_code_unique",
-          "nullsNotDistinct": false,
-          "columns": [
-            "code"
-          ]
-        }
-      },
-      "policies": {},
-      "checkConstraints": {
-        "investment_opportunities_sector_check": {
-          "name": "investment_opportunities_sector_check",
-          "value": "\"market_entry\".\"investment_opportunities\".\"sector\" in ('retail', 'manufacturing', 'logistics', 'enterprise')"
-        },
-        "investment_opportunities_type_check": {
-          "name": "investment_opportunities_type_check",
-          "value": "\"market_entry\".\"investment_opportunities\".\"opportunity_type\" in ('industrial_park', 'high_tech_park', 'logistics_hub', 'project')"
-        },
-        "investment_opportunities_occupancy_check": {
-          "name": "investment_opportunities_occupancy_check",
-          "value": "\"market_entry\".\"investment_opportunities\".\"occupancy_percent\" is null or (\"market_entry\".\"investment_opportunities\".\"occupancy_percent\" >= 0 and \"market_entry\".\"investment_opportunities\".\"occupancy_percent\" <= 100)"
-        },
-        "investment_opportunities_readiness_check": {
-          "name": "investment_opportunities_readiness_check",
-          "value": "\"market_entry\".\"investment_opportunities\".\"readiness_status\" in ('early_stage', 'available', 'under_review', 'closed')"
-        },
-        "investment_opportunities_legal_check": {
-          "name": "investment_opportunities_legal_check",
-          "value": "\"market_entry\".\"investment_opportunities\".\"legal_status\" in ('not_reviewed', 'source_recorded', 'needs_check', 'verified_separately')"
-        },
-        "investment_opportunities_status_check": {
-          "name": "investment_opportunities_status_check",
-          "value": "\"market_entry\".\"investment_opportunities\".\"status\" in ('draft', 'review', 'published', 'expired', 'archived')"
-        },
-        "investment_opportunities_url_check": {
-          "name": "investment_opportunities_url_check",
-          "value": "\"market_entry\".\"investment_opportunities\".\"official_url\" ~ '^https://'"
         }
       },
       "isRLSEnabled": false
@@ -2734,8 +2226,8 @@
           "onDelete": "no action",
           "onUpdate": "no action"
         },
-        "observations_dataset_version_id_dataset_versions_dataset_version_id_fk": {
-          "name": "observations_dataset_version_id_dataset_versions_dataset_version_id_fk",
+        "observations_dataset_version_fkey": {
+          "name": "observations_dataset_version_fkey",
           "tableFrom": "observations",
           "tableTo": "dataset_versions",
           "schemaTo": "market_entry",
@@ -2994,8 +2486,8 @@
           "onDelete": "no action",
           "onUpdate": "no action"
         },
-        "release_members_dataset_version_id_dataset_versions_dataset_version_id_fk": {
-          "name": "release_members_dataset_version_id_dataset_versions_dataset_version_id_fk",
+        "release_members_dataset_version_fkey": {
+          "name": "release_members_dataset_version_fkey",
           "tableFrom": "release_members",
           "tableTo": "dataset_versions",
           "schemaTo": "market_entry",

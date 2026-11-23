@@ -26,3 +26,8 @@ playwright-report
 docx-extracted.txt
 skills
 **/skills
+*.zip
+*.md
+docs
+tests
+database

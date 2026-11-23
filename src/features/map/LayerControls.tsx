@@ -6,12 +6,12 @@ import {
 	indicatorGroups,
 	infrastructureKindColors,
 	infrastructureKindOrder,
-	missingColor,
 	sourcesAreComparable,
 	type InfrastructureKind,
 	type MapLayers,
 	type StatisticalLayer,
 } from "./layers";
+import { BOUNDARIES_LAYER } from "./url-state";
 import type { LayerFilterSummary } from "./filters";
 import {
 	catchmentFacilities,
@@ -34,7 +34,7 @@ function groupMessageKey(code: string): MessageKey {
 }
 
 function SourceDetails({ layer }: { layer: StatisticalLayer }) {
-	const { t, locale } = useI18n();
+	const { t, locale, formatDate } = useI18n();
 	const covered = Object.values(layer.values).filter(
 		(value) => value !== null,
 	).length;
@@ -83,7 +83,7 @@ function SourceDetails({ layer }: { layer: StatisticalLayer }) {
 						{layer.dataset.freshness === "review_due"
 							? t("layers.due")
 							: t("layers.current")}{" "}
-						· {layer.dataset.reviewDueAt.slice(0, 10)}
+						· {formatDate(layer.dataset.reviewDueAt)}
 					</dd>
 				</div>
 			</dl>
@@ -123,64 +123,220 @@ function SourceComparison({
 	return (
 		<details className="layer-comparison">
 			<summary>{t("layers.compareSources")}</summary>
-			<label>
-				{t("layers.firstSource")}
-				<select
-					value={first.id}
-					onChange={(event) => setFirstId(event.target.value)}
-				>
-					{layers.map((item) => (
-						<option key={item.id} value={item.id}>
-							{option(item)}
-						</option>
-					))}
-				</select>
-			</label>
-			<label>
-				{t("layers.secondSource")}
-				<select
-					value={second.id}
-					onChange={(event) => setSecondId(event.target.value)}
-				>
-					{others.map((item) => (
-						<option key={item.id} value={item.id}>
-							{option(item)}
-						</option>
-					))}
-				</select>
-			</label>
-			<div className="layer-comparison-result" aria-live="polite">
-				{!comparable ? (
-					<p>{t("layers.compareIncompatible")}</p>
-				) : !province ? (
-					<p>{t("layers.compareSelectProvince")}</p>
-				) : firstValue == null || secondValue == null ? (
-					<p>{t("layers.compareNeedsBoth", { name: province.name })}</p>
+			<div className="form-stack">
+				<div className="layer-filter-row">
+					<label className="form-field">
+						{t("layers.firstSource")}
+						<select
+							className="control-select"
+							value={first.id}
+							onChange={(event) => setFirstId(event.target.value)}
+						>
+							{layers.map((item) => (
+								<option key={item.id} value={item.id}>
+									{option(item)}
+								</option>
+							))}
+						</select>
+					</label>
+					<label className="form-field">
+						{t("layers.secondSource")}
+						<select
+							className="control-select"
+							value={second.id}
+							onChange={(event) => setSecondId(event.target.value)}
+						>
+							{others.map((item) => (
+								<option key={item.id} value={item.id}>
+									{option(item)}
+								</option>
+							))}
+						</select>
+					</label>
+				</div>
+				<div className="layer-comparison-result" aria-live="polite">
+					{!comparable ? (
+						<p>{t("layers.compareIncompatible")}</p>
+					) : !province ? (
+						<p>{t("layers.compareSelectProvince")}</p>
+					) : firstValue == null || secondValue == null ? (
+						<p>{t("layers.compareNeedsBoth", { name: province.name })}</p>
+					) : (
+						<p className="tabular-nums">
+							{t("layers.compareResult", {
+								name: province.name,
+								first: formatNumber(firstValue),
+								firstUnit: unitLabel(locale, first.unit),
+								second: formatNumber(secondValue),
+								secondUnit: unitLabel(locale, second.unit),
+								delta: formatNumber(secondValue - firstValue),
+								unit:
+									first.unit === "%"
+										? t("common.percentagePoints")
+										: unitLabel(locale, first.unit),
+							})}
+						</p>
+					)}
+				</div>
+				<SourceDetails layer={first} />
+				<SourceDetails layer={second} />
+			</div>
+		</details>
+	);
+}
+
+export function LayerLegend({
+	layer,
+	province,
+	provinceCount,
+}: {
+	layer: StatisticalLayer | null;
+	province: { id: string; name: string } | null;
+	provinceCount: number;
+}) {
+	const { t, locale, formatNumber, formatDate } = useI18n();
+	if (!layer) {
+		return (
+			<div
+				className="layer-legend overprint-transition"
+				role="group"
+				aria-label={t("layers.legendAria")}
+			>
+				<h3 className="layer-legend-title">{t("layers.boundaries")}</h3>
+				<p className="layer-legend-summary tabular-nums">
+					{t("layers.boundariesLegendSummary", { count: provinceCount })}
+				</p>
+				<ul className="layer-legend-list">
+					<li>
+						<span className="legend-chip boundary-chip" aria-hidden="true" />
+						<span>{t("map.simplified")}</span>
+					</li>
+				</ul>
+			</div>
+		);
+	}
+
+	const numericValues = Object.values(layer.values).filter(
+		(value): value is number => value != null,
+	);
+	const covered = numericValues.length;
+	const allIntegers =
+		numericValues.length > 0 &&
+		numericValues.every((value) => Number.isInteger(value));
+	const formatBound = (value: number) =>
+		formatNumber(value, { maximumFractionDigits: allIntegers ? 0 : 1 });
+	const details = province ? layer.valueDetails?.[province.id] : undefined;
+	const provinceValue = province ? layer.values[province.id] : undefined;
+
+	return (
+		<div
+			className="layer-legend overprint-transition"
+			role="group"
+			aria-label={t("layers.legendAria")}
+		>
+			<h3 className="layer-legend-title">
+				{indicatorLabel(locale, layer.indicator, layer.label)}
+			</h3>
+			<p className="layer-legend-summary tabular-nums">
+				{t("layers.legendSummary", {
+					unit: unitLabel(locale, layer.unit),
+					period: layer.period,
+					covered,
+					total: provinceCount,
+				})}
+			</p>
+			<ul className="layer-legend-list">
+				{colorScale(layer).map((bin, index) => (
+					<li key={`${bin.color}-${index}`}>
+						<span
+							className="legend-chip"
+							style={{ backgroundColor: bin.color }}
+							aria-hidden="true"
+						/>
+						<span>
+							{bin.min === bin.max
+								? formatBound(bin.min)
+								: `${formatBound(bin.min)} – ${formatBound(bin.max)}`}
+						</span>
+					</li>
+				))}
+				<li>
+					<span className="legend-chip hatch-chip" aria-hidden="true" />
+					<span>{t("layers.unavailable")}</span>
+				</li>
+			</ul>
+			<div className="layer-legend-source">
+				<span>
+					{layer.dataset.source.publisher} · {layer.dataset.version}
+				</span>
+				{layer.dataset.source.url ? (
+					<a href={layer.dataset.source.url}>{layer.dataset.source.title}</a>
 				) : (
+					<span>{layer.dataset.source.title}</span>
+				)}
+				<details className="layer-legend-details">
+					<summary>{t("layers.sourceDetails")}</summary>
+					<dl className="dataset-details">
+						<div>
+							<dt>{t("layers.geography")}</dt>
+							<dd>{layer.geographyVersion}</dd>
+						</div>
+						<div>
+							<dt>{t("layers.license")}</dt>
+							<dd>{layer.dataset.source.license}</dd>
+						</div>
+						<div>
+							<dt>{t("layers.review")}</dt>
+							<dd>
+								{layer.dataset.freshness === "review_due"
+									? t("layers.due")
+									: t("layers.current")}{" "}
+								· {formatDate(layer.dataset.reviewDueAt)}
+							</dd>
+						</div>
+					</dl>
+				</details>
+			</div>
+			{province && (
+				<div className="layer-comparison-result" aria-live="polite">
+					<strong>{province.name}</strong>
+					<p className="tabular-nums">
+						{provinceValue == null
+							? t("layers.unavailable")
+							: `${formatNumber(provinceValue)} ${unitLabel(locale, layer.unit)}`}{" "}
+						· {layer.period}
+					</p>
 					<p>
-						{t("layers.compareResult", {
-							name: province.name,
-							first: formatNumber(firstValue),
-							firstUnit: unitLabel(locale, first.unit),
-							second: formatNumber(secondValue),
-							secondUnit: unitLabel(locale, second.unit),
-							delta: formatNumber(secondValue - firstValue),
-							unit:
-								first.unit === "%"
-									? t("common.percentagePoints")
-									: unitLabel(locale, first.unit),
+						{t("layers.quality", {
+							quality: qualityLabel(locale, details?.quality ?? "unavailable"),
 						})}
 					</p>
-				)}
-			</div>
-			<SourceDetails layer={first} />
-			<SourceDetails layer={second} />
-		</details>
+					<p className="muted">
+						{details?.quality === "verified"
+							? t("layers.qualityVerifiedNote")
+							: details?.quality === "supported"
+								? t("layers.qualitySupportedNote")
+								: t("layers.qualityUnavailableNote")}
+					</p>
+					{details?.missingReason && <p>{details.missingReason}</p>}
+					<p>
+						{t("layers.source", {
+							publisher: layer.dataset.source.publisher,
+							title: layer.dataset.source.title,
+							license: layer.dataset.source.license,
+						})}
+					</p>
+					{details?.method && <p>{details.method}</p>}
+					{details?.limitations && <p>{details.limitations}</p>}
+				</div>
+			)}
+		</div>
 	);
 }
 
 export function LayerControls({
 	data,
+	selectValue,
 	layer,
 	setLayer,
 	airports,
@@ -188,7 +344,6 @@ export function LayerControls({
 	enabledKinds = [],
 	onToggleKind,
 	province,
-	provinceCount,
 	filterMin,
 	filterMax,
 	onFilterChange,
@@ -208,6 +363,7 @@ export function LayerControls({
 	catchmentRadius?: number;
 	onCatchmentRadius?: (radius: number) => void;
 	data: MapLayers;
+	selectValue: string;
 	layer: StatisticalLayer | null;
 	setLayer: (id: string) => void;
 	airports: boolean;
@@ -215,7 +371,6 @@ export function LayerControls({
 	enabledKinds?: InfrastructureKind[];
 	onToggleKind?: (kind: InfrastructureKind) => void;
 	province: { id: string; name: string } | null;
-	provinceCount: number;
 	filterMin: string;
 	filterMax: string;
 	onFilterChange: (min: string, max: string) => void;
@@ -253,18 +408,15 @@ export function LayerControls({
 		if (group) group.push(item);
 		else groups.set(name, [item]);
 	}
-	const covered = layer
-		? Object.values(layer.values).filter((value) => value != null).length
-		: 0;
-	const details =
-		layer && province ? layer.valueDetails?.[province.id] : undefined;
+
 	return (
 		<section className="layer-controls" aria-label={t("layers.aria")}>
 			{onCatchmentRadius && (
 				<div className="layer-filter">
-					<label>
+					<label className="form-field">
 						{t("site.catchment")}
 						<select
+							className="control-select"
 							disabled={!catchmentCenter}
 							value={catchmentCenter ? catchmentRadius : 0}
 							onChange={(event) =>
@@ -299,46 +451,58 @@ export function LayerControls({
 					)}
 				</div>
 			)}
-			<div className="layer-share">
-				<button
-					type="button"
-					className="text-button"
-					onClick={() => void copyLink()}
-				>
-					{t("share.copy")}
-				</button>
-				{shareStatus && <span role="status">{t(shareStatus)}</span>}
-			</div>
-			<label>
-				{t("layers.colourBy")}
-				<select
-					value={layer?.id ?? ""}
-					onChange={(event) => setLayer(event.target.value)}
-				>
-					<option value="">{t("layers.boundaries")}</option>
-					{[...groups].map(([name, items]) => (
-						<optgroup key={name} label={t(name as MessageKey)}>
-							{items.map((item) => (
-								<option value={item.id} key={item.id}>
-									{indicatorLabel(locale, item.indicator, item.label)} ·{" "}
-									{item.period} · {item.dataset.version}
-								</option>
+			<div className="layer-controls-top">
+				<div className="layer-controls-select-wrap">
+					<label className="form-field">
+						{t("layers.colourBy")}
+						<select
+							className="control-select"
+							value={selectValue}
+							onChange={(event) => setLayer(event.target.value)}
+						>
+							<option value={BOUNDARIES_LAYER}>{t("layers.boundaries")}</option>
+							{[...groups].map(([name, items]) => (
+								<optgroup key={name} label={t(name as MessageKey)}>
+									{items.map((item) => (
+										<option value={item.id} key={item.id}>
+											{indicatorLabel(locale, item.indicator, item.label)} ·{" "}
+											{item.period} · {item.dataset.version}
+										</option>
+									))}
+								</optgroup>
 							))}
-						</optgroup>
-					))}
-				</select>
-			</label>
+						</select>
+					</label>
+				</div>
+				<div className="action-row">
+					<button
+						type="button"
+						className="btn btn-secondary btn-sm"
+						onClick={() => void copyLink()}
+					>
+						{t("share.copy")}
+					</button>
+					{shareStatus && (
+						<span className="muted" role="status">
+							{t(shareStatus)}
+						</span>
+					)}
+				</div>
+			</div>
 			{layer && (
 				<div
 					className="layer-filter"
 					role="group"
 					aria-label={t("layers.filterTitle")}
 				>
-					<p className="map-label">{t("layers.filterTitle")}</p>
+					<p className="muted">
+						<strong>{t("layers.filterTitle")}</strong>
+					</p>
 					<div className="layer-filter-row">
-						<label>
+						<label className="form-field">
 							{t("layers.filterMin")}
 							<input
+								className="control-input"
 								type="number"
 								inputMode="decimal"
 								value={filterMin}
@@ -347,9 +511,10 @@ export function LayerControls({
 								}
 							/>
 						</label>
-						<label>
+						<label className="form-field">
 							{t("layers.filterMax")}
 							<input
+								className="control-input"
 								type="number"
 								inputMode="decimal"
 								value={filterMax}
@@ -361,7 +526,7 @@ export function LayerControls({
 						{(filterMin !== "" || filterMax !== "") && (
 							<button
 								type="button"
-								className="text-button"
+								className="btn btn-quiet btn-sm"
 								onClick={onClearFilter}
 							>
 								{t("layers.filterClear")}
@@ -369,11 +534,15 @@ export function LayerControls({
 						)}
 					</div>
 					{filterInvalid ? (
-						<p role="alert">{t("layers.filterInvalid")}</p>
+						<p className="field-error" role="alert">
+							{t("layers.filterInvalid")}
+						</p>
 					) : filterInverted ? (
-						<p role="alert">{t("layers.filterRange")}</p>
+						<p className="field-error" role="alert">
+							{t("layers.filterRange")}
+						</p>
 					) : filterSummary?.active ? (
-						<p role="status">
+						<p className="muted" role="status">
 							{t("layers.filterSummary", {
 								matched: filterSummary.matched,
 								total: filterSummary.total,
@@ -381,79 +550,6 @@ export function LayerControls({
 							})}
 						</p>
 					) : null}
-				</div>
-			)}
-			{layer && (
-				<div
-					className="layer-legend"
-					role="group"
-					aria-label={t("layers.legendAria")}
-				>
-					<p>
-						{t("layers.legendSummary", {
-							unit: unitLabel(locale, layer.unit),
-							period: layer.period,
-							covered,
-							total: provinceCount,
-						})}
-					</p>
-					<ul>
-						{colorScale(layer).map((bin, index) => (
-							<li key={bin.color}>
-								<span style={{ background: bin.color }} aria-hidden="true" />
-								{bin.min === bin.max
-									? formatNumber(bin.min)
-									: `${index === 0 ? "" : "≥ "}${formatNumber(bin.min)} – ${formatNumber(bin.max)}`}
-							</li>
-						))}
-						<li>
-							<span style={{ background: missingColor }} aria-hidden="true" />{" "}
-							{t("layers.unavailable")}
-						</li>
-					</ul>
-					<a href={layer.dataset.source.url ?? undefined}>
-						{layer.dataset.source.title}
-					</a>
-					{province &&
-						(() => {
-							const provinceValue = layer.values[province.id];
-							return (
-								<div className="layer-comparison-result" aria-live="polite">
-									<strong>{province.name}</strong>
-									<p>
-										{provinceValue == null
-											? t("layers.unavailable")
-											: `${formatNumber(provinceValue)} ${unitLabel(locale, layer.unit)}`}{" "}
-										· {layer.period}
-									</p>
-									<p>
-										{t("layers.quality", {
-											quality: qualityLabel(
-												locale,
-												details?.quality ?? "unavailable",
-											),
-										})}
-									</p>
-									<p className="muted">
-										{details?.quality === "verified"
-											? t("layers.qualityVerifiedNote")
-											: details?.quality === "supported"
-												? t("layers.qualitySupportedNote")
-												: t("layers.qualityUnavailableNote")}
-									</p>
-									{details?.missingReason && <p>{details.missingReason}</p>}
-									<p>
-										{t("layers.source", {
-											publisher: layer.dataset.source.publisher,
-											title: layer.dataset.source.title,
-											license: layer.dataset.source.license,
-										})}
-									</p>
-									{details?.method && <p>{details.method}</p>}
-									{details?.limitations && <p>{details.limitations}</p>}
-								</div>
-							);
-						})()}
 				</div>
 			)}
 			{data.infrastructure &&
@@ -472,37 +568,43 @@ export function LayerControls({
 					return (
 						<div className="poi-control">
 							<div className="infra-kind-list">
-								<label>
+								<label className="checkbox-field">
 									<input
 										type="checkbox"
 										checked={airports}
 										onChange={(event) => setAirports(event.target.checked)}
-									/>{" "}
+									/>
 									<span
 										className="infra-kind-dot"
-										style={{ background: infrastructureKindColors.airport }}
+										style={{
+											backgroundColor: infrastructureKindColors.airport,
+										}}
 										aria-hidden="true"
 									/>
-									{t("layers.airports")}
+									<span>{t("layers.airports")}</span>
 								</label>
 								{otherKinds.map((kind) => (
-									<label key={kind}>
+									<label key={kind} className="checkbox-field">
 										<input
 											type="checkbox"
 											checked={enabledKinds.includes(kind)}
 											onChange={() => onToggleKind?.(kind)}
-										/>{" "}
+										/>
 										<span
 											className="infra-kind-dot"
-											style={{ background: infrastructureKindColors[kind] }}
+											style={{
+												backgroundColor: infrastructureKindColors[kind],
+											}}
 											aria-hidden="true"
 										/>
-										{t(`infra.${kind}` as MessageKey)} ({counts[kind]})
+										<span>
+											{t(`infra.${kind}` as MessageKey)} ({counts[kind]})
+										</span>
 									</label>
 								))}
 							</div>
 							{activeTotal > 0 && (
-								<p>
+								<p className="muted">
 									<a href={data.infrastructure.dataset.source.url ?? undefined}>
 										{data.infrastructure.dataset.source.publisher}
 									</a>{" "}

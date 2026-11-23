@@ -113,7 +113,7 @@ async function readDatasets(
     left join lateral (
       select count(*)::int as total, count(*) filter (where value_numeric is null)::int as missing,
         count(*) filter (where period_end > v.data_as_of or period_start > period_end or
-          (value_numeric is null) <> (quality_status = 'unavailable') or indicator.score_eligible or
+          (o.value_numeric is null) <> (o.quality_status = 'unavailable' or o.value_type in ('text', 'category')) or
           nullif(btrim(method_note), '') is null or nullif(btrim(o.limitations), '') is null)::int as invalid,
         array_agg(distinct period_label || ' (' || period_start || ' to ' || period_end || ')') as periods,
         array_agg(distinct method_note) filter (where method_note is not null) as methods,
@@ -278,7 +278,7 @@ export async function applyReleaseAction(
       join market_entry.dataset_versions dataset using (dataset_version_id)
       join market_entry.source_registry source using (source_id)
       where member.batch_id = ${id}
-      order by dataset.dataset_version_id for update of dataset, source
+      order by dataset.dataset_version_id for update of dataset
     `;
 
 		const datasets = await readDatasets(tx, id);
@@ -313,6 +313,16 @@ export async function applyReleaseAction(
 						status: 409,
 						message: "Reviewer approval is required before publication.",
 					};
+				if (
+					batch.audit.some(
+						(event) => event.action === "approve" && event.actor === actor,
+					)
+				) {
+					return {
+						status: 403,
+						message: "The approving reviewer cannot publish the same batch.",
+					};
+				}
 				const [geography] = await tx<
 					{ id: string; status: string; ready: boolean }[]
 				>`

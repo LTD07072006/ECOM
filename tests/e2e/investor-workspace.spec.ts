@@ -19,6 +19,30 @@ test.beforeEach(async ({ page }) => {
 					data: searchGeographies(demoCatalog, url.searchParams.get("q") ?? ""),
 				},
 			});
+		if (tail === "batch") {
+			const ids = (url.searchParams.get("ids") ?? "")
+				.split(",")
+				.map((id) => id.trim().toLowerCase())
+				.filter(Boolean);
+			const profiles = ids
+				.map((id) => getProfile(demoCatalog, id))
+				.filter((p): p is NonNullable<typeof p> => p !== null);
+			if (profiles.length === 0)
+				return route.fulfill({
+					status: 404,
+					json: { error: "No matching geography units were found." },
+				});
+			return route.fulfill({
+				json: {
+					data: profiles,
+					meta: {
+						dataStatus: demoCatalog.mode,
+						requested: ids.length,
+						found: profiles.length,
+					},
+				},
+			});
+		}
 		if (tail === "compare") {
 			const profiles = (url.searchParams.get("ids") ?? "")
 				.split(",")

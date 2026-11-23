@@ -19,8 +19,8 @@ const stages: Array<{ value: PublicInquiryStatus["status"]; key: MessageKey }> =
 		{ value: "closed", key: "admin.closed" },
 	];
 
-const closeReasonKeys: Record<string, MessageKey> = {
-	spam: "admin.reasonSpam",
+// Public status page maps spam close reasons to closed without surfacing internal spam labels.
+const publicCloseReasonKeys: Record<string, MessageKey> = {
 	duplicate: "admin.reasonDuplicate",
 	out_of_scope: "admin.reasonOutOfScope",
 	resolved: "admin.reasonResolved",
@@ -185,9 +185,10 @@ export function InquiryStatusLookup({
 				className={`status-lookup-form ${styles.lookupForm}`}
 				onSubmit={onSubmit}
 			>
-				<label>
+				<label className="form-field">
 					{t("status.referenceCode")}
 					<input
+						className="control-input"
 						name="referenceCode"
 						value={referenceCode}
 						onChange={(event) => setReferenceCode(event.target.value)}
@@ -197,9 +198,10 @@ export function InquiryStatusLookup({
 						autoComplete="off"
 					/>
 				</label>
-				<label>
+				<label className="form-field">
 					{t("status.email")}
 					<input
+						className="control-input"
 						name="email"
 						type="email"
 						value={email}
@@ -209,18 +211,26 @@ export function InquiryStatusLookup({
 						autoComplete="email"
 					/>
 				</label>
-				<button type="submit" disabled={pending}>
-					{pending ? t("status.checking") : t("status.submit")}
-				</button>
+				<div>
+					<button type="submit" className="btn btn-primary" disabled={pending}>
+						{pending ? t("status.checking") : t("status.submit")}
+					</button>
+				</div>
 			</form>
 
-			{error && <p role="alert">{error}</p>}
+			{error && (
+				<p className="banner banner--error" role="alert">
+					{error}
+				</p>
+			)}
 
 			{result && summary && (
 				<section className={styles.statusCard} aria-live="polite">
 					<div className={styles.cardHeader}>
 						<div className={styles.badgeRow}>
-							<h2 className={styles.refHeading}>{result.referenceCode}</h2>
+							<h2 className={`${styles.refHeading} tabular-nums`}>
+								{result.referenceCode}
+							</h2>
 							<span className={slaClass}>{text.sla[summary.slaBadge]}</span>
 						</div>
 						<div className={styles.actionsBar}>
@@ -291,12 +301,12 @@ export function InquiryStatusLookup({
 						{text.guidance[summary.nextStepKey]}
 					</p>
 
-					<dl className="inquiry-report-meta">
+					<dl className="status-meta-list">
 						<dt>{t("admin.statusLabel")}</dt>
 						<dd>
 							{statusLabel(result.status)}
-							{result.closeReason && closeReasonKeys[result.closeReason]
-								? ` · ${t(closeReasonKeys[result.closeReason])}`
+							{result.closeReason && publicCloseReasonKeys[result.closeReason]
+								? ` · ${t(publicCloseReasonKeys[result.closeReason])}`
 								: ""}
 						</dd>
 						<dt>{t("status.submittedAt")}</dt>

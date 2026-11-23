@@ -22,6 +22,7 @@ export function InquiryForm({
 }: InquiryFormProps) {
 	const { t } = useI18n();
 	const privacySummary = useId();
+	const errorId = useId();
 	const [error, setError] = useState<string | null>(null);
 	const [referenceCode, setReferenceCode] = useState<string | null>(null);
 	const [pending, setPending] = useState(false);
@@ -71,24 +72,28 @@ export function InquiryForm({
 
 	if (referenceCode)
 		return (
-			<div role="status">
-				<p>{t("inquiry.received")}</p>
-				<p>{t("inquiry.reference", { code: referenceCode })}</p>
-				<p>{t("inquiry.keepCode")}</p>
-				<p>
-					<a
-						href={`/inquiries/status?ref=${encodeURIComponent(referenceCode)}`}
-					>
-						{t("inquiry.trackLink")}
-					</a>
-				</p>
+			<div className="banner banner--success" role="status">
+				<div className="form-stack">
+					<p>{t("inquiry.received")}</p>
+					<p className="tabular-nums">
+						<strong>{t("inquiry.reference", { code: referenceCode })}</strong>
+					</p>
+					<p>{t("inquiry.keepCode")}</p>
+					<p>
+						<a
+							href={`/inquiries/status?ref=${encodeURIComponent(referenceCode)}`}
+						>
+							{t("inquiry.trackLink")}
+						</a>
+					</p>
+				</div>
 			</div>
 		);
 	return (
-		<form className="inquiry-form" onSubmit={submit}>
-			<p>{t("inquiry.requiredNote")}</p>
+		<form className="form-stack" onSubmit={submit}>
+			<p className="muted">{t("inquiry.requiredNote")}</p>
 			{geographyLabels.length > 0 && (
-				<fieldset>
+				<fieldset className="decision-places">
 					<legend>{t("inquiry.places")}</legend>
 					<ul>
 						{geographyLabels.map((label) => (
@@ -98,39 +103,64 @@ export function InquiryForm({
 					<p className="muted">{t("inquiry.selfReported")}</p>
 				</fieldset>
 			)}
-			<label>
+			<label className="form-field">
 				{t("inquiry.email")} *
 				<input
+					className="control-input"
 					name="email"
 					type="email"
 					required
 					maxLength={254}
 					autoComplete="email"
+					aria-describedby={error ? errorId : undefined}
 				/>
 			</label>
-			<label>
+			<label className="form-field">
 				{t("inquiry.message")} *
-				<textarea name="message" required minLength={10} maxLength={5000} />
+				<textarea
+					className="control-textarea"
+					name="message"
+					required
+					minLength={10}
+					maxLength={5000}
+					aria-describedby={error ? errorId : undefined}
+				/>
 			</label>
-			<label>
+			<label className="form-field">
 				{t("inquiry.name")}
-				<input name="name" maxLength={160} autoComplete="name" />
+				<input
+					className="control-input"
+					name="name"
+					maxLength={160}
+					autoComplete="name"
+				/>
 			</label>
-			<label>
+			<label className="form-field">
 				{t("inquiry.organization")}
 				<input
+					className="control-input"
 					name="organization"
 					maxLength={200}
 					autoComplete="organization"
 				/>
 			</label>
-			<label>
+			<label className="form-field">
 				{t("inquiry.country")}
-				<input name="country" maxLength={100} autoComplete="country-name" />
+				<input
+					className="control-input"
+					name="country"
+					maxLength={100}
+					autoComplete="country-name"
+				/>
 			</label>
-			<label>
+			<label className="form-field">
 				{t("inquiry.sector")}
-				<input name="sector" maxLength={160} defaultValue={defaultSector} />
+				<input
+					className="control-input"
+					name="sector"
+					maxLength={160}
+					defaultValue={defaultSector}
+				/>
 			</label>
 			{scenarioSnapshot && (
 				<label>
@@ -141,26 +171,32 @@ export function InquiryForm({
 				Website
 				<input name="website" tabIndex={-1} autoComplete="off" />
 			</label>
-			<p id={privacySummary}>
+			<p className="muted" id={privacySummary}>
 				{t("inquiry.privacyBefore")}{" "}
 				<a href="/privacy/inquiries" target="_blank" rel="noopener noreferrer">
 					{t("inquiry.privacyLink")}
 				</a>{" "}
 				{t("inquiry.privacyAfter")}
 			</p>
-			<label className="inquiry-consent">
+			<label className="checkbox-field">
 				<input
 					type="checkbox"
 					name="consent"
 					required
 					aria-describedby={privacySummary}
-				/>{" "}
-				{t("inquiry.consent")}
+				/>
+				<span>{t("inquiry.consent")}</span>
 			</label>
-			{error && <p role="alert">{error}</p>}
-			<button type="submit" disabled={pending}>
-				{pending ? t("inquiry.sending") : t("inquiry.send")}
-			</button>
+			{error && (
+				<p id={errorId} className="banner banner--error" role="alert">
+					{error}
+				</p>
+			)}
+			<div>
+				<button type="submit" className="btn btn-cta" disabled={pending}>
+					{pending ? t("inquiry.sending") : t("inquiry.send")}
+				</button>
+			</div>
 		</form>
 	);
 }

@@ -5,7 +5,7 @@ import {
 	nextNotificationState,
 	parseRequestLocale,
 } from "../../src/features/inquiries/notifications";
-import { redactEmail, sendMail } from "../../src/lib/mail";
+import { mailTransport, redactEmail, sendMail } from "../../src/lib/mail";
 
 test("parseRequestLocale reads ecom_locale cookie before accept-language header", () => {
 	const fromCookie = new Request("http://localhost/api/inquiries", {
@@ -159,4 +159,30 @@ test("package.json exposes mail:flush and mail:scheduler scripts", async () => {
 	expect(pkg.scripts["mail:scheduler"]).toBe(
 		"bun run src/db/mail-scheduler.ts",
 	);
+});
+
+test("mailTransport only enables resend when ECOM_MAIL_TRANSPORT=resend", () => {
+	const prevTransport = process.env.ECOM_MAIL_TRANSPORT;
+	const prevKey = process.env.RESEND_API_KEY;
+	const prevNodeEnv = process.env.NODE_ENV;
+	const mutableEnv = process.env as Record<string, string | undefined>;
+	try {
+		delete process.env.ECOM_MAIL_TRANSPORT;
+		process.env.RESEND_API_KEY = "re_test_key";
+		mutableEnv.NODE_ENV = "test";
+		expect(mailTransport()).toBe("log");
+
+		mutableEnv.NODE_ENV = "production";
+		expect(mailTransport()).toBe("disabled");
+
+		process.env.ECOM_MAIL_TRANSPORT = "resend";
+		expect(mailTransport()).toBe("resend");
+	} finally {
+		if (prevTransport === undefined) delete process.env.ECOM_MAIL_TRANSPORT;
+		else process.env.ECOM_MAIL_TRANSPORT = prevTransport;
+		if (prevKey === undefined) delete process.env.RESEND_API_KEY;
+		else process.env.RESEND_API_KEY = prevKey;
+		if (prevNodeEnv === undefined) delete mutableEnv.NODE_ENV;
+		else mutableEnv.NODE_ENV = prevNodeEnv;
+	}
 });

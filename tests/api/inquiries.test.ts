@@ -1,4 +1,5 @@
-import { expect, test } from "bun:test";
+import { afterAll, beforeAll, expect, test } from "bun:test";
+import { randomBytes } from "node:crypto";
 import { POST } from "../../src/app/api/inquiries/route";
 import { INQUIRY_NOTICE_VERSION } from "../../src/features/inquiries/privacy";
 import { inquirySubmissionSchema } from "../../src/features/inquiries/validation";
@@ -29,11 +30,39 @@ test("accepts a bounded advisory scenario and rejects unexpected attachment keys
 });
 
 const consent = { consent: true, noticeVersion: INQUIRY_NOTICE_VERSION };
+const testProxyToken = randomBytes(32).toString("base64url");
+let previousProxyToken: string | undefined;
+let requestCounter = 0;
+
+beforeAll(() => {
+	previousProxyToken = process.env.ECOM_TRUSTED_PROXY_TOKEN;
+	process.env.ECOM_TRUSTED_PROXY_TOKEN = testProxyToken;
+});
+
+afterAll(() => {
+	if (previousProxyToken === undefined) {
+		delete process.env.ECOM_TRUSTED_PROXY_TOKEN;
+	} else {
+		process.env.ECOM_TRUSTED_PROXY_TOKEN = previousProxyToken;
+	}
+});
+
+const proxyHeaders = () => {
+	requestCounter += 1;
+	return {
+		"x-ecom-ingress-token": testProxyToken,
+		"x-ecom-client-ip": `198.51.100.${requestCounter}`,
+	};
+};
 
 const request = (body: unknown, headers: Record<string, string> = {}) =>
 	new Request("http://localhost/api/inquiries", {
 		method: "POST",
-		headers: { "content-type": "application/json", ...headers },
+		headers: {
+			"content-type": "application/json",
+			...proxyHeaders(),
+			...headers,
+		},
 		body: JSON.stringify(body),
 	});
 
@@ -51,7 +80,7 @@ test("public inquiry API rejects non-JSON requests", async () => {
 	const response = await POST(
 		new Request("http://localhost/api/inquiries", {
 			method: "POST",
-			headers: { "content-type": "text/plain" },
+			headers: { "content-type": "text/plain", ...proxyHeaders() },
 			body: "email=a@example.com",
 		}),
 	);
@@ -104,7 +133,7 @@ test("public inquiry byte limit applies to UTF-8 streams and cancels the reader 
 	const response = await POST(
 		new Request("http://localhost/api/inquiries", {
 			method: "POST",
-			headers: { "content-type": "application/json" },
+			headers: { "content-type": "application/json", ...proxyHeaders() },
 			body: stream,
 		}),
 	);
@@ -120,4 +149,50 @@ test("public inquiry byte limit applies even when the declared length is smaller
 		),
 	);
 	expect(response.status).toBe(413);
+});
+
+test("public inquiry API rejects filled honeypot without disclosing the honeypot field", async () => {
+	const onlyHoneypot = await POST(
+		request({
+			...consent,
+			email: "valid@example.test",
+			message: "An ordinary investment inquiry.",
+			honeypot: "https://spam.example.test",
+		}),
+	);
+	expect(onlyHoneypot.status).toBe(400);
+	const onlyBody = (await onlyHoneypot.json()) as Record<string, unknown>;
+	expect(onlyBody).toEqual({ error: "Please correct the inquiry form." });
+	expect(JSON.stringify(onlyBody)).not.toContain("honeypot");
+
+	const withBadEmail = await POST(
+		request({
+			...consent,
+			email: "invalid",
+			message: "An ordinary investment inquiry.",
+			honeypot: "bot",
+		}),
+	);
+	expect(withBadEmail.status).toBe(400);
+	const badEmailBody = (await withBadEmail.json()) as {
+		error: string;
+		fields?: string[];
+	};
+	expect(badEmailBody.fields).toEqual(["email"]);
+	expect(JSON.stringify(badEmailBody)).not.toContain("honeypot");
+});
+
+test("public inquiry API rejects unexpected query parameters", async () => {
+	const response = await POST(
+		new Request("http://localhost/api/inquiries?unexpected=1", {
+			method: "POST",
+			headers: { "content-type": "application/json", ...proxyHeaders() },
+			body: JSON.stringify({
+				...consent,
+				email: "valid@example.test",
+				message: "An ordinary investment inquiry.",
+			}),
+		}),
+	);
+	expect(response.status).toBe(400);
 });

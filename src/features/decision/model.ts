@@ -396,6 +396,14 @@ export function calculateContextualRanking(
 	};
 }
 
+export function twoWayShare(a: number, b: number): [number, number] | null {
+	if (!Number.isFinite(a) || !Number.isFinite(b) || a <= 0 || b <= 0) {
+		return null;
+	}
+	const shareA = Math.round((a / (a + b)) * 100);
+	return [shareA, 100 - shareA];
+}
+
 export function calculateRetailScore(
 	profiles: Profile[],
 	weights: number[],

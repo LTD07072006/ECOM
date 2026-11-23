@@ -1,4 +1,4 @@
-export const INQUIRY_NOTICE_VERSION = "inquiry-privacy-v1";
+export const INQUIRY_NOTICE_VERSION = "inquiry-privacy-v2";
 
 export function inquiryPrivacyContact() {
 	const controller = process.env.INQUIRY_PRIVACY_CONTROLLER?.trim();

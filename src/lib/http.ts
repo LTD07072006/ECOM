@@ -7,11 +7,13 @@ export function error(message: string, status: number) {
 }
 
 export function csvDownload(csv: string, filename: string) {
+	const safeFilename =
+		filename.replace(/[^A-Za-z0-9._-]/g, "_") || "export.csv";
 	// Excel detects UTF-8 on direct open when the download includes a BOM.
 	return new Response(`\uFEFF${csv}`, {
 		headers: {
 			"Content-Type": "text/csv; charset=utf-8",
-			"Content-Disposition": `attachment; filename="${filename}"`,
+			"Content-Disposition": `attachment; filename="${safeFilename}"`,
 		},
 	});
 }

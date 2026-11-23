@@ -1,14 +1,17 @@
 import { z } from "zod";
-import { releaseIdentity } from "../../../../../features/releases/authorization";
 import {
 	getInquiry,
+	InquiryError,
+	recordInquiryAccess,
 	updateInquiry,
 } from "../../../../../features/inquiries/repository";
 import {
 	closeReasons,
+	inquiryReferencePattern,
 	inquiryStatuses,
 } from "../../../../../features/inquiries/validation";
-import { observeApi } from "../../../../../lib/api-operations";
+import { releaseIdentity } from "../../../../../features/releases/authorization";
+import { boundedQuery, observeApi } from "../../../../../lib/api-operations";
 import { error, json, readBoundedJson } from "../../../../../lib/http";
 
 export const dynamic = "force-dynamic";
@@ -35,11 +38,19 @@ export async function GET(
 			const identity = releaseIdentity(request);
 			if (!identity || identity.role !== "steward")
 				return error("A valid steward access token is required.", 401);
+			if (!boundedQuery(request))
+				return error("Unexpected inquiry parameters.", 400);
 			const { referenceCode } = await context.params;
-			if (!referenceCode || referenceCode.length > 64)
+			if (!inquiryReferencePattern.test(referenceCode))
 				return error("Inquiry not found.", 404);
 			const result = await getInquiry(referenceCode);
-			return result ? json({ data: result }) : error("Inquiry not found.", 404);
+			if (!result) return error("Inquiry not found.", 404);
+			await recordInquiryAccess({
+				actor: identity.actor,
+				action: "viewed_detail",
+				inquiryId: result.inquiry.inquiry_id,
+			});
+			return json({ data: result });
 		},
 		true,
 	);
@@ -56,26 +67,24 @@ export async function PATCH(
 			const identity = releaseIdentity(request);
 			if (!identity || identity.role !== "steward")
 				return error("A valid steward access token is required.", 401);
+			if (!boundedQuery(request))
+				return error("Unexpected inquiry parameters.", 400);
+			const { referenceCode } = await context.params;
+			if (!inquiryReferencePattern.test(referenceCode))
+				return error("Inquiry not found.", 404);
 			const body = await readBoundedJson(request, 32_000);
 			if (!body.ok) return error(body.message, body.status);
 			const parsed = updateSchema.safeParse(body.value);
 			if (!parsed.success)
 				return error("Provide a valid status, close reason, or note.", 400);
-			const { referenceCode } = await context.params;
-			if (!referenceCode || referenceCode.length > 64)
-				return error("Inquiry not found.", 404);
 			try {
 				await updateInquiry(referenceCode, parsed.data, identity.actor);
 				return json({ updated: true, referenceCode });
 			} catch (cause) {
-				const message =
-					cause instanceof Error ? cause.message : "Unable to update inquiry.";
-				return error(
-					message === "Inquiry not found."
-						? message
-						: "Unable to update inquiry.",
-					message === "Inquiry not found." ? 404 : 409,
-				);
+				if (cause instanceof InquiryError) {
+					return error(cause.message, cause.status);
+				}
+				throw cause;
 			}
 		},
 		true,

@@ -50,9 +50,10 @@ export function InquiryFilters({
 	return (
 		<fieldset className="inquiry-dashboard-filters">
 			<legend>{t("admin.filters")}</legend>
-			<label>
+			<label className="form-field">
 				{t("admin.status")}
 				<select
+					className="control-select"
 					value={status}
 					disabled={busy}
 					onChange={(event) => onStatusChange(event.target.value)}
@@ -65,34 +66,38 @@ export function InquiryFilters({
 					))}
 				</select>
 			</label>
-			<label>
+			<label className="form-field">
 				{t("admin.country")}
 				<input
+					className="control-input"
 					value={country}
 					disabled={busy}
 					onChange={(event) => onCountryChange(event.target.value)}
 				/>
 			</label>
-			<label>
+			<label className="form-field">
 				{t("admin.sector")}
 				<input
+					className="control-input"
 					value={sector}
 					disabled={busy}
 					onChange={(event) => onSectorChange(event.target.value)}
 				/>
 			</label>
-			<label>
+			<label className="form-field">
 				{t("admin.from")}
 				<input
+					className="control-input"
 					type="date"
 					value={from}
 					disabled={busy}
 					onChange={(event) => onFromChange(event.target.value)}
 				/>
 			</label>
-			<label>
+			<label className="form-field">
 				{t("admin.to")}
 				<input
+					className="control-input"
 					type="date"
 					value={to}
 					disabled={busy}
@@ -106,9 +111,10 @@ export function InquiryFilters({
 					onSearchGeographies();
 				}}
 			>
-				<label>
+				<label className="form-field">
 					{t("admin.searchGeography")}
 					<input
+						className="control-input"
 						value={geographyQuery}
 						disabled={busy}
 						placeholder={t("admin.geographyPlaceholder")}
@@ -117,6 +123,7 @@ export function InquiryFilters({
 				</label>
 				<button
 					type="submit"
+					className="btn btn-secondary"
 					disabled={busy || geographyQuery.trim().length < 2}
 				>
 					{t("admin.findGeography")}
@@ -127,6 +134,7 @@ export function InquiryFilters({
 							<li key={option.id}>
 								<button
 									type="button"
+									className="btn btn-secondary btn-sm"
 									disabled={
 										busy || geographies.some(({ id }) => option.id === id)
 									}
@@ -148,6 +156,7 @@ export function InquiryFilters({
 							<li key={option.id}>
 								<button
 									type="button"
+									className="btn btn-secondary btn-sm"
 									disabled={busy}
 									aria-label={t("admin.removeGeography", {
 										name: option.displayName || option.name,

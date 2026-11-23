@@ -1,17 +1,19 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useI18n } from "../../lib/i18n/provider";
+import { ComparisonPanel } from "../comparison/ComparisonPanel";
 import type { Geography } from "../geography/types";
+import { InquiryForm } from "../inquiries/InquiryForm";
+import { formalPlaceName } from "../../lib/i18n/data-labels";
+import { readCompareIds } from "../map/url-state";
 import {
-	removeFromShortlist,
+	COMPARISON_LIMIT,
+	SHORTLIST_LIMIT,
 	readShortlist,
+	removeFromShortlist,
 	selectForComparison,
 } from "./store";
-import { ComparisonPanel } from "../comparison/ComparisonPanel";
-import { InquiryForm } from "../inquiries/InquiryForm";
-import { readCompareIds } from "../map/url-state";
-import { useI18n } from "../../lib/i18n/provider";
-import { formalPlaceName } from "../../lib/i18n/data-labels";
 
 function syncCompareUrl(ids: string[] | null) {
 	if (typeof window === "undefined") return;
@@ -24,8 +26,11 @@ function syncCompareUrl(ids: string[] | null) {
 
 export function ShortlistTray() {
 	const { t, locale } = useI18n();
+	const tRef = useRef(t);
+	tRef.current = t;
 	const [ids, setIds] = useState<string[]>([]);
 	const [places, setPlaces] = useState<Geography[]>([]);
+	const [loadingPlaces, setLoadingPlaces] = useState(false);
 	const [comparisonIds, setComparisonIds] = useState<string[] | null>(null);
 	const [urlRestored, setUrlRestored] = useState(false);
 	const [error, setError] = useState<string | null>(null);
@@ -51,7 +56,7 @@ export function ShortlistTray() {
 			try {
 				setIds(readShortlist(localStorage.getItem("investor-shortlist")));
 			} catch {
-				setError(t("shortlist.storageError"));
+				setError(tRef.current("shortlist.storageError"));
 			}
 		};
 		sync();
@@ -62,39 +67,55 @@ export function ShortlistTray() {
 			window.removeEventListener("investor-shortlist-change", handleChange);
 			window.removeEventListener("storage", handleChange);
 		};
-	}, [t]);
+	}, []);
 
 	useEffect(() => {
-		let active = true;
-		setPlaces([]);
 		setError(null);
-		if (!ids.length) return;
-		Promise.all(
-			ids.map((id) =>
-				fetch(`/api/geographies/${id}`).then(async (response) => {
-					if (!response.ok) return null;
-					const body = await response.json();
-					return body.data as Geography;
-				}),
-			),
+		if (!ids.length) {
+			setPlaces([]);
+			setLoadingPlaces(false);
+			return;
+		}
+		setLoadingPlaces(true);
+		const controller = new AbortController();
+		fetch(
+			`/api/geographies/batch?ids=${ids.map((id) => encodeURIComponent(id)).join(",")}`,
+			{
+				signal: controller.signal,
+			},
 		)
-			.then((next) => {
-				if (!active) return;
-				const valid = next.filter(
-					(place): place is Geography => place !== null,
-				);
-				setPlaces(valid);
-				setError(
-					valid.length === ids.length ? null : t("shortlist.someMissing"),
-				);
+			.then(async (response) => {
+				if (response.status === 404) {
+					return { places: [] as Geography[], someMissing: true };
+				}
+				if (!response.ok) {
+					throw new Error("Shortlist batch failed");
+				}
+				const body = (await response.json().catch(() => null)) as {
+					data?: Geography[];
+				} | null;
+				if (!body || !Array.isArray(body.data)) {
+					throw new Error("Unexpected shortlist batch response");
+				}
+				return {
+					places: body.data,
+					someMissing: body.data.length < ids.length,
+				};
+			})
+			.then(({ places: nextPlaces, someMissing }) => {
+				if (controller.signal.aborted) return;
+				setPlaces(nextPlaces);
+				setLoadingPlaces(false);
+				setError(someMissing ? tRef.current("shortlist.someMissing") : null);
 			})
 			.catch(() => {
-				if (active) setError(t("shortlist.loadFailed"));
+				if (!controller.signal.aborted) {
+					setLoadingPlaces(false);
+					setError(tRef.current("shortlist.loadFailed"));
+				}
 			});
-		return () => {
-			active = false;
-		};
-	}, [ids, t]);
+		return () => controller.abort();
+	}, [ids]);
 
 	function remove(id: string) {
 		try {
@@ -117,10 +138,12 @@ export function ShortlistTray() {
 		setError(null);
 		try {
 			const response = await fetch(
-				`/api/geographies/export?ids=${ids.join(",")}&format=${format}`,
+				`/api/geographies/export?ids=${ids.map((id) => encodeURIComponent(id)).join(",")}&format=${format}`,
 			);
 			if (!response.ok) {
-				const body = await response.json();
+				const body = (await response.json().catch(() => null)) as {
+					error?: string;
+				} | null;
 				throw new Error(body?.error ?? t("shortlist.exportUnavailable"));
 			}
 			const blob = await response.blob();
@@ -141,6 +164,9 @@ export function ShortlistTray() {
 	}
 
 	const placesById = new Map(places.map((place) => [place.id, place]));
+	const resolvedCount = loadingPlaces
+		? Math.max(places.length, ids.length)
+		: places.length;
 
 	if (!ids.length && !comparisonIds) return null;
 	return (
@@ -152,24 +178,27 @@ export function ShortlistTray() {
 				>
 					<div className="shortlist-heading">
 						<div>
-							<span className="map-label">{t("shortlist.savedPlaces")}</span>
-							<strong>
-								{t("shortlist.savedCount", { count: places.length })}
+							<span className="muted">{t("shortlist.savedPlaces")}</span>
+							<strong className="tabular-nums">
+								{t("shortlist.savedCount", { count: resolvedCount })} (
+								{ids.length}/{SHORTLIST_LIMIT})
 							</strong>
 						</div>
-						<div className="shortlist-actions">
+						<div className="action-row">
 							{ids.length >= 2 ? (
 								<>
 									<button
 										type="button"
-										className="text-button"
+										className="btn btn-primary btn-sm"
 										onClick={() => setComparisonIds(selectForComparison(ids))}
 									>
-										{t("shortlist.compare", { count: Math.min(ids.length, 3) })}
+										{t("shortlist.compare", {
+											count: Math.min(ids.length, COMPARISON_LIMIT),
+										})}
 									</button>
 									<a
 										href={`/decision?provinces=${encodeURIComponent(selectForComparison(ids).join(","))}`}
-										className="text-button"
+										className="btn btn-secondary btn-sm"
 									>
 										{t("shortlist.openDecision")}
 									</a>
@@ -177,21 +206,25 @@ export function ShortlistTray() {
 							) : null}
 							<button
 								type="button"
-								className="text-button"
+								className="btn btn-quiet btn-sm"
 								onClick={() => download("json")}
 							>
 								{t("shortlist.downloadJson")}
 							</button>
 							<button
 								type="button"
-								className="text-button"
+								className="btn btn-quiet btn-sm"
 								onClick={() => download("csv")}
 							>
 								{t("shortlist.downloadCsv")}
 							</button>
 						</div>
 					</div>
-					{error ? <p className="state-message">{error}</p> : null}
+					{error ? (
+						<p className="banner banner--warning" role="status">
+							{error}
+						</p>
+					) : null}
 					<ul>
 						{ids.map((id) => {
 							const place = placesById.get(id);
@@ -200,11 +233,13 @@ export function ShortlistTray() {
 									<span>
 										{place
 											? formalPlaceName(locale, place)
-											: t("shortlist.removedPlace")}
+											: loadingPlaces
+												? t("common.loading")
+												: t("shortlist.removedPlace")}
 									</span>
 									<button
 										type="button"
-										className="remove-button"
+										className="btn btn-quiet btn-sm"
 										onClick={() => remove(id)}
 										aria-label={
 											place

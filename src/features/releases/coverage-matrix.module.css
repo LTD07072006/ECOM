@@ -1,11 +1,10 @@
 .matrix {
 	display: grid;
-	gap: 1rem;
-	margin-block: 1.5rem 2rem;
-	padding: 1.15rem;
-	border: 1px solid var(--line);
-	border-radius: var(--radius-md);
-	background: var(--panel);
+	gap: var(--space-4);
+	margin-block: var(--space-5) var(--space-6);
+	padding: var(--space-4);
+	border: var(--border-frame);
+	background: var(--bg-surface);
 	font-variant-numeric: tabular-nums;
 }
 
@@ -14,13 +13,12 @@
 	flex-wrap: wrap;
 	align-items: center;
 	justify-content: space-between;
-	gap: 0.75rem 1rem;
+	gap: var(--space-3) var(--space-4);
 }
 
 .header h2 {
 	margin: 0;
-	font-family: var(--font-serif);
-	font-size: 1.25rem;
+	font-size: var(--text-lg);
 }
 
 .toolbar {
@@ -28,174 +26,170 @@
 	flex-wrap: wrap;
 	align-items: center;
 	justify-content: space-between;
-	gap: 0.65rem;
+	gap: var(--space-2);
 }
 
 .filters {
 	display: flex;
 	flex-wrap: wrap;
-	gap: 0.45rem;
+	gap: var(--space-2);
 }
 
 .filterBtn,
 .exportBtn {
 	padding: 0.38rem 0.78rem;
-	border: 1px solid var(--line-strong);
-	border-radius: var(--radius-sm);
-	background: var(--panel-elevated);
-	color: var(--ink);
+	border: 1.5px solid var(--border-strong);
+	border-radius: var(--radius-none);
+	background: var(--bg-card);
+	color: var(--text-primary);
 	font: inherit;
-	font-size: 0.82rem;
-	font-weight: 600;
+	font-size: var(--text-sm);
+	font-weight: 700;
 	cursor: pointer;
 	transition:
-		background-color 150ms var(--ease-out),
-		border-color 150ms var(--ease-out),
-		transform 120ms var(--ease-out);
+		background-color var(--duration-fast) var(--ease-out),
+		border-color var(--duration-fast) var(--ease-out);
 }
 
 .filterBtn:hover,
 .exportBtn:hover:not(:disabled) {
-	border-color: var(--teal);
-	background: var(--teal-soft);
-}
-
-.filterBtn:active,
-.exportBtn:active:not(:disabled) {
-	transform: scale(0.98);
+	border-color: var(--accent-teal);
+	background: var(--status-success-bg);
 }
 
 .filterBtnActive {
-	border-color: var(--teal);
-	background: var(--teal);
+	border-color: var(--accent-teal-deep);
+	background: var(--accent-teal);
 	color: #fff;
 }
 
 .filterBtnActive:hover {
-	background: var(--teal-hover);
+	background: var(--accent-teal-deep);
 	color: #fff;
 }
 
 .kpiStrip {
 	display: grid;
 	grid-template-columns: repeat(auto-fit, minmax(min(100%, 9.5rem), 1fr));
-	gap: 0.6rem;
+	gap: var(--space-2);
 }
 
 .kpiCard {
-	padding: 0.65rem 0.85rem;
-	border: 1px solid var(--line);
-	border-radius: var(--radius-sm);
-	background: var(--panel-elevated);
+	padding: var(--space-3);
+	border: var(--border-frame);
+	background: var(--bg-card);
 }
 
 .kpiLabel {
 	display: block;
-	font-size: 0.75rem;
-	font-weight: 600;
-	color: var(--muted);
+	font-size: var(--text-xs);
+	font-weight: 700;
+	color: var(--text-secondary);
 }
 
 .kpiValue {
 	display: block;
 	margin-top: 0.2rem;
-	font-size: 1.18rem;
-	font-weight: 700;
-	color: var(--ink);
+	font-size: var(--text-lg);
+	font-weight: 800;
+	color: var(--text-primary);
 }
 
 .kpiAlert {
-	color: var(--copper);
+	color: var(--status-error-fg);
 }
 
 .tableWrap {
 	overflow-x: auto;
-	border: 1px solid var(--line);
-	border-radius: var(--radius-sm);
-	background: var(--panel-elevated);
+	border: var(--border-frame);
+	background: var(--bg-card);
 }
 
 .table {
 	width: 100%;
 	border-collapse: collapse;
-	font-size: 0.85rem;
+	font-size: var(--text-sm);
 	text-align: left;
 }
 
 .table th,
 .table td {
 	padding: 0.55rem 0.7rem;
-	border-bottom: 1px solid var(--line);
+	border-bottom: var(--border-hairline);
 	vertical-align: middle;
 }
 
 .table th {
-	font-size: 0.76rem;
+	font-size: var(--text-xs);
 	text-transform: uppercase;
 	letter-spacing: 0.03em;
-	color: var(--muted);
-	background: var(--panel);
+	color: var(--text-secondary);
+	background: var(--bg-surface);
 	white-space: nowrap;
 }
 
 .codeCell {
-	font-family: var(--font-mono);
-	font-weight: 600;
+	font-family: ui-monospace, SFMono-Regular, monospace;
+	font-weight: 700;
 }
 
 .coverageCell {
 	display: flex;
 	align-items: center;
-	gap: 0.5rem;
+	gap: var(--space-2);
 	min-width: 8.5rem;
 }
 
 .coverageBar {
 	flex: 1;
 	height: 6px;
-	border-radius: 999px;
-	background: var(--panel-subtle);
+	background: var(--bg-muted);
+	border: 1px solid var(--border-subtle);
 	overflow: hidden;
 }
 
 .coverageFill {
 	display: block;
 	height: 100%;
-	background: var(--teal);
+	background: var(--accent-teal);
 }
 
 .badge {
 	display: inline-block;
 	padding: 0.16rem 0.52rem;
-	border-radius: 999px;
-	font-size: 0.75rem;
+	border: 1px solid transparent;
+	font-size: var(--text-xs);
 	font-weight: 700;
 	white-space: nowrap;
 }
 
 .badgeOverdue {
-	background: var(--copper-soft);
-	color: var(--copper);
+	background: var(--status-error-bg);
+	color: var(--status-error-fg);
+	border-color: var(--status-error-border);
 }
 
 .badgeDueSoon {
-	background: rgba(184, 93, 50, 0.14);
-	color: var(--ink);
+	background: var(--status-warning-bg);
+	color: var(--status-warning-fg);
+	border-color: var(--status-warning-border);
 }
 
 .badgeFresh {
-	background: var(--teal-soft);
-	color: var(--teal);
+	background: var(--status-success-bg);
+	color: var(--status-success-fg);
+	border-color: var(--status-success-border);
 }
 
 .badgeUnknown {
-	background: var(--panel-subtle);
-	color: var(--muted);
+	background: var(--status-neutral-bg);
+	color: var(--status-neutral-fg);
+	border-color: var(--status-neutral-border);
 }
 
 .emptyNote {
 	margin: 0;
-	padding: 0.75rem;
-	font-size: 0.85rem;
-	color: var(--muted);
+	padding: var(--space-3);
+	font-size: var(--text-sm);
+	color: var(--text-secondary);
 }

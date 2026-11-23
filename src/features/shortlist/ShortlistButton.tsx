@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import type { Geography } from "../geography/types";
-import { readShortlist, toggleShortlist } from "./store";
+import { SHORTLIST_LIMIT, readShortlist, toggleShortlist } from "./store";
 import { useI18n } from "../../lib/i18n/provider";
 
 export function ShortlistButton({ geo }: { geo: Geography }) {
@@ -45,17 +45,21 @@ export function ShortlistButton({ geo }: { geo: Geography }) {
 		<>
 			<button
 				type="button"
-				className="shortlist-button"
+				className={`btn ${saved ? "btn-secondary" : "btn-primary"}`}
 				onClick={toggle}
-				disabled={storageError || (!saved && ids.length >= 20)}
+				disabled={storageError || (!saved && ids.length >= SHORTLIST_LIMIT)}
 			>
 				{saved
 					? t("shortlist.saved")
-					: ids.length >= 20
+					: ids.length >= SHORTLIST_LIMIT
 						? t("shortlist.full")
 						: t("shortlist.save")}
 			</button>
-			{storageError && <p role="alert">{t("shortlist.storageUnavailable")}</p>}
+			{storageError && (
+				<p className="field-error" role="alert">
+					{t("shortlist.storageUnavailable")}
+				</p>
+			)}
 		</>
 	);
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import "maplibre-gl/dist/maplibre-gl.css";
 import type { FeatureCollection, LineString, Point, Polygon } from "geojson";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type {
@@ -13,7 +14,9 @@ import type { DatasetMetadata, ProvinceMapData } from "../geography/types";
 import { safeSourceUrl } from "../../lib/source-url";
 import {
 	colorScale,
+	infrastructureKindColors,
 	layerColor,
+	mapCanvasColors,
 	missingColor,
 	type InfrastructureLayer,
 	type StatisticalLayer,
@@ -34,8 +37,10 @@ import {
 } from "./province-districts";
 
 const provinceSource = "provinces";
+const hatchLayer = "province-missing-hatch";
 const fillLayer = "province-fill";
 const outlineLayer = "province-outline";
+const focusOutlineLayer = "province-focus-outline";
 const districtSource = "selected-sub-area";
 const catchmentSource = "site-catchment";
 const streetBasemapSource = "osm-street-tiles";
@@ -50,7 +55,46 @@ const buildingBlocksLineLayer = "province-building-blocks-line";
 const roadNetworkSource = "province-road-network";
 const roadCasingLayer = "province-roads-casing";
 const roadLineLayer = "province-roads-line";
-const baseFill = "#38615b";
+const hatchPatternId = "missing-hatch";
+const maplibrePromise =
+	typeof window !== "undefined" ? import("maplibre-gl") : null;
+
+function createHatchPatternData(): {
+	width: number;
+	height: number;
+	data: Uint8ClampedArray;
+} {
+	const size = 8;
+	const canvas = document.createElement("canvas");
+	canvas.width = size;
+	canvas.height = size;
+	const ctx = canvas.getContext("2d");
+	if (!ctx) {
+		return {
+			width: size,
+			height: size,
+			data: new Uint8ClampedArray(size * size * 4),
+		};
+	}
+	ctx.fillStyle = mapCanvasColors.ground;
+	ctx.fillRect(0, 0, size, size);
+	ctx.strokeStyle = mapCanvasColors.ink;
+	ctx.lineWidth = 1.4;
+	ctx.beginPath();
+	ctx.moveTo(-1, size - 1);
+	ctx.lineTo(size - 1, -1);
+	ctx.moveTo(0, size);
+	ctx.lineTo(size, 0);
+	ctx.moveTo(1, size + 1);
+	ctx.lineTo(size + 1, 1);
+	ctx.stroke();
+	const imageData = ctx.getImageData(0, 0, size, size);
+	return {
+		width: imageData.width,
+		height: imageData.height,
+		data: imageData.data,
+	};
+}
 
 export type FocusedMicroLocation = MicroLocationPointProperties & {
 	longitude: number;
@@ -59,6 +103,8 @@ export type FocusedMicroLocation = MicroLocationPointProperties & {
 
 export function ProvinceMap({
 	selectedId,
+	hoveredId = null,
+	shortlistIds = [],
 	regionIds = [],
 	onSelect,
 	layer,
@@ -74,6 +120,8 @@ export function ProvinceMap({
 	onResetProvince,
 }: {
 	selectedId: string | null;
+	hoveredId?: string | null;
+	shortlistIds?: string[];
 	regionIds?: string[];
 	onSelect: (id: string) => void;
 	layer: StatisticalLayer | null;
@@ -105,7 +153,8 @@ export function ProvinceMap({
 	const boundsCtorRef = useRef<typeof LngLatBoundsType | null>(null);
 	const featuresRef = useRef<ProvinceMapData["features"]>([]);
 	const countryBoundsRef = useRef<LngLatBoundsType | null>(null);
-	const previousIds = useRef<string[]>([]);
+	const previousSelectedIds = useRef<string[]>([]);
+	const previousHoveredId = useRef<string | null>(null);
 	const onSelectRef = useRef(onSelect);
 	onSelectRef.current = onSelect;
 	const popupRef = useRef<MapPopup | null>(null);
@@ -205,11 +254,15 @@ export function ProvinceMap({
 		const request = new AbortController();
 		let map: MapLibreMap | null = null;
 		let removeLifecycleListeners: (() => void) | undefined;
+		let resizeObserver: ResizeObserver | null = null;
 
 		async function mountMap() {
-			const response = await fetch("/api/map/provinces", {
-				signal: request.signal,
-			});
+			const [response, maplibre] = await Promise.all([
+				fetch("/api/map/provinces", {
+					signal: request.signal,
+				}),
+				maplibrePromise ?? import("maplibre-gl"),
+			]);
 			if (!response.ok) throw new Error("Boundary request failed");
 			const result: {
 				data: Omit<ProvinceMapData, "dataset">;
@@ -227,7 +280,7 @@ export function ProvinceMap({
 				NavigationControl,
 				Popup,
 				setWorkerUrl,
-			} = await import("maplibre-gl");
+			} = maplibre;
 			if (request.signal.aborted || !container.current) return;
 			popupCtorRef.current = Popup;
 			boundsCtorRef.current = LngLatBounds;
@@ -294,6 +347,18 @@ export function ProvinceMap({
 				// Fallback to inline style if offline
 			}
 
+			const reducedMotion = window.matchMedia(
+				"(prefers-reduced-motion: reduce)",
+			).matches;
+			const transitionMs = reducedMotion ? 0 : 180;
+
+			const fitPadding = () => {
+				const width = container.current?.clientWidth ?? 0;
+				return width > 0 && width < 500
+					? { top: 10, right: 10, bottom: 56, left: 10 }
+					: { top: 12, right: 12, bottom: 12, left: 12 };
+			};
+
 			const view = new MapView({
 				container: container.current,
 				style: mapStyle as never,
@@ -302,15 +367,38 @@ export function ProvinceMap({
 					[97, 5],
 					[122, 26],
 				],
-				fitBoundsOptions: { padding: 28, duration: 0 },
+				fitBoundsOptions: {
+					padding: fitPadding(),
+					duration: 0,
+				},
 				maxZoom: 18,
 				dragRotate: false,
 				renderWorldCopies: false,
 				attributionControl: false,
+				canvasContextAttributes: { preserveDrawingBuffer: true },
 			});
 			map = view;
 			mapRef.current = view;
 			view.touchZoomRotate.disableRotation();
+			let userMoved = false;
+			view.on("movestart", (event) => {
+				if (event.originalEvent) {
+					userMoved = true;
+				}
+			});
+			if (typeof ResizeObserver !== "undefined" && container.current) {
+				resizeObserver = new ResizeObserver(() => {
+					if (request.signal.aborted || mapRef.current !== view) return;
+					view.resize();
+					if (!userMoved) {
+						view.fitBounds(bounds, {
+							padding: fitPadding(),
+							duration: 0,
+						});
+					}
+				});
+				resizeObserver.observe(container.current);
+			}
 			let initialized = false;
 			removeLifecycleListeners = () => {
 				view.off("style.load", handleMapLifecycle);
@@ -326,30 +414,65 @@ export function ProvinceMap({
 					return;
 				if (!view.isStyleLoaded()) return;
 				try {
+					if (!view.hasImage(hatchPatternId)) {
+						view.addImage(hatchPatternId, createHatchPatternData());
+					}
 					view.addSource(provinceSource, {
 						type: "geojson",
 						data: result.data,
 						promoteId: "id",
 					});
 					view.addLayer({
+						id: hatchLayer,
+						type: "fill",
+						source: provinceSource,
+						paint: {
+							"fill-pattern": hatchPatternId,
+							"fill-opacity": 0,
+						},
+					});
+					view.addLayer({
 						id: fillLayer,
 						type: "fill",
 						source: provinceSource,
 						paint: {
-							"fill-color": [
-								"case",
-								["boolean", ["feature-state", "selected"], false],
-								"#d68c61",
-								baseFill,
-							],
+							"fill-color": mapCanvasColors.ground,
 							"fill-opacity": 0.92,
+							"fill-color-transition": { duration: transitionMs, delay: 0 },
+							"fill-opacity-transition": { duration: transitionMs, delay: 0 },
 						},
 					});
 					view.addLayer({
 						id: outlineLayer,
 						type: "line",
 						source: provinceSource,
-						paint: { "line-color": "#a4cebf", "line-width": 1.2 },
+						paint: {
+							"line-color": mapCanvasColors.ink,
+							"line-width": [
+								"case",
+								["boolean", ["feature-state", "selected"], false],
+								3.2,
+								2,
+							],
+						},
+					});
+					view.addLayer({
+						id: focusOutlineLayer,
+						type: "line",
+						source: provinceSource,
+						paint: {
+							"line-color": mapCanvasColors.selectedStroke,
+							"line-width": [
+								"case",
+								[
+									"any",
+									["boolean", ["feature-state", "selected"], false],
+									["boolean", ["feature-state", "hovered"], false],
+								],
+								2.8,
+								0,
+							],
+						},
 					});
 
 					// Zone Master-Plan Footprints & Building Blocks (KCN & Khu dân cư)
@@ -497,23 +620,23 @@ export function ProvinceMap({
 						source: airportLayer,
 						layout: { visibility: "none" },
 						paint: {
-							"circle-radius": 5,
+							"circle-radius": 5.5,
 							"circle-color": [
 								"match",
 								["get", "kind"],
 								"airport",
-								"#73d8f5",
+								infrastructureKindColors.airport,
 								"seaport",
-								"#f2c14e",
+								infrastructureKindColors.seaport,
 								"industrial_park",
-								"#f78154",
+								infrastructureKindColors.industrial_park,
 								"icd",
-								"#b5838d",
+								infrastructureKindColors.icd,
 								"expressway_node",
-								"#90be6d",
-								"#73d8f5",
+								infrastructureKindColors.expressway_node,
+								infrastructureKindColors.airport,
 							],
-							"circle-stroke-color": "#132e2c",
+							"circle-stroke-color": mapCanvasColors.surface,
 							"circle-stroke-width": 1.5,
 						},
 					});
@@ -703,10 +826,12 @@ export function ProvinceMap({
 		});
 		return () => {
 			request.abort();
+			resizeObserver?.disconnect();
 			removeLifecycleListeners?.();
 			map?.remove();
 			mapRef.current = null;
-			previousIds.current = [];
+			previousSelectedIds.current = [];
+			previousHoveredId.current = null;
 			popupRef.current = null;
 		};
 	}, []);
@@ -714,14 +839,20 @@ export function ProvinceMap({
 	useEffect(() => {
 		const map = mapRef.current;
 		if (status !== "ready" || !map?.getSource(provinceSource)) return;
-		for (const id of previousIds.current)
-			map.removeFeatureState({ source: provinceSource, id });
+		for (const id of previousSelectedIds.current) {
+			map.setFeatureState({ source: provinceSource, id }, { selected: false });
+		}
 		const ids = [
-			...new Set([...regionIds, ...(selectedId ? [selectedId] : [])]),
+			...new Set([
+				...regionIds,
+				...shortlistIds,
+				...(selectedId ? [selectedId] : []),
+			]),
 		];
-		for (const id of ids)
+		for (const id of ids) {
 			map.setFeatureState({ source: provinceSource, id }, { selected: true });
-		previousIds.current = ids;
+		}
+		previousSelectedIds.current = ids;
 
 		const BoundsClass = boundsCtorRef.current;
 		if (!BoundsClass) return;
@@ -753,32 +884,43 @@ export function ProvinceMap({
 				duration: 400,
 			});
 		}
-	}, [selectedId, regionIds, status]);
+	}, [selectedId, regionIds, shortlistIds, status]);
+
+	useEffect(() => {
+		const map = mapRef.current;
+		if (status !== "ready" || !map?.getSource(provinceSource)) return;
+		if (previousHoveredId.current) {
+			map.setFeatureState(
+				{ source: provinceSource, id: previousHoveredId.current },
+				{ hovered: false },
+			);
+		}
+		if (hoveredId) {
+			map.setFeatureState(
+				{ source: provinceSource, id: hoveredId },
+				{ hovered: true },
+			);
+		}
+		previousHoveredId.current = hoveredId;
+	}, [hoveredId, status]);
 
 	useEffect(() => {
 		const map = mapRef.current;
 		if (status !== "ready" || !map?.getLayer(fillLayer)) return;
-		let colors: string | ExpressionSpecification = baseFill;
+		let colors: string | ExpressionSpecification = mapCanvasColors.ground;
 		if (layer) {
 			const bins = colorScale(layer);
-			const [first, ...rest] = Object.entries(layer.values);
-			colors = first
-				? [
+			const entries = Object.entries(layer.values);
+			colors = entries.length
+				? ([
 						"match",
 						["get", "id"],
-						first[0],
-						layerColor(first[1], bins),
-						...rest.flatMap(([id, value]) => [id, layerColor(value, bins)]),
+						...entries.flatMap(([id, value]) => [id, layerColor(value, bins)]),
 						missingColor,
-					]
+					] as unknown as ExpressionSpecification)
 				: missingColor;
 		}
-		map.setPaintProperty(fillLayer, "fill-color", [
-			"case",
-			["boolean", ["feature-state", "selected"], false],
-			"#d68c61",
-			colors,
-		]);
+		map.setPaintProperty(fillLayer, "fill-color", colors);
 	}, [layer, status]);
 
 	useEffect(() => {
@@ -797,16 +939,19 @@ export function ProvinceMap({
 			map.setPaintProperty(
 				outlineLayer,
 				"line-width",
-				showDetailStreets ? 3 : 1.2,
+				showDetailStreets ? 3 : 2,
 			);
 			map.setPaintProperty(
 				outlineLayer,
 				"line-color",
-				showDetailStreets ? "#d9480f" : "#a4cebf",
+				showDetailStreets ? "#d9480f" : mapCanvasColors.ink,
 			);
 		}
 
 		if (showDetailStreets && selectedId) {
+			if (map.getLayer(hatchLayer)) {
+				map.setPaintProperty(hatchLayer, "fill-opacity", 0);
+			}
 			// 0% tint inside the selected province so streets, road labels, and building blocks are 100% sharp
 			map.setPaintProperty(fillLayer, "fill-opacity", [
 				"case",
@@ -817,44 +962,78 @@ export function ProvinceMap({
 			return;
 		}
 
-		const qualityOpacity = (id: string) => {
-			const quality = layer?.valueDetails?.[id]?.quality;
-			if (quality === "supported") return 0.72;
-			if (quality === "unavailable") return 0.5;
-			return 0.92;
+		const isMissingFor = (id: string) => {
+			if (!layer) return false;
+			const val = layer.values[id];
+			if (val === null || val === undefined) return true;
+			const quality = layer.valueDetails?.[id]?.quality;
+			return quality === "unavailable";
 		};
-		const [firstId, ...restIds] = layer ? Object.keys(layer.values) : [];
-		const baseOpacity: number | ExpressionSpecification = firstId
-			? [
+		const baseOpacityFor = (id: string) => {
+			if (!layer) return 0.92;
+			if (isMissingFor(id)) return 0;
+			const quality = layer.valueDetails?.[id]?.quality;
+			if (quality === "supported") return 0.94;
+			return 0.98;
+		};
+		const keys = layer ? Object.keys(layer.values) : [];
+		const hatchOpacity: number | ExpressionSpecification =
+			layer && keys.length
+				? ([
+						"match",
+						["get", "id"],
+						...keys.flatMap((id) => [id, isMissingFor(id) ? 1 : 0]),
+						1,
+					] as unknown as ExpressionSpecification)
+				: 0;
+		if (map.getLayer(hatchLayer)) {
+			map.setPaintProperty(hatchLayer, "fill-opacity", hatchOpacity);
+		}
+		const baseOpacity: number | ExpressionSpecification = keys.length
+			? ([
 					"match",
 					["get", "id"],
-					firstId,
-					qualityOpacity(firstId),
-					...restIds.flatMap((id) => [id, qualityOpacity(id)]),
-					0.5,
-				]
+					...keys.flatMap((id) => [id, baseOpacityFor(id)]),
+					0,
+				] as unknown as ExpressionSpecification)
 			: 0.92;
-		if (!matchIds) {
-			map.setPaintProperty(fillLayer, "fill-opacity", baseOpacity);
+
+		if (matchIds) {
+			const expression: ExpressionSpecification = [
+				"case",
+				["in", ["get", "id"], ["literal", matchIds]],
+				baseOpacity,
+				0.14,
+			];
+			map.setPaintProperty(fillLayer, "fill-opacity", expression);
 			return;
 		}
-		const expression: ExpressionSpecification = [
-			"case",
-			["in", ["get", "id"], ["literal", matchIds]],
-			baseOpacity,
-			0.12,
-		];
-		map.setPaintProperty(fillLayer, "fill-opacity", expression);
-	}, [matchIds, layer, status, selectedId, streetMode]);
+
+		const focusTarget = hoveredId ?? selectedId;
+		if (focusTarget) {
+			const expression: ExpressionSpecification = [
+				"case",
+				["==", ["get", "id"], focusTarget],
+				baseOpacity,
+				["case", ["==", baseOpacity, 0], 0, 0.38],
+			];
+			map.setPaintProperty(fillLayer, "fill-opacity", expression);
+			return;
+		}
+
+		map.setPaintProperty(fillLayer, "fill-opacity", baseOpacity);
+	}, [matchIds, hoveredId, selectedId, layer, status, streetMode]);
 
 	useEffect(() => {
 		const map = mapRef.current;
 		if (status !== "ready" || !map?.getLayer(airportLayer)) return;
-		if (infrastructure)
+		if (infrastructure) {
 			map
 				.getSource<GeoJSONSource>(airportLayer)
 				?.setData(infrastructure.points);
-		else popupRef.current?.remove();
+		} else {
+			popupRef.current?.remove();
+		}
 		map.setLayoutProperty(
 			airportLayer,
 			"visibility",

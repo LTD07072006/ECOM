@@ -50,6 +50,12 @@ export function RegionPanel({
 	const [saved, setSaved] = useState<SavedRegionComparison[]>([]);
 	const [name, setName] = useState("");
 	const [reportDate, setReportDate] = useState("");
+	const [confirmDeleteIndex, setConfirmDeleteIndex] = useState<number | null>(
+		null,
+	);
+	const [undoClearRegions, setUndoClearRegions] = useState<RegionIds | null>(
+		null,
+	);
 	const [shareStatus, setShareStatus] = useState<
 		"share.copied" | "share.failed" | null
 	>(null);
@@ -90,9 +96,16 @@ export function RegionPanel({
 		try {
 			localStorage.setItem("ecom-regions-v1", JSON.stringify(next));
 			setSaved(next);
+			setConfirmDeleteIndex(null);
 		} catch {
 			setStorageMessage(t("region.storageFailed"));
 		}
+	}
+	function handleClearRegions() {
+		if (regions.flat().length > 0) {
+			setUndoClearRegions([regions[0].slice(), regions[1].slice()]);
+		}
+		clear();
 	}
 	async function copyRegionLink() {
 		try {
@@ -172,45 +185,77 @@ export function RegionPanel({
 	return (
 		<section className="region-panel" aria-labelledby="region-title">
 			<h2 id="region-title">{t("region.title")}</h2>
-			<p>{t("region.instructions")}</p>
+			<p className="muted">{t("region.instructions")}</p>
 			<p className="muted">{t("region.scope")}</p>
 			<fieldset>
 				<legend>{t("region.mode")}</legend>
 				{names.map((regionName, index) => (
-					<label key={regionName} className="region-radio">
+					<label key={regionName} className="checkbox-field">
 						<input
 							type="radio"
 							name="region-active"
 							checked={active === index}
 							onChange={() => setActive(index)}
-						/>{" "}
-						{regionName}
+						/>
+						<span>{regionName}</span>
 					</label>
 				))}
 			</fieldset>
-			<p role="status">{t("region.active", { region: names[active] })}</p>
-			<button type="button" onClick={addCurrent} disabled={!canAddCurrent}>
-				{t("region.add")}
-			</button>
+			<p className="muted" role="status">
+				{t("region.active", { region: names[active] })}
+			</p>
+			<div className="action-row action-row--split">
+				<button
+					type="button"
+					className="btn btn-primary btn-sm"
+					onClick={addCurrent}
+					disabled={!canAddCurrent}
+				>
+					{t("region.add")}
+				</button>
+				<button
+					type="button"
+					className="btn btn-destructive btn-sm"
+					onClick={handleClearRegions}
+				>
+					{t("region.clear")}
+				</button>
+			</div>
+			{undoClearRegions && (
+				<div className="banner banner--info" role="status">
+					<span>{t("region.clearedNotice")}</span>
+					<button
+						type="button"
+						className="btn btn-secondary btn-sm"
+						onClick={() => {
+							restore(undoClearRegions);
+							setUndoClearRegions(null);
+						}}
+					>
+						{t("common.undo")}
+					</button>
+				</div>
+			)}
 			<p className="muted">{t("region.limit")}</p>
 			{regions.map((ids, index) => (
 				<div key={names[index]}>
 					<h3>{names[index]}</h3>
 					{ids.length === 0 ? (
-						<p>{t("region.empty")}</p>
+						<p className="muted">{t("region.empty")}</p>
 					) : (
 						<ul>
 							{ids.map((id) => (
-								<li key={id}>
-									{profiles[id]?.displayName ?? id}{" "}
+								<li key={id} className="action-row action-row--split">
+									<span>{profiles[id]?.displayName ?? id}</span>
 									<button
 										type="button"
+										className="btn btn-quiet btn-sm"
 										onClick={() => remove(index, id)}
 										aria-label={t("region.remove", {
 											name: profiles[id]?.displayName ?? id,
 										})}
 									>
-										×
+										{t("common.remove")}
 									</button>
 								</li>
 							))}
@@ -218,48 +263,86 @@ export function RegionPanel({
 					)}
 				</div>
 			))}
-			<button type="button" onClick={clear}>
-				{t("region.clear")}
-			</button>
-			<div className="region-save-controls">
-				<label>
+			<div className="form-stack">
+				<label className="form-field">
 					{t("region.saveName")}
 					<input
+						className="control-input"
 						maxLength={80}
 						value={name}
 						onChange={(event) => setName(event.target.value)}
 					/>
 				</label>
-				<button
-					type="button"
-					onClick={saveRegions}
-					disabled={!name.trim() || !regions.flat().length}
-				>
-					{t("region.save")}
-				</button>
-				{storageMessage && <p role="status">{storageMessage}</p>}
+				<div>
+					<button
+						type="button"
+						className="btn btn-secondary btn-sm"
+						onClick={saveRegions}
+						disabled={!name.trim() || !regions.flat().length}
+					>
+						{t("region.save")}
+					</button>
+				</div>
+				{storageMessage && (
+					<p className="muted" role="status">
+						{storageMessage}
+					</p>
+				)}
 				{saved.length > 0 && (
 					<>
 						<h3>{t("region.saved")}</h3>
 						<ul>
 							{saved.map((item, index) => (
-								<li key={`${item.savedAt}-${index}`}>
-									{item.name}{" "}
-									<button type="button" onClick={() => restore(item.regions)}>
-										{t("region.restore")}
-									</button>{" "}
-									<button type="button" onClick={() => deleteSaved(index)}>
-										{t("region.deleteSaved")}
-									</button>
+								<li
+									key={`${item.savedAt}-${index}`}
+									className="action-row action-row--split"
+								>
+									<span>{item.name}</span>
+									<span className="action-row">
+										<button
+											type="button"
+											className="btn btn-secondary btn-sm"
+											onClick={() => restore(item.regions)}
+										>
+											{t("region.restore")}
+										</button>
+										{confirmDeleteIndex === index ? (
+											<>
+												<button
+													type="button"
+													className="btn btn-destructive btn-sm"
+													onClick={() => deleteSaved(index)}
+												>
+													{t("common.confirm")}
+												</button>
+												<button
+													type="button"
+													className="btn btn-quiet btn-sm"
+													onClick={() => setConfirmDeleteIndex(null)}
+												>
+													{t("common.cancel")}
+												</button>
+											</>
+										) : (
+											<button
+												type="button"
+												className="btn btn-destructive btn-sm"
+												onClick={() => setConfirmDeleteIndex(index)}
+											>
+												{t("region.deleteSaved")}
+											</button>
+										)}
+									</span>
 								</li>
 							))}
 						</ul>
 					</>
 				)}
 			</div>
-			<div className="region-export-actions">
+			<div className="action-row">
 				<button
 					type="button"
+					className="btn btn-secondary btn-sm"
 					onClick={() => {
 						document.body.classList.add("print-region");
 						window.addEventListener(
@@ -275,7 +358,7 @@ export function RegionPanel({
 				</button>
 				<button
 					type="button"
-					className="text-button"
+					className="btn btn-quiet btn-sm"
 					onClick={() => downloadRegion("json")}
 					disabled={!canExport}
 				>
@@ -283,7 +366,7 @@ export function RegionPanel({
 				</button>
 				<button
 					type="button"
-					className="text-button"
+					className="btn btn-quiet btn-sm"
 					onClick={() => downloadRegion("csv")}
 					disabled={!canExport}
 				>
@@ -291,7 +374,7 @@ export function RegionPanel({
 				</button>
 				<button
 					type="button"
-					className="text-button"
+					className="btn btn-quiet btn-sm"
 					onClick={() => void copyRegionLink()}
 					disabled={!key}
 				>
@@ -303,16 +386,20 @@ export function RegionPanel({
 					</span>
 				)}
 			</div>
-			<p>
+			<p className="muted">
 				{t("region.reportDate")}: {reportDate}
 			</p>
 			<p className="muted">{t("region.reportWarning")}</p>
 			<h3>{t("region.summary")}</h3>
 			<p className="muted">{t("region.method")}</p>
 			{loading ? (
-				<p role="status">{t("region.loading")}</p>
+				<p className="muted" role="status">
+					{t("region.loading")}
+				</p>
 			) : failed ? (
-				<p role="alert">{t("region.loadError")}</p>
+				<p className="field-error" role="alert">
+					{t("region.loadError")}
+				</p>
 			) : (
 				regionIndicators.map((indicator) => {
 					const groups = regions.map((ids) =>
@@ -334,7 +421,7 @@ export function RegionPanel({
 								)}
 							</h4>
 							{metrics.map((metric, index) => (
-								<div key={names[index]}>
+								<div key={names[index]} className="tabular-nums">
 									<strong>{names[index]}: </strong>
 									{metric.value === null ? (
 										metric.reason === "empty" ? (
@@ -351,7 +438,7 @@ export function RegionPanel({
 											{formatNumber(metric.value)}{" "}
 											{unitLabel(locale, metric.observation.unit)}
 											<br />
-											<small>
+											<small className="muted">
 												{t("region.source")}:{" "}
 												{metric.observation.source.url ? (
 													<a href={metric.observation.source.url}>
@@ -368,7 +455,7 @@ export function RegionPanel({
 									)}
 								</div>
 							))}
-							<p>
+							<p className="tabular-nums">
 								{compatibleRegionMetrics(metrics[0], metrics[1]) &&
 								metrics[0].value !== null &&
 								metrics[1].value !== null

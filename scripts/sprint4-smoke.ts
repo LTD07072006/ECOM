@@ -20,7 +20,7 @@ const byteBudgets: Record<string, number> = {
 	profile: 64 * 1024,
 	compare: 96 * 1024,
 	export: 512 * 1024,
-	boundaries: 3 * 1024 * 1024,
+	boundaries: 1536 * 1024,
 	layers: 256 * 1024,
 	health: 4 * 1024,
 };

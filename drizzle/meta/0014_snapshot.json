@@ -1,5 +1,5 @@
 {
-  "id": "a7a3e869-d221-4079-be56-5417103f017d",
+  "id": "a37c9409-8423-43ee-b123-7e8298ad351c",
   "prevId": "32c73c36-d9c8-4d6b-bad5-f18308c9ea2c",
   "version": "7",
   "dialect": "postgresql",
@@ -351,20 +351,6 @@
         }
       },
       "foreignKeys": {
-        "entry_requirements_legal_reference_id_legal_references_legal_reference_id_fk": {
-          "name": "entry_requirements_legal_reference_id_legal_references_legal_reference_id_fk",
-          "tableFrom": "entry_requirements",
-          "tableTo": "legal_references",
-          "schemaTo": "market_entry",
-          "columnsFrom": [
-            "legal_reference_id"
-          ],
-          "columnsTo": [
-            "legal_reference_id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
         "entry_requirements_geo_id_geo_units_geo_id_fk": {
           "name": "entry_requirements_geo_id_geo_units_geo_id_fk",
           "tableFrom": "entry_requirements",
@@ -375,6 +361,20 @@
           ],
           "columnsTo": [
             "geo_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "entry_requirements_legal_reference_fkey": {
+          "name": "entry_requirements_legal_reference_fkey",
+          "tableFrom": "entry_requirements",
+          "tableTo": "legal_references",
+          "schemaTo": "market_entry",
+          "columnsFrom": [
+            "legal_reference_id"
+          ],
+          "columnsTo": [
+            "legal_reference_id"
           ],
           "onDelete": "no action",
           "onUpdate": "no action"
@@ -446,8 +446,8 @@
           "onDelete": "no action",
           "onUpdate": "no action"
         },
-        "geo_boundaries_dataset_version_id_dataset_versions_dataset_version_id_fk": {
-          "name": "geo_boundaries_dataset_version_id_dataset_versions_dataset_version_id_fk",
+        "geo_boundaries_dataset_version_fkey": {
+          "name": "geo_boundaries_dataset_version_fkey",
           "tableFrom": "geo_boundaries",
           "tableTo": "dataset_versions",
           "schemaTo": "market_entry",
@@ -614,8 +614,8 @@
         }
       },
       "foreignKeys": {
-        "geo_units_geography_version_id_geography_versions_geography_version_id_fk": {
-          "name": "geo_units_geography_version_id_geography_versions_geography_version_id_fk",
+        "geo_units_geography_version_fkey": {
+          "name": "geo_units_geography_version_fkey",
           "tableFrom": "geo_units",
           "tableTo": "geography_versions",
           "schemaTo": "market_entry",
@@ -753,8 +753,8 @@
       },
       "indexes": {},
       "foreignKeys": {
-        "geography_versions_authority_source_id_source_registry_source_id_fk": {
-          "name": "geography_versions_authority_source_id_source_registry_source_id_fk",
+        "geography_versions_authority_source_fkey": {
+          "name": "geography_versions_authority_source_fkey",
           "tableFrom": "geography_versions",
           "tableTo": "source_registry",
           "schemaTo": "market_entry",
@@ -1265,8 +1265,8 @@
         }
       },
       "foreignKeys": {
-        "inquiry_notifications_inquiry_id_investor_inquiries_inquiry_id_fk": {
-          "name": "inquiry_notifications_inquiry_id_investor_inquiries_inquiry_id_fk",
+        "inquiry_notifications_inquiry_fkey": {
+          "name": "inquiry_notifications_inquiry_fkey",
           "tableFrom": "inquiry_notifications",
           "tableTo": "investor_inquiries",
           "schemaTo": "market_entry",
@@ -1373,8 +1373,8 @@
         }
       },
       "foreignKeys": {
-        "inquiry_report_snapshot_audit_snapshot_id_inquiry_report_snapshots_snapshot_id_fk": {
-          "name": "inquiry_report_snapshot_audit_snapshot_id_inquiry_report_snapshots_snapshot_id_fk",
+        "inquiry_report_snapshot_audit_snapshot_fk": {
+          "name": "inquiry_report_snapshot_audit_snapshot_fk",
           "tableFrom": "inquiry_report_snapshot_audit",
           "tableTo": "inquiry_report_snapshots",
           "schemaTo": "market_entry",
@@ -1619,230 +1619,6 @@
         "inquiry_snapshot_privacy_key_id_check": {
           "name": "inquiry_snapshot_privacy_key_id_check",
           "value": "\"market_entry\".\"inquiry_snapshot_privacy_key\".\"id\""
-        }
-      },
-      "isRLSEnabled": false
-    },
-    "market_entry.investment_incentives": {
-      "name": "investment_incentives",
-      "schema": "market_entry",
-      "columns": {
-        "incentive_id": {
-          "name": "incentive_id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "code": {
-          "name": "code",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "legal_reference_id": {
-          "name": "legal_reference_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "sector": {
-          "name": "sector",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "geo_id": {
-          "name": "geo_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "zone_tier": {
-          "name": "zone_tier",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'standard'"
-        },
-        "incentive_type": {
-          "name": "incentive_type",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "investor_type": {
-          "name": "investor_type",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'foreign_investor'"
-        },
-        "display_order": {
-          "name": "display_order",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "default": 0
-        },
-        "title_vi": {
-          "name": "title_vi",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "title_en": {
-          "name": "title_en",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "headline_benefit_vi": {
-          "name": "headline_benefit_vi",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "headline_benefit_en": {
-          "name": "headline_benefit_en",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "description_vi": {
-          "name": "description_vi",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "description_en": {
-          "name": "description_en",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "eligibility_note_vi": {
-          "name": "eligibility_note_vi",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "eligibility_note_en": {
-          "name": "eligibility_note_en",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "valid_from": {
-          "name": "valid_from",
-          "type": "date",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "valid_to": {
-          "name": "valid_to",
-          "type": "date",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "status": {
-          "name": "status",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'published'"
-        }
-      },
-      "indexes": {
-        "investment_incentives_sector_geo_idx": {
-          "name": "investment_incentives_sector_geo_idx",
-          "columns": [
-            {
-              "expression": "sector",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "geo_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "status",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "investment_incentives_legal_reference_id_legal_references_legal_reference_id_fk": {
-          "name": "investment_incentives_legal_reference_id_legal_references_legal_reference_id_fk",
-          "tableFrom": "investment_incentives",
-          "tableTo": "legal_references",
-          "schemaTo": "market_entry",
-          "columnsFrom": [
-            "legal_reference_id"
-          ],
-          "columnsTo": [
-            "legal_reference_id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "investment_incentives_geo_id_geo_units_geo_id_fk": {
-          "name": "investment_incentives_geo_id_geo_units_geo_id_fk",
-          "tableFrom": "investment_incentives",
-          "tableTo": "geo_units",
-          "schemaTo": "market_entry",
-          "columnsFrom": [
-            "geo_id"
-          ],
-          "columnsTo": [
-            "geo_id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "investment_incentives_code_unique": {
-          "name": "investment_incentives_code_unique",
-          "nullsNotDistinct": false,
-          "columns": [
-            "code"
-          ]
-        }
-      },
-      "policies": {},
-      "checkConstraints": {
-        "investment_incentives_sector_check": {
-          "name": "investment_incentives_sector_check",
-          "value": "\"market_entry\".\"investment_incentives\".\"sector\" is null or \"market_entry\".\"investment_incentives\".\"sector\" in ('retail', 'manufacturing', 'logistics', 'enterprise')"
-        },
-        "investment_incentives_zone_tier_check": {
-          "name": "investment_incentives_zone_tier_check",
-          "value": "\"market_entry\".\"investment_incentives\".\"zone_tier\" in ('special_difficult_area', 'difficult_area', 'economic_zone_hightech', 'industrial_park', 'sector_encouraged', 'standard')"
-        },
-        "investment_incentives_type_check": {
-          "name": "investment_incentives_type_check",
-          "value": "\"market_entry\".\"investment_incentives\".\"incentive_type\" in ('cit_rate_holiday', 'land_rent_exemption', 'import_duty_exemption', 'rd_accelerated_depreciation')"
-        },
-        "investment_incentives_status_check": {
-          "name": "investment_incentives_status_check",
-          "value": "\"market_entry\".\"investment_incentives\".\"status\" in ('draft', 'review', 'published', 'expired')"
-        },
-        "investment_incentives_valid_dates_check": {
-          "name": "investment_incentives_valid_dates_check",
-          "value": "\"market_entry\".\"investment_incentives\".\"valid_to\" is null or \"market_entry\".\"investment_incentives\".\"valid_to\" >= \"market_entry\".\"investment_incentives\".\"valid_from\""
         }
       },
       "isRLSEnabled": false
@@ -2349,8 +2125,8 @@
           "onDelete": "no action",
           "onUpdate": "no action"
         },
-        "observations_dataset_version_id_dataset_versions_dataset_version_id_fk": {
-          "name": "observations_dataset_version_id_dataset_versions_dataset_version_id_fk",
+        "observations_dataset_version_fkey": {
+          "name": "observations_dataset_version_fkey",
           "tableFrom": "observations",
           "tableTo": "dataset_versions",
           "schemaTo": "market_entry",
@@ -2609,8 +2385,8 @@
           "onDelete": "no action",
           "onUpdate": "no action"
         },
-        "release_members_dataset_version_id_dataset_versions_dataset_version_id_fk": {
-          "name": "release_members_dataset_version_id_dataset_versions_dataset_version_id_fk",
+        "release_members_dataset_version_fkey": {
+          "name": "release_members_dataset_version_fkey",
           "tableFrom": "release_members",
           "tableTo": "dataset_versions",
           "schemaTo": "market_entry",

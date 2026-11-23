@@ -2,7 +2,7 @@ import type postgres from "postgres";
 import type { MultiPolygon, Polygon } from "geojson";
 import { databasePool } from "../../db/pool";
 import { safeSourceUrl } from "../../lib/source-url";
-import { normalizeSearch } from "./domain";
+import { searchTerms } from "./domain";
 import type {
 	Catalog,
 	DatasetMetadata,
@@ -141,29 +141,28 @@ export async function loadDatabaseCatalog(
 				};
 
 			const geographies = await sql<GeographyRow[]>`
+        with latest_boundary as (
+          select chosen.dataset_version_id
+          from market_entry.dataset_versions chosen
+          join market_entry.source_registry chosen_source on chosen_source.source_id = chosen.source_id
+          where chosen.publication_status = 'published' and chosen_source.access_right = 'public' and chosen_source.status = 'active'
+            and exists (
+              select 1 from market_entry.geo_boundaries candidate
+              join market_entry.geo_units unit on unit.geo_id = candidate.geo_id
+              where candidate.dataset_version_id = chosen.dataset_version_id
+                and unit.geography_version_id = ${release.geography_version_id} and unit.level = 'province'
+            )
+          order by chosen.published_at desc, chosen.dataset_version_id
+          limit 1
+        )
         select geo.geo_id, geo.admin_code, geo.name, geo.display_name, geo.normalized_name, geo.level,
           geo.parent_geo_id, parent.display_name as parent_name, geo.latitude, geo.longitude,
-          case when exists (
-            select 1 from market_entry.geo_boundaries as boundary
-            join market_entry.dataset_versions as dataset on dataset.dataset_version_id = boundary.dataset_version_id
-            join market_entry.source_registry as source on source.source_id = dataset.source_id
-            where boundary.geo_id = geo.geo_id and ${publicReleaseConditions(sql)}
-              and boundary.dataset_version_id = (
-                select chosen.dataset_version_id
-                from market_entry.dataset_versions chosen
-                join market_entry.source_registry chosen_source on chosen_source.source_id = chosen.source_id
-                where chosen.publication_status = 'published' and chosen_source.access_right = 'public' and chosen_source.status = 'active'
-                  and exists (
-                    select 1 from market_entry.geo_boundaries candidate
-                    join market_entry.geo_units unit on unit.geo_id = candidate.geo_id
-                    where candidate.dataset_version_id = chosen.dataset_version_id
-                      and unit.geography_version_id = ${release.geography_version_id} and unit.level = 'province'
-                  )
-                order by chosen.published_at desc, chosen.dataset_version_id limit 1
-              )
-          ) then 'boundary_verified' else 'not_available' end as geometry_status
+          case when boundary.geo_id is not null then 'boundary_verified' else 'not_available' end as geometry_status
         from market_entry.geo_units as geo
         left join market_entry.geo_units as parent on parent.geo_id = geo.parent_geo_id
+        left join latest_boundary on true
+        left join market_entry.geo_boundaries as boundary
+          on boundary.geo_id = geo.geo_id and boundary.dataset_version_id = latest_boundary.dataset_version_id
         where geo.geography_version_id = ${release.geography_version_id} and geo.valid_from <= current_date
           and (geo.valid_to is null or geo.valid_to >= current_date)
           and (${geoIds ?? null}::uuid[] is null or geo.geo_id = any(${geoIds ?? null}::uuid[]))
@@ -187,13 +186,14 @@ export async function loadDatabaseCatalog(
         join market_entry.dataset_versions as dataset on dataset.dataset_version_id = observation.dataset_version_id
         join market_entry.source_registry as source on source.source_id = dataset.source_id
         where geo.geography_version_id = ${release.geography_version_id}
+          and geo.valid_from <= current_date and (geo.valid_to is null or geo.valid_to >= current_date)
           and (${level ?? null}::text is null or geo.level = ${level ?? null})
           and indicator.status = 'active' and ${publicReleaseConditions(sql)}
         ), cohorts as (
           select indicator_id, level, dataset_id, period_start, period_end, scope, unit, published_at,
             count(distinct geo_id) as coverage
           from eligible group by indicator_id, level, dataset_id, period_start, period_end, scope, unit, published_at
-        ), chosen as (
+        ), chosen as materialized (
           select distinct on (indicator_id, level) * from cohorts
           order by indicator_id, level, period_end desc, coverage desc, published_at desc,
             dataset_id, period_start desc, scope, unit
@@ -369,7 +369,7 @@ export async function loadProvinceMap(): Promise<ProvinceMapData> {
           order by dataset.published_at desc, dataset.dataset_version_id
           limit 1
         )
-        select geo.geo_id, geo.admin_code, geo.display_name, ST_AsGeoJSON(boundary.geom, 15)::json as geometry,
+        select geo.geo_id, geo.admin_code, geo.display_name, ST_AsGeoJSON(boundary.geom, 6)::json as geometry,
           ${publishedDatasetColumns(sql)}
         from latest_dataset
         join market_entry.geo_boundaries as boundary on boundary.dataset_version_id = latest_dataset.dataset_version_id
@@ -507,16 +507,28 @@ export async function loadComparableDatabaseCatalog(
 			}
 
 			const geographies = await sql<GeographyRow[]>`
+        with latest_boundary as (
+          select chosen.dataset_version_id
+          from market_entry.dataset_versions chosen
+          join market_entry.source_registry chosen_source on chosen_source.source_id = chosen.source_id
+          where chosen.publication_status = 'published' and chosen_source.access_right = 'public' and chosen_source.status = 'active'
+            and exists (
+              select 1 from market_entry.geo_boundaries candidate
+              join market_entry.geo_units unit on unit.geo_id = candidate.geo_id
+              where candidate.dataset_version_id = chosen.dataset_version_id
+                and unit.geography_version_id = ${release.geography_version_id} and unit.level = 'province'
+            )
+          order by chosen.published_at desc, chosen.dataset_version_id
+          limit 1
+        )
         select geo.geo_id, geo.admin_code, geo.name, geo.display_name, geo.normalized_name, geo.level,
           geo.parent_geo_id, parent.display_name as parent_name, geo.latitude, geo.longitude,
-          case when exists (
-            select 1 from market_entry.geo_boundaries as boundary
-            join market_entry.dataset_versions as dataset on dataset.dataset_version_id = boundary.dataset_version_id
-            join market_entry.source_registry as source on source.source_id = dataset.source_id
-            where boundary.geo_id = geo.geo_id and ${publicReleaseConditions(sql)}
-          ) then 'boundary_verified' else 'not_available' end as geometry_status
+          case when boundary.geo_id is not null then 'boundary_verified' else 'not_available' end as geometry_status
         from market_entry.geo_units as geo
         left join market_entry.geo_units as parent on parent.geo_id = geo.parent_geo_id
+        left join latest_boundary on true
+        left join market_entry.geo_boundaries as boundary
+          on boundary.geo_id = geo.geo_id and boundary.dataset_version_id = latest_boundary.dataset_version_id
         where geo.geography_version_id = ${release.geography_version_id}
           and geo.valid_from <= current_date
           and (geo.valid_to is null or geo.valid_to >= current_date)
@@ -532,6 +544,7 @@ export async function loadComparableDatabaseCatalog(
         join market_entry.dataset_versions as dataset on dataset.dataset_version_id = observation.dataset_version_id
         join market_entry.source_registry as source on source.source_id = dataset.source_id
         where geo.geography_version_id = ${release.geography_version_id}
+          and geo.valid_from <= current_date and (geo.valid_to is null or geo.valid_to >= current_date)
           and observation.geo_id = any(${geoIds}::uuid[])
           and indicator.status = 'active'
           and ${publicReleaseConditions(sql)}
@@ -555,6 +568,7 @@ export async function loadComparableDatabaseCatalog(
           join market_entry.dataset_versions as dataset on dataset.dataset_version_id = observation.dataset_version_id
           join market_entry.source_registry as source on source.source_id = dataset.source_id
           where geo.geography_version_id = ${release.geography_version_id}
+            and geo.valid_from <= current_date and (geo.valid_to is null or geo.valid_to >= current_date)
             and observation.geo_id = any(${geoIds}::uuid[])
             and (${requestedPeriod}::text is null or observation.period_label = ${requestedPeriod}::text)
             and indicator.status = 'active' and ${publicReleaseConditions(sql)}
@@ -564,7 +578,7 @@ export async function loadComparableDatabaseCatalog(
             count(distinct geo_id) filter (where value_numeric is not null and quality_status <> 'unavailable') as usable_coverage
           from eligible
           group by indicator_id, level, dataset_id, period_start, period_end, scope, unit, published_at
-        ), chosen as (
+        ), chosen as materialized (
           select distinct on (indicator_id, level) * from cohorts
           order by indicator_id, level,
             case when usable_coverage = ${geoIds.length} then 0 else 1 end,
@@ -690,9 +704,20 @@ export type SearchGeographiesResult = {
 export async function searchDatabaseGeographies(
 	options: DatabaseSearchOptions,
 ): Promise<SearchGeographiesResult> {
-	const normalized = options.query ? normalizeSearch(options.query) : "";
-	const pattern = normalized ? `%${escapeLike(normalized)}%` : null;
-	const exactCode = normalized || null;
+	const terms = options.query ? searchTerms(options.query).slice(0, 2) : [];
+	const primary = terms[0] ?? "";
+	const secondary = terms[1] ?? "";
+	const primaryCompact = primary.replace(/\s+/g, "");
+	const secondaryCompact = secondary.replace(/\s+/g, "");
+	const pattern = primary ? `%${escapeLike(primary)}%` : null;
+	const compactPattern = primaryCompact
+		? `%${escapeLike(primaryCompact)}%`
+		: null;
+	const secondaryPattern = secondary ? `%${escapeLike(secondary)}%` : null;
+	const secondaryCompactPattern = secondaryCompact
+		? `%${escapeLike(secondaryCompact)}%`
+		: null;
+	const exactCode = primary || null;
 	const level = options.level ?? null;
 	const limit = Math.min(Math.max(options.limit ?? 50, 1), 50);
 	const hasNumericFilter = Boolean(
@@ -751,6 +776,7 @@ export async function searchDatabaseGeographies(
             and indicator.code = ${indicatorCode}::text
             and indicator.status = 'active'
             and geo.geography_version_id = ${release.geography_version_id}
+            and geo.valid_from <= current_date and (geo.valid_to is null or geo.valid_to >= current_date)
             and (${periodFilter}::text is null or observation.period_label = ${periodFilter}::text)
             and ${publicReleaseConditions(sql)}
         ), cohorts as (
@@ -758,7 +784,7 @@ export async function searchDatabaseGeographies(
             count(distinct geo_id) as coverage
           from eligible
           group by indicator_id, level, dataset_id, period_start, period_end, scope, unit, published_at
-        ), chosen as (
+        ), chosen as materialized (
           select distinct on (indicator_id, level) * from cohorts
           order by indicator_id, level, period_end desc, coverage desc, published_at desc,
             dataset_id, period_start desc, scope, unit
@@ -785,7 +811,20 @@ export async function searchDatabaseGeographies(
         and geo.valid_from <= current_date
         and (geo.valid_to is null or geo.valid_to >= current_date)
         and (${level}::text is null or geo.level = ${level}::text)
-        and (${pattern}::text is null or geo.normalized_name ilike ${pattern} escape '\\' or geo.admin_code ilike ${pattern} escape '\\')
+        and (
+          ${pattern}::text is null
+          or geo.normalized_name ilike ${pattern} escape '\\'
+          or replace(geo.normalized_name, ' ', '') ilike ${compactPattern} escape '\\'
+          or geo.admin_code ilike ${pattern} escape '\\'
+          or (
+            ${secondaryPattern}::text is not null
+            and (
+              geo.normalized_name ilike ${secondaryPattern} escape '\\'
+              or replace(geo.normalized_name, ' ', '') ilike ${secondaryCompactPattern} escape '\\'
+              or geo.admin_code ilike ${secondaryPattern} escape '\\'
+            )
+          )
+        )
         and (${indicatorCode}::text is null or exists (select 1 from filtered_obs fo where fo.geo_id = geo.geo_id))
       order by
         case when ${exactCode}::text is not null and lower(geo.admin_code) = ${exactCode} then 0 else 1 end,
@@ -821,6 +860,7 @@ export async function searchDatabaseGeographies(
             where indicator.code = ${indicatorCode}::text
               and indicator.status = 'active'
               and geo.geography_version_id = ${release.geography_version_id}
+              and geo.valid_from <= current_date and (geo.valid_to is null or geo.valid_to >= current_date)
               and (${periodFilter}::text is null or observation.period_label = ${periodFilter}::text)
               and ${publicReleaseConditions(sql)}
           ), cohorts as (
