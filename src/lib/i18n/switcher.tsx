@@ -18,7 +18,7 @@ export function LocaleSwitcher() {
 
 	return (
 		<fieldset className="locale-switcher">
-			<legend className="locale-switcher-legend">{t("common.language")}</legend>
+			<legend className="sr-only">{t("common.language")}</legend>
 			{LOCALES.map((item) => (
 				<button
 					key={item}

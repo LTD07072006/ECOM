@@ -597,10 +597,59 @@ export function InquiryDashboard() {
 
 	return (
 		<section className="inquiry-dashboard">
-			<p>{t("admin.accessNote")}</p>
+			<p className="muted">{t("admin.accessNote")}</p>
+			<div className="session-bar">
+				{session ? (
+					<>
+						<span>
+							{t("admin.sessionActive", {
+								actor: session.actor,
+								role: session.role,
+							})}
+						</span>
+						<button
+							type="button"
+							className="btn btn-secondary btn-sm"
+							disabled={busy}
+							onClick={signOutSession}
+						>
+							{t("admin.sessionSignOut")}
+						</button>
+						{session.role !== "steward" && (
+							<p className="banner banner--warning" role="alert">
+								{t("admin.sessionRoleMismatch", { role: session.role })}
+							</p>
+						)}
+					</>
+				) : (
+					<div className="session-bar-form">
+						<label className="form-field">
+							{t("admin.token")}
+							<input
+								className="control-input"
+								type="password"
+								value={token}
+								disabled={busy}
+								onChange={(event) => handleTokenChange(event.target.value)}
+								autoComplete="off"
+							/>
+						</label>
+						<button
+							type="button"
+							className="btn btn-primary"
+							disabled={busy || !token.trim()}
+							onClick={signInSession}
+						>
+							{t("admin.sessionSignIn")}
+						</button>
+					</div>
+				)}
+			</div>
+
 			<nav className="inquiry-dashboard-tabs" aria-label={t("admin.tabsAria")}>
 				<button
 					type="button"
+					className={`btn ${activeTab === "inquiries" ? "btn-primary" : "btn-secondary"}`}
 					disabled={busy}
 					aria-pressed={activeTab === "inquiries"}
 					onClick={() => setActiveTab("inquiries")}
@@ -609,6 +658,7 @@ export function InquiryDashboard() {
 				</button>
 				<button
 					type="button"
+					className={`btn ${activeTab === "reports" ? "btn-primary" : "btn-secondary"}`}
 					disabled={busy}
 					aria-pressed={activeTab === "reports"}
 					onClick={() => {
@@ -619,47 +669,6 @@ export function InquiryDashboard() {
 					{t("admin.reports")}
 				</button>
 			</nav>
-
-			<div className="session-bar">
-				{session ? (
-					<>
-						<span>
-							{t("admin.sessionActive", {
-								actor: session.actor,
-								role: session.role,
-							})}
-						</span>
-						<button type="button" disabled={busy} onClick={signOutSession}>
-							{t("admin.sessionSignOut")}
-						</button>
-						{session.role !== "steward" && (
-							<p role="alert">
-								{t("admin.sessionRoleMismatch", { role: session.role })}
-							</p>
-						)}
-					</>
-				) : (
-					<>
-						<label>
-							{t("admin.token")}
-							<input
-								type="password"
-								value={token}
-								disabled={busy}
-								onChange={(event) => handleTokenChange(event.target.value)}
-								autoComplete="off"
-							/>
-						</label>
-						<button
-							type="button"
-							disabled={busy || !token.trim()}
-							onClick={signInSession}
-						>
-							{t("admin.sessionSignIn")}
-						</button>
-					</>
-				)}
-			</div>
 
 			<InquiryFilters
 				busy={busy}
@@ -703,11 +712,21 @@ export function InquiryDashboard() {
 				}}
 			/>
 
-			<p role="status">{notice}</p>
-			{error && <p role="alert">{error}</p>}
+			<p className="muted" role="status">
+				{notice}
+			</p>
+			{error && (
+				<p className="banner banner--error" role="alert">
+					{error}
+				</p>
+			)}
 
 			{activeTab === "inquiries" && (
-				<>
+				<div
+					className={`inquiry-workspace-split ${
+						selected ? "inquiry-workspace-split--with-detail" : ""
+					}`}
+				>
 					<InquiryList
 						busy={busy}
 						canAuthenticate={canAuthenticate}
@@ -745,7 +764,7 @@ export function InquiryDashboard() {
 							onErase={eraseInquiry}
 						/>
 					)}
-				</>
+				</div>
 			)}
 
 			{activeTab === "reports" && (

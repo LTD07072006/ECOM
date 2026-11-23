@@ -7,17 +7,21 @@ export type MapViewState = {
 	airports: boolean;
 };
 
+export const BOUNDARIES_LAYER = "boundaries";
+
 const uuidPattern =
 	/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const maxLayerIdLength = 400;
 const maxLayerPartLength = 120;
 
 /**
- * Layer identifiers are JSON tuples produced by the map repository. Reject anything that is not a
- * six-part tuple of short strings so a shared link cannot inject arbitrary text into the layer select.
+ * Layer identifiers are JSON tuples produced by the map repository, plus the explicit
+ * "boundaries" sentinel for boundary-only mode. Reject anything else so a shared link
+ * cannot inject arbitrary text into the layer select.
  */
 export function parseLayerId(value: string | null): string {
 	if (!value || value.length > maxLayerIdLength) return "";
+	if (value === BOUNDARIES_LAYER) return BOUNDARIES_LAYER;
 	try {
 		const parsed: unknown = JSON.parse(value);
 		if (!Array.isArray(parsed) || parsed.length !== 6) return "";

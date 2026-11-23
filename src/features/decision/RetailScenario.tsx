@@ -2,12 +2,18 @@
 
 import { useEffect, useState } from "react";
 import type { Profile } from "../geography/types";
-import { compareProfiles } from "../geography/domain";
+import {
+	compareProfiles,
+	normalizeSearch,
+	searchTerms,
+} from "../geography/domain";
 import { InquiryForm } from "../inquiries/InquiryForm";
+import { readShortlist } from "../shortlist/store";
 import {
 	calculateContextualRanking,
 	calculateSectorScore,
 	sectorScenarios,
+	twoWayShare,
 	validateCustomerEvidence,
 	type Evidence,
 	type SectorId,
@@ -93,6 +99,9 @@ export function RetailScenario({
 	const [hypotheses, setHypotheses] = useState("");
 	const [minimums, setMinimums] = useState<string[]>(["", ""]);
 	const [selected, setSelected] = useState<string[]>([]);
+	const [provinceFilter, setProvinceFilter] = useState("");
+	const [shortlistIds, setShortlistIds] = useState<string[]>([]);
+	const [confirmReset, setConfirmReset] = useState(false);
 	const [weights, setWeights] = useState<string[]>(["60", "40"]);
 	const [showResult, setShowResult] = useState(false);
 	const [showWhatIf, setShowWhatIf] = useState(false);
@@ -105,6 +114,14 @@ export function RetailScenario({
 
 	useEffect(() => {
 		const validIds = new Set(provinces.map((profile) => profile.id));
+		try {
+			const storedShortlist = readShortlist(
+				window.localStorage.getItem("investor-shortlist"),
+			).filter((id) => validIds.has(id));
+			setShortlistIds(storedShortlist);
+		} catch {
+			setShortlistIds([]);
+		}
 		try {
 			const savedRaw = window.localStorage.getItem(SCENARIO_STORAGE_KEY);
 			if (savedRaw) {
@@ -201,6 +218,7 @@ export function RetailScenario({
 		setShowWhatIf(false);
 		setSetChangedNotice(false);
 		setScenarioExportStatus("");
+		setConfirmReset(false);
 		if (value) {
 			const next = sectorScenarios[value];
 			setMinimums(next.criteria.map(() => ""));
@@ -217,6 +235,7 @@ export function RetailScenario({
 		setHypotheses("");
 		setMinimums(["", ""]);
 		setSelected([]);
+		setProvinceFilter("");
 		setWeights(["60", "40"]);
 		setShowResult(false);
 		setShowWhatIf(false);
@@ -224,6 +243,7 @@ export function RetailScenario({
 		setBenchmarkId("");
 		setEvidenceDraft(emptyEvidenceDraft);
 		setScenarioExportStatus("");
+		setConfirmReset(false);
 		try {
 			window.localStorage.removeItem(SCENARIO_STORAGE_KEY);
 		} catch {
@@ -253,6 +273,22 @@ export function RetailScenario({
 			);
 		}),
 	);
+	const filterTerms = provinceFilter.trim() ? searchTerms(provinceFilter) : [];
+	const visibleCandidates =
+		filterTerms.length > 0
+			? candidates.filter((profile) => {
+					const haystack = normalizeSearch(
+						`${profile.displayName} ${profile.name} ${profile.code}`,
+					);
+					const compactHaystack = haystack.replace(/\s+/g, "");
+					return filterTerms.some(
+						(term) =>
+							haystack.includes(term) ||
+							compactHaystack.includes(term.replace(/\s+/g, "")),
+					);
+				})
+			: candidates;
+
 	const chosen = candidates.filter((profile) => selected.includes(profile.id));
 	const comparison = chosen.length >= 2 ? compareProfiles(chosen) : null;
 	const benchmarkIndex = chosen.findIndex(
@@ -320,6 +356,18 @@ export function RetailScenario({
 		setShowWhatIf(false);
 	}
 
+	function loadFromShortlist() {
+		const candidateIds = new Set(candidates.map((profile) => profile.id));
+		const matching = shortlistIds
+			.filter((id) => candidateIds.has(id))
+			.slice(0, 3);
+		if (matching.length > 0) {
+			setSelected(matching);
+			setShowResult(false);
+			setShowWhatIf(false);
+		}
+	}
+
 	function exportScenario(format: "json" | "csv") {
 		if (!activeScenario || !sector) return;
 		const payload = buildDecisionScenarioExport({
@@ -353,6 +401,10 @@ export function RetailScenario({
 		);
 	}
 
+	const eligibleShortlistCount = shortlistIds.filter((id) =>
+		candidates.some((profile) => profile.id === id),
+	).length;
+
 	return (
 		<div className="decision-flow">
 			{activeScenario && (
@@ -371,9 +423,10 @@ export function RetailScenario({
 			<section aria-labelledby="sector-title">
 				<h2 id="sector-title">{t("retail.sectorTitle")}</h2>
 				<div className="decision-filters">
-					<label>
+					<label className="form-field">
 						{t("retail.sector")}
 						<select
+							className="control-select"
 							value={sector}
 							onChange={(event) =>
 								handleSectorChange(event.target.value as "" | SectorId)
@@ -386,9 +439,10 @@ export function RetailScenario({
 							<option value="enterprise">{t("retail.enterprise")}</option>
 						</select>
 					</label>
-					<label>
+					<label className="form-field">
 						{t("decision.targetSegment")}
 						<input
+							className="control-input"
 							type="text"
 							maxLength={160}
 							value={targetSegment}
@@ -397,9 +451,10 @@ export function RetailScenario({
 						/>
 					</label>
 				</div>
-				<label className="decision-hypotheses">
+				<label className="form-field">
 					<span>{t("decision.hypotheses")}</span>
 					<textarea
+						className="control-textarea"
 						rows={2}
 						maxLength={600}
 						value={hypotheses}
@@ -408,14 +463,33 @@ export function RetailScenario({
 					/>
 				</label>
 				{(sector || targetSegment || hypotheses || selected.length > 0) && (
-					<div className="inquiry-report-actions">
-						<button
-							type="button"
-							className="text-button"
-							onClick={resetScenario}
-						>
-							{t("decision.resetScenario")}
-						</button>
+					<div className="action-row">
+						{confirmReset ? (
+							<>
+								<button
+									type="button"
+									className="btn btn-destructive btn-sm"
+									onClick={resetScenario}
+								>
+									{t("decision.confirmReset")}
+								</button>
+								<button
+									type="button"
+									className="btn btn-quiet btn-sm"
+									onClick={() => setConfirmReset(false)}
+								>
+									{t("common.cancel")}
+								</button>
+							</>
+						) : (
+							<button
+								type="button"
+								className="btn btn-destructive btn-sm"
+								onClick={() => setConfirmReset(true)}
+							>
+								{t("decision.resetScenario")}
+							</button>
+						)}
 					</div>
 				)}
 			</section>
@@ -423,10 +497,10 @@ export function RetailScenario({
 				<>
 					<section aria-labelledby="filters-title">
 						<h2 id="filters-title">{t("retail.filterTitle")}</h2>
-						<p>{t("retail.filterNote")}</p>
+						<p className="muted">{t("retail.filterNote")}</p>
 						<div className="decision-filters">
 							{activeCriteria.map((criterion, index) => (
-								<label key={criterion.code}>
+								<label key={criterion.code} className="form-field">
 									{criterion.minimumLabelKey
 										? t(criterion.minimumLabelKey)
 										: t("retail.minimumCriterion", {
@@ -434,6 +508,7 @@ export function RetailScenario({
 												unit: unitLabel(locale, criterion.unit),
 											})}
 									<input
+										className="control-input"
 										type="number"
 										min="0"
 										value={minimums[index] ?? ""}
@@ -452,11 +527,13 @@ export function RetailScenario({
 								</label>
 							))}
 						</div>
-						<p>{t("retail.missingExcluded")}</p>
+						<p className="muted">{t("retail.missingExcluded")}</p>
 						{invalid ? (
-							<p role="alert">{t("retail.invalid")}</p>
+							<p className="field-error" role="alert">
+								{t("retail.invalid")}
+							</p>
 						) : (
-							<p role="status">
+							<p className="muted" role="status">
 								{t("retail.matchCount", { count: candidates.length })}
 							</p>
 						)}
@@ -499,31 +576,59 @@ export function RetailScenario({
 							</details>
 						)}
 						{!invalid && (
-							<fieldset className="decision-places">
-								<legend>{t("retail.provinces")}</legend>
-								{candidates.map((profile) => (
-									<label key={profile.id}>
+							<>
+								<div className="decision-picker-toolbar">
+									<label className="form-field decision-picker-search">
+										{t("decision.filterProvinces")}
 										<input
-											type="checkbox"
-											checked={selected.includes(profile.id)}
-											disabled={
-												selected.length >= 3 && !selected.includes(profile.id)
+											className="control-input"
+											type="text"
+											value={provinceFilter}
+											placeholder={t("search.placeholder")}
+											onChange={(event) =>
+												setProvinceFilter(event.target.value)
 											}
-											onChange={() => toggle(profile.id)}
 										/>
-										{profile.displayName}
 									</label>
-								))}
-							</fieldset>
+									{eligibleShortlistCount > 0 && (
+										<button
+											type="button"
+											className="btn btn-secondary btn-sm"
+											onClick={loadFromShortlist}
+										>
+											{t("decision.loadShortlist", {
+												count: Math.min(eligibleShortlistCount, 3),
+											})}
+										</button>
+									)}
+								</div>
+								<fieldset className="decision-places">
+									<legend>{t("retail.provinces")}</legend>
+									{visibleCandidates.map((profile) => (
+										<label key={profile.id}>
+											<input
+												type="checkbox"
+												checked={selected.includes(profile.id)}
+												disabled={
+													selected.length >= 3 && !selected.includes(profile.id)
+												}
+												onChange={() => toggle(profile.id)}
+											/>
+											<span>{profile.displayName}</span>
+										</label>
+									))}
+								</fieldset>
+							</>
 						)}
 					</section>
 					{chosen.length > 0 && (
 						<section aria-labelledby="compare-title">
 							<h2 id="compare-title">{t("retail.compareTitle")}</h2>
 							{chosen.length >= 2 && (
-								<label>
+								<label className="form-field">
 									{t("retail.baseline")}
 									<select
+										className="control-select"
 										value={benchmarkIndex >= 0 ? benchmarkId : ""}
 										onChange={(event) => setBenchmarkId(event.target.value)}
 									>
@@ -536,14 +641,14 @@ export function RetailScenario({
 									</select>
 								</label>
 							)}
-							<p>{t("retail.differencesNote")}</p>
-							<div className="decision-table-wrap">
-								<table>
+							<p className="muted">{t("retail.differencesNote")}</p>
+							<div className="data-table-wrap">
+								<table className="data-table">
 									<thead>
 										<tr>
 											<th scope="col">{t("retail.indicatorCol")}</th>
 											{chosen.map((profile) => (
-												<th scope="col" key={profile.id}>
+												<th scope="col" className="num" key={profile.id}>
 													{profile.displayName}
 												</th>
 											))}
@@ -588,7 +693,7 @@ export function RetailScenario({
 														(row) => row.indicator === criterion.code,
 													)?.values[profileIndex];
 													return (
-														<td key={profile.id}>
+														<td className="num" key={profile.id}>
 															{!matches ? (
 																<span>{t("retail.notComparable")}</span>
 															) : !item ||
@@ -607,8 +712,10 @@ export function RetailScenario({
 																		{unitLabel(locale, item.unit)}
 																	</strong>
 																	<br />
-																	{item.period} ·{" "}
-																	{qualityLabel(locale, item.quality)}
+																	<span className="muted">
+																		{item.period} ·{" "}
+																		{qualityLabel(locale, item.quality)}
+																	</span>
 																	<br />
 																	{item.source.url ? (
 																		<a href={item.source.url}>
@@ -618,7 +725,10 @@ export function RetailScenario({
 																		item.source.publisher
 																	)}
 																	<br />
-																	{item.datasetVersion} · {item.source.license}
+																	<span className="muted">
+																		{item.datasetVersion} ·{" "}
+																		{item.source.license}
+																	</span>
 																	{benchmarkIndex >= 0 &&
 																		profileIndex !== benchmarkIndex &&
 																		baseline != null &&
@@ -666,7 +776,7 @@ export function RetailScenario({
 								{t("retail.evidenceSource")}
 							</a>
 						</p>
-						<p role="status">
+						<p className="banner banner--info" role="status">
 							{evidence.status === "available"
 								? t("decision.evidenceMetaSummary", {
 										segment: evidence.segment ?? "",
@@ -687,7 +797,7 @@ export function RetailScenario({
 												{locale === "vi" ? study.title.vi : study.title.en}
 											</strong>{" "}
 											{study.isDemo && (
-												<span className="demo-badge">
+												<span className="status-badge status-badge--warning">
 													{t("decision.demoBadge")}
 												</span>
 											)}
@@ -708,206 +818,218 @@ export function RetailScenario({
 								</ul>
 							</div>
 						)}
-						<p>{t("retail.evidenceRequirement")}</p>
+						<p className="muted">{t("retail.evidenceRequirement")}</p>
 						<details>
 							<summary>{t("retail.evidenceProvide")}</summary>
-							<div className="decision-filters">
-								<label>
-									{t("retail.evidenceSegment")}
+							<div className="form-stack">
+								<div className="decision-filters">
+									<label className="form-field">
+										{t("retail.evidenceSegment")}
+										<input
+											className="control-input"
+											value={evidenceDraft.segment}
+											maxLength={160}
+											onChange={(event) => {
+												setEvidenceDraft((prev) => ({
+													...prev,
+													segment: event.target.value,
+												}));
+												setShowResult(false);
+											}}
+										/>
+									</label>
+									<label className="form-field">
+										{t("retail.evidenceSample")}
+										<input
+											className="control-input"
+											type="number"
+											min="1"
+											value={evidenceDraft.sampleSize}
+											onChange={(event) => {
+												setEvidenceDraft((prev) => ({
+													...prev,
+													sampleSize: event.target.value,
+												}));
+												setShowResult(false);
+											}}
+										/>
+									</label>
+									<label className="form-field">
+										{t("retail.evidenceMethod")}
+										<input
+											className="control-input"
+											value={evidenceDraft.method}
+											maxLength={200}
+											onChange={(event) => {
+												setEvidenceDraft((prev) => ({
+													...prev,
+													method: event.target.value,
+												}));
+												setShowResult(false);
+											}}
+										/>
+									</label>
+									<label className="form-field">
+										{t("retail.evidencePeriod")}
+										<input
+											className="control-input"
+											value={evidenceDraft.period}
+											maxLength={80}
+											onChange={(event) => {
+												setEvidenceDraft((prev) => ({
+													...prev,
+													period: event.target.value,
+												}));
+												setShowResult(false);
+											}}
+										/>
+									</label>
+									<label className="form-field">
+										{t("decision.questionId")}
+										<input
+											className="control-input"
+											value={evidenceDraft.questionId}
+											maxLength={60}
+											onChange={(event) => {
+												setEvidenceDraft((prev) => ({
+													...prev,
+													questionId: event.target.value,
+												}));
+												setShowResult(false);
+											}}
+										/>
+									</label>
+									<label className="form-field">
+										{t("retail.evidenceSourceInput")}
+										<input
+											className="control-input"
+											value={evidenceDraft.source}
+											maxLength={240}
+											onChange={(event) => {
+												setEvidenceDraft((prev) => ({
+													...prev,
+													source: event.target.value,
+												}));
+												setShowResult(false);
+											}}
+										/>
+									</label>
+									<label className="form-field">
+										{t("retail.evidenceSourceUrl")}
+										<input
+											className="control-input"
+											type="url"
+											value={evidenceDraft.sourceUrl}
+											maxLength={300}
+											placeholder="https://..."
+											onChange={(event) => {
+												setEvidenceDraft((prev) => ({
+													...prev,
+													sourceUrl: event.target.value,
+												}));
+												setShowResult(false);
+											}}
+										/>
+									</label>
+								</div>
+								{!evidenceValidation.checks.sourceUrlValid && (
+									<p className="field-error" role="alert">
+										{t("retail.evidenceUrlInvalid")}
+									</p>
+								)}
+								<label className="checkbox-field">
 									<input
-										value={evidenceDraft.segment}
-										maxLength={160}
+										type="checkbox"
+										checked={evidenceDraft.coversSelected}
 										onChange={(event) => {
 											setEvidenceDraft((prev) => ({
 												...prev,
-												segment: event.target.value,
+												coversSelected: event.target.checked,
 											}));
 											setShowResult(false);
 										}}
 									/>
+									<span>{t("retail.evidenceCoversSelected")}</span>
 								</label>
-								<label>
-									{t("retail.evidenceSample")}
-									<input
-										type="number"
-										min="1"
-										value={evidenceDraft.sampleSize}
-										onChange={(event) => {
-											setEvidenceDraft((prev) => ({
-												...prev,
-												sampleSize: event.target.value,
-											}));
-											setShowResult(false);
-										}}
-									/>
-								</label>
-								<label>
-									{t("retail.evidenceMethod")}
-									<input
-										value={evidenceDraft.method}
-										maxLength={200}
-										onChange={(event) => {
-											setEvidenceDraft((prev) => ({
-												...prev,
-												method: event.target.value,
-											}));
-											setShowResult(false);
-										}}
-									/>
-								</label>
-								<label>
-									{t("retail.evidencePeriod")}
-									<input
-										value={evidenceDraft.period}
-										maxLength={80}
-										onChange={(event) => {
-											setEvidenceDraft((prev) => ({
-												...prev,
-												period: event.target.value,
-											}));
-											setShowResult(false);
-										}}
-									/>
-								</label>
-								<label>
-									{t("decision.questionId")}
-									<input
-										value={evidenceDraft.questionId}
-										maxLength={60}
-										onChange={(event) => {
-											setEvidenceDraft((prev) => ({
-												...prev,
-												questionId: event.target.value,
-											}));
-											setShowResult(false);
-										}}
-									/>
-								</label>
-								<label>
-									{t("retail.evidenceSourceInput")}
-									<input
-										value={evidenceDraft.source}
-										maxLength={240}
-										onChange={(event) => {
-											setEvidenceDraft((prev) => ({
-												...prev,
-												source: event.target.value,
-											}));
-											setShowResult(false);
-										}}
-									/>
-								</label>
-								<label>
-									{t("retail.evidenceSourceUrl")}
-									<input
-										type="url"
-										value={evidenceDraft.sourceUrl}
-										maxLength={300}
-										placeholder="https://..."
-										onChange={(event) => {
-											setEvidenceDraft((prev) => ({
-												...prev,
-												sourceUrl: event.target.value,
-											}));
-											setShowResult(false);
-										}}
-									/>
-								</label>
-							</div>
-							{!evidenceValidation.checks.sourceUrlValid && (
-								<p role="alert">{t("retail.evidenceUrlInvalid")}</p>
-							)}
-							<label>
-								<input
-									type="checkbox"
-									checked={evidenceDraft.coversSelected}
-									onChange={(event) => {
-										setEvidenceDraft((prev) => ({
-											...prev,
-											coversSelected: event.target.checked,
-										}));
-										setShowResult(false);
-									}}
-								/>{" "}
-								{t("retail.evidenceCoversSelected")}
-							</label>
-							<p className="muted">
-								<strong>{t("retail.evidenceChecklist")}:</strong>
-							</p>
-							<ul className="evidence-checklist">
-								<li data-ready={evidenceValidation.checks.segment}>
-									{t("retail.evidenceSegment")}:{" "}
-									{t(
-										evidenceValidation.checks.segment
-											? "retail.checkReady"
-											: "retail.checkMissing",
-									)}
-								</li>
-								<li data-ready={evidenceValidation.checks.sampleSize}>
-									{t("retail.evidenceSample")}:{" "}
-									{t(
-										evidenceValidation.checks.sampleSize
-											? "retail.checkReady"
-											: "retail.checkMissing",
-									)}
-								</li>
-								<li data-ready={evidenceValidation.checks.method}>
-									{t("retail.evidenceMethod")}:{" "}
-									{t(
-										evidenceValidation.checks.method
-											? "retail.checkReady"
-											: "retail.checkMissing",
-									)}
-								</li>
-								<li data-ready={evidenceValidation.checks.period}>
-									{t("retail.evidencePeriod")}:{" "}
-									{t(
-										evidenceValidation.checks.period
-											? "retail.checkReady"
-											: "retail.checkMissing",
-									)}
-								</li>
-								<li data-ready={evidenceValidation.checks.source}>
-									{t("retail.evidenceSourceInput")}:{" "}
-									{t(
-										evidenceValidation.checks.source
-											? "retail.checkReady"
-											: "retail.checkMissing",
-									)}
-								</li>
-								<li data-ready={evidenceValidation.checks.coverage}>
-									{t("retail.evidenceCoversSelected")}:{" "}
-									{t(
-										evidenceValidation.checks.coverage
-											? "retail.checkReady"
-											: "retail.checkMissing",
-									)}
-								</li>
-							</ul>
-							{evidence.status === "available" && (
-								<p>
-									<button
-										type="button"
-										className="text-button"
-										onClick={() => {
-											setEvidenceDraft(emptyEvidenceDraft);
-											setShowResult(false);
-										}}
-									>
-										{t("retail.evidenceClear")}
-									</button>
+								<p className="muted">
+									<strong>{t("retail.evidenceChecklist")}:</strong>
 								</p>
-							)}
+								<ul className="evidence-checklist">
+									<li data-ready={evidenceValidation.checks.segment}>
+										{t("retail.evidenceSegment")}:{" "}
+										{t(
+											evidenceValidation.checks.segment
+												? "retail.checkReady"
+												: "retail.checkMissing",
+										)}
+									</li>
+									<li data-ready={evidenceValidation.checks.sampleSize}>
+										{t("retail.evidenceSample")}:{" "}
+										{t(
+											evidenceValidation.checks.sampleSize
+												? "retail.checkReady"
+												: "retail.checkMissing",
+										)}
+									</li>
+									<li data-ready={evidenceValidation.checks.method}>
+										{t("retail.evidenceMethod")}:{" "}
+										{t(
+											evidenceValidation.checks.method
+												? "retail.checkReady"
+												: "retail.checkMissing",
+										)}
+									</li>
+									<li data-ready={evidenceValidation.checks.period}>
+										{t("retail.evidencePeriod")}:{" "}
+										{t(
+											evidenceValidation.checks.period
+												? "retail.checkReady"
+												: "retail.checkMissing",
+										)}
+									</li>
+									<li data-ready={evidenceValidation.checks.source}>
+										{t("retail.evidenceSourceInput")}:{" "}
+										{t(
+											evidenceValidation.checks.source
+												? "retail.checkReady"
+												: "retail.checkMissing",
+										)}
+									</li>
+									<li data-ready={evidenceValidation.checks.coverage}>
+										{t("retail.evidenceCoversSelected")}:{" "}
+										{t(
+											evidenceValidation.checks.coverage
+												? "retail.checkReady"
+												: "retail.checkMissing",
+										)}
+									</li>
+								</ul>
+								{evidence.status === "available" && (
+									<div>
+										<button
+											type="button"
+											className="btn btn-quiet btn-sm"
+											onClick={() => {
+												setEvidenceDraft(emptyEvidenceDraft);
+												setShowResult(false);
+											}}
+										>
+											{t("retail.evidenceClear")}
+										</button>
+									</div>
+								)}
+							</div>
 						</details>
 					</section>
 					<section aria-labelledby="score-title">
 						<h2 id="score-title">{t("retail.scoreTitle")}</h2>
-						<p>{t("retail.scoreNote")}</p>
+						<p className="muted">{t("retail.scoreNote")}</p>
 						<div className="decision-filters">
 							{activeCriteria.map((criterion, index) => (
-								<label key={criterion.code}>
+								<label key={criterion.code} className="form-field">
 									{t("retail.weight", { label: t(criterion.labelKey) })}
 									<input
+										className="control-input"
 										type="number"
 										min="0"
 										max="100"
@@ -925,9 +1047,28 @@ export function RetailScenario({
 								</label>
 							))}
 						</div>
-						<div className="inquiry-report-actions">
+						{!result.ok && (
+							<div role="status" className="decision-result">
+								<strong>{t("retail.assessUnavailable")}</strong>
+								<ul>
+									{result.reasons.map((reason, index) => (
+										<li key={`${reason.code}-${index}`}>
+											{t(
+												reason.code,
+												"criterion" in reason
+													? { label: t(reason.criterion) }
+													: undefined,
+											)}
+										</li>
+									))}
+								</ul>
+							</div>
+						)}
+						<div className="action-row">
 							<button
 								type="button"
+								className="btn btn-primary"
+								disabled={!result.ok}
 								onClick={() => {
 									setShowResult(true);
 									setSetChangedNotice(false);
@@ -937,7 +1078,7 @@ export function RetailScenario({
 							</button>
 							<button
 								type="button"
-								className="text-button"
+								className="btn btn-secondary"
 								onClick={() => {
 									setShowWhatIf((value) => !value);
 									setSetChangedNotice(false);
@@ -949,14 +1090,14 @@ export function RetailScenario({
 								<>
 									<button
 										type="button"
-										className="text-button"
+										className="btn btn-quiet btn-sm"
 										onClick={() => exportScenario("json")}
 									>
 										{t("decision.exportScenarioJson")}
 									</button>
 									<button
 										type="button"
-										className="text-button"
+										className="btn btn-quiet btn-sm"
 										onClick={() => exportScenario("csv")}
 									>
 										{t("decision.exportScenarioCsv")}
@@ -974,55 +1115,35 @@ export function RetailScenario({
 								{t("decision.sensitivityWarning")}
 							</p>
 						)}
-						{showResult && (
+						{showResult && result.ok && (
 							<div role="status" className="decision-result">
-								{!result.ok ? (
-									<>
-										<strong>{t("retail.assessUnavailable")}</strong>
+								<p>{t("retail.scoreRelative")}</p>
+								<p className="whatif-warning">
+									{t("decision.sensitivityWarning")}
+								</p>
+								{result.results.map((item) => (
+									<article key={item.id}>
+										<h3>
+											{t("retail.scoreHeading", {
+												name: item.name,
+												score: formatNumber(item.score),
+											})}
+										</h3>
 										<ul>
-											{result.reasons.map((reason, index) => (
-												<li key={`${reason.code}-${index}`}>
-													{t(
-														reason.code,
-														"criterion" in reason
-															? { label: t(reason.criterion) }
-															: undefined,
-													)}
+											{item.parts.map((part) => (
+												<li key={part.label} className="tabular-nums">
+													{t("retail.partLine", {
+														label: t(part.labelKey),
+														value: formatNumber(part.value),
+														normalized: formatNumber(part.normalized),
+														weight: formatNumber(part.weight),
+														contribution: formatNumber(part.contribution),
+													})}
 												</li>
 											))}
 										</ul>
-									</>
-								) : (
-									<>
-										<p>{t("retail.scoreRelative")}</p>
-										<p className="whatif-warning">
-											{t("decision.sensitivityWarning")}
-										</p>
-										{result.results.map((item) => (
-											<article key={item.id}>
-												<h3>
-													{t("retail.scoreHeading", {
-														name: item.name,
-														score: formatNumber(item.score),
-													})}
-												</h3>
-												<ul>
-													{item.parts.map((part) => (
-														<li key={part.label}>
-															{t("retail.partLine", {
-																label: t(part.labelKey),
-																value: formatNumber(part.value),
-																normalized: formatNumber(part.normalized),
-																weight: formatNumber(part.weight),
-																contribution: formatNumber(part.contribution),
-															})}
-														</li>
-													))}
-												</ul>
-											</article>
-										))}
-									</>
-								)}
+									</article>
+								))}
 							</div>
 						)}
 						{whatIfResult && (
@@ -1057,34 +1178,106 @@ export function RetailScenario({
 												})}
 											</p>
 										)}
-										<p>{t("retail.scoreRelative")}</p>
-										{whatIfResult.results.map((item) => (
-											<article key={item.id}>
-												<h3>
-													{t("retail.scoreHeading", {
-														name: item.name,
-														score: formatNumber(Number(item.score.toFixed(1))),
-													})}
-												</h3>
-												<ul>
-													{item.parts.map((part) => (
-														<li key={part.label}>
-															{t("retail.partLine", {
-																label: t(part.labelKey),
-																value: formatNumber(part.value),
-																normalized: formatNumber(
-																	Number(part.normalized.toFixed(1)),
-																),
-																weight: formatNumber(part.weight),
-																contribution: formatNumber(
-																	Number(part.contribution.toFixed(1)),
+										{chosen.length === 2 ? (
+											<>
+												<p className="whatif-warning">
+													{t("retail.whatIfTwoProvinceNote")}
+												</p>
+												<div className="ratio-table-wrap">
+													<table className="data-table">
+														<thead>
+															<tr>
+																<th scope="col">{t("retail.indicatorCol")}</th>
+																<th scope="col" className="num">
+																	{chosen[0].displayName}
+																</th>
+																<th scope="col" className="num">
+																	{chosen[1].displayName}
+																</th>
+																<th scope="col" className="num">
+																	{t("retail.whatIfRatioCol")}
+																</th>
+															</tr>
+														</thead>
+														<tbody>
+															{activeCriteria.map((criterion, idx) => {
+																const v0 = whatIfResult.results.find(
+																	(r) => r.id === chosen[0].id,
+																)?.parts[idx]?.value;
+																const v1 = whatIfResult.results.find(
+																	(r) => r.id === chosen[1].id,
+																)?.parts[idx]?.value;
+																const share =
+																	v0 !== undefined && v1 !== undefined
+																		? twoWayShare(v0, v1)
+																		: null;
+																return (
+																	<tr key={criterion.code}>
+																		<th scope="row">
+																			{t(criterion.labelKey)}
+																			{criterion.polarity === "lower" && (
+																				<span className="muted">
+																					{" "}
+																					({t("retail.lowerIsBetter")})
+																				</span>
+																			)}
+																		</th>
+																		<td className="num">
+																			{v0 !== undefined
+																				? formatNumber(v0)
+																				: "—"}
+																		</td>
+																		<td className="num">
+																			{v1 !== undefined
+																				? formatNumber(v1)
+																				: "—"}
+																		</td>
+																		<td className="num">
+																			{share
+																				? `${share[0]}% : ${share[1]}%`
+																				: "—"}
+																		</td>
+																	</tr>
+																);
+															})}
+														</tbody>
+													</table>
+												</div>
+											</>
+										) : (
+											<>
+												<p>{t("retail.scoreRelative")}</p>
+												{whatIfResult.results.map((item) => (
+													<article key={item.id}>
+														<h3>
+															{t("retail.scoreHeading", {
+																name: item.name,
+																score: formatNumber(
+																	Number(item.score.toFixed(1)),
 																),
 															})}
-														</li>
-													))}
-												</ul>
-											</article>
-										))}
+														</h3>
+														<ul>
+															{item.parts.map((part) => (
+																<li key={part.label} className="tabular-nums">
+																	{t("retail.partLine", {
+																		label: t(part.labelKey),
+																		value: formatNumber(part.value),
+																		normalized: formatNumber(
+																			Number(part.normalized.toFixed(1)),
+																		),
+																		weight: formatNumber(part.weight),
+																		contribution: formatNumber(
+																			Number(part.contribution.toFixed(1)),
+																		),
+																	})}
+																</li>
+															))}
+														</ul>
+													</article>
+												))}
+											</>
+										)}
 									</>
 								)}
 							</div>

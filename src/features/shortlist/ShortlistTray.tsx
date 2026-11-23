@@ -7,6 +7,8 @@ import type { Geography } from "../geography/types";
 import { InquiryForm } from "../inquiries/InquiryForm";
 import { readCompareIds } from "../map/url-state";
 import {
+	COMPARISON_LIMIT,
+	SHORTLIST_LIMIT,
 	readShortlist,
 	removeFromShortlist,
 	selectForComparison,
@@ -27,6 +29,7 @@ export function ShortlistTray() {
 	tRef.current = t;
 	const [ids, setIds] = useState<string[]>([]);
 	const [places, setPlaces] = useState<Geography[]>([]);
+	const [loadingPlaces, setLoadingPlaces] = useState(false);
 	const [comparisonIds, setComparisonIds] = useState<string[] | null>(null);
 	const [urlRestored, setUrlRestored] = useState(false);
 	const [error, setError] = useState<string | null>(null);
@@ -66,9 +69,13 @@ export function ShortlistTray() {
 	}, []);
 
 	useEffect(() => {
-		setPlaces([]);
 		setError(null);
-		if (!ids.length) return;
+		if (!ids.length) {
+			setPlaces([]);
+			setLoadingPlaces(false);
+			return;
+		}
+		setLoadingPlaces(true);
 		const controller = new AbortController();
 		fetch(
 			`/api/geographies/batch?ids=${ids.map((id) => encodeURIComponent(id)).join(",")}`,
@@ -97,11 +104,14 @@ export function ShortlistTray() {
 			.then(({ places: nextPlaces, someMissing }) => {
 				if (controller.signal.aborted) return;
 				setPlaces(nextPlaces);
+				setLoadingPlaces(false);
 				setError(someMissing ? tRef.current("shortlist.someMissing") : null);
 			})
 			.catch(() => {
-				if (!controller.signal.aborted)
+				if (!controller.signal.aborted) {
+					setLoadingPlaces(false);
 					setError(tRef.current("shortlist.loadFailed"));
+				}
 			});
 		return () => controller.abort();
 	}, [ids]);
@@ -153,6 +163,9 @@ export function ShortlistTray() {
 	}
 
 	const placesById = new Map(places.map((place) => [place.id, place]));
+	const resolvedCount = loadingPlaces
+		? Math.max(places.length, ids.length)
+		: places.length;
 
 	if (!ids.length && !comparisonIds) return null;
 	return (
@@ -164,24 +177,27 @@ export function ShortlistTray() {
 				>
 					<div className="shortlist-heading">
 						<div>
-							<span className="map-label">{t("shortlist.savedPlaces")}</span>
-							<strong>
-								{t("shortlist.savedCount", { count: places.length })}
+							<span className="muted">{t("shortlist.savedPlaces")}</span>
+							<strong className="tabular-nums">
+								{t("shortlist.savedCount", { count: resolvedCount })} (
+								{ids.length}/{SHORTLIST_LIMIT})
 							</strong>
 						</div>
-						<div className="shortlist-actions">
+						<div className="action-row">
 							{ids.length >= 2 ? (
 								<>
 									<button
 										type="button"
-										className="text-button"
+										className="btn btn-primary btn-sm"
 										onClick={() => setComparisonIds(selectForComparison(ids))}
 									>
-										{t("shortlist.compare", { count: Math.min(ids.length, 3) })}
+										{t("shortlist.compare", {
+											count: Math.min(ids.length, COMPARISON_LIMIT),
+										})}
 									</button>
 									<a
 										href={`/decision?provinces=${encodeURIComponent(selectForComparison(ids).join(","))}`}
-										className="text-button"
+										className="btn btn-secondary btn-sm"
 									>
 										{t("shortlist.openDecision")}
 									</a>
@@ -189,32 +205,39 @@ export function ShortlistTray() {
 							) : null}
 							<button
 								type="button"
-								className="text-button"
+								className="btn btn-quiet btn-sm"
 								onClick={() => download("json")}
 							>
 								{t("shortlist.downloadJson")}
 							</button>
 							<button
 								type="button"
-								className="text-button"
+								className="btn btn-quiet btn-sm"
 								onClick={() => download("csv")}
 							>
 								{t("shortlist.downloadCsv")}
 							</button>
 						</div>
 					</div>
-					{error ? <p className="state-message">{error}</p> : null}
+					{error ? (
+						<p className="banner banner--warning" role="status">
+							{error}
+						</p>
+					) : null}
 					<ul>
 						{ids.map((id) => {
 							const place = placesById.get(id);
 							return (
 								<li key={id}>
 									<span>
-										{place?.displayName ?? t("shortlist.removedPlace")}
+										{place?.displayName ??
+											(loadingPlaces
+												? t("common.loading")
+												: t("shortlist.removedPlace"))}
 									</span>
 									<button
 										type="button"
-										className="remove-button"
+										className="btn btn-quiet btn-sm"
 										onClick={() => remove(id)}
 										aria-label={
 											place

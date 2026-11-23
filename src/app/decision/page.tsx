@@ -28,13 +28,21 @@ export default async function DecisionPage() {
 			),
 		}));
 	return (
-		<main className="decision-page">
-			<Link href="/">{t("common.backToMap")}</Link>
-			<h1>{t("decision.title")}</h1>
-			<p>{t("decision.lede")}</p>
+		<main id="main-content" className="decision-page" tabIndex={-1}>
+			<header className="decision-page-header">
+				<div>
+					<Link href="/" className="btn btn-quiet btn-sm">
+						{t("common.backToMap")}
+					</Link>
+				</div>
+				<h1>{t("decision.title")}</h1>
+				<p>{t("decision.lede")}</p>
+			</header>
 			{catalog.mode !== "database" ||
 			catalog.publicationStatus !== "published" ? (
-				<p role="alert">{t("decision.unavailable")}</p>
+				<p className="banner banner--warning" role="alert">
+					{t("decision.unavailable")}
+				</p>
 			) : (
 				<RetailScenario
 					provinces={provinces}

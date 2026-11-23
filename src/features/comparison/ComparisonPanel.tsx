@@ -4,6 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import type { Profile } from "../geography/types";
 import { useI18n } from "../../lib/i18n/provider";
 import { indicatorLabel, unitLabel } from "../../lib/i18n/data-labels";
+import { indicatorGroups } from "../map/layers";
+import { COMPARISON_LIMIT } from "../shortlist/store";
 import { computeComparisonRowMetrics } from "./metrics";
 
 type Comparison = {
@@ -20,6 +22,8 @@ type Comparison = {
 	}>;
 };
 
+const orderedIndicators = Object.keys(indicatorGroups);
+
 export function ComparisonPanel({
 	ids,
 	onClose,
@@ -30,6 +34,9 @@ export function ComparisonPanel({
 	const { t, tc, locale, formatNumber } = useI18n();
 	const tRef = useRef(t);
 	tRef.current = t;
+	const onCloseRef = useRef(onClose);
+	onCloseRef.current = onClose;
+	const panelRef = useRef<HTMLElement | null>(null);
 	const [period, setPeriod] = useState("");
 	const key = `${ids.join(",")}|${period}`;
 	const [result, setResult] = useState<
@@ -44,6 +51,24 @@ export function ComparisonPanel({
 	const [shareStatus, setShareStatus] = useState<
 		"share.copied" | "share.failed" | null
 	>(null);
+
+	useEffect(() => {
+		const previousFocus = document.activeElement as HTMLElement | null;
+		panelRef.current?.focus();
+
+		function handleKeyDown(event: KeyboardEvent) {
+			if (event.key === "Escape") {
+				event.preventDefault();
+				onCloseRef.current();
+			}
+		}
+
+		document.addEventListener("keydown", handleKeyDown);
+		return () => {
+			document.removeEventListener("keydown", handleKeyDown);
+			previousFocus?.focus();
+		};
+	}, []);
 
 	useEffect(() => {
 		const controller = new AbortController();
@@ -115,22 +140,46 @@ export function ComparisonPanel({
 		profiles.findIndex((profile) => profile.id === baselineId),
 	);
 
+	const sortedRows = comparison
+		? [...comparison.rows].sort((left, right) => {
+				const leftIdx = orderedIndicators.indexOf(left.indicator);
+				const rightIdx = orderedIndicators.indexOf(right.indicator);
+				const a = leftIdx === -1 ? Number.MAX_SAFE_INTEGER : leftIdx;
+				const b = rightIdx === -1 ? Number.MAX_SAFE_INTEGER : rightIdx;
+				return a - b;
+			})
+		: [];
+
 	return (
-		<section className="comparison-panel" aria-label={t("comparison.aria")}>
+		<section
+			ref={panelRef}
+			className="comparison-panel"
+			aria-label={t("comparison.aria")}
+			tabIndex={-1}
+		>
 			<div className="comparison-heading">
 				<div>
-					<span className="map-label">{t("comparison.eyebrow")}</span>
 					<h2>{t("comparison.title")}</h2>
+					<span className="muted tabular-nums">
+						{t("comparison.capacity", {
+							count: ids.length,
+							max: COMPARISON_LIMIT,
+						})}
+					</span>
 				</div>
-				<div className="shortlist-actions">
+				<div className="action-row">
 					<button
 						type="button"
-						className="text-button"
+						className="btn btn-secondary btn-sm"
 						onClick={() => void copyLink()}
 					>
 						{t("comparison.share")}
 					</button>
-					<button type="button" className="text-button" onClick={onClose}>
+					<button
+						type="button"
+						className="btn btn-secondary btn-sm"
+						onClick={onClose}
+					>
 						{t("common.close")}
 					</button>
 				</div>
@@ -141,23 +190,24 @@ export function ComparisonPanel({
 				</p>
 			)}
 			{error ? (
-				<p className="state-message">{error}</p>
+				<p className="banner banner--error">{error}</p>
 			) : !comparison ? (
-				<p className="state-message">{t("comparison.loading")}</p>
+				<p className="muted">{t("comparison.loading")}</p>
 			) : (
 				<>
 					{!comparison.compatible ? (
-						<p className="state-message">
+						<p className="banner banner--warning">
 							{tc(comparison.reasonCode, comparison.reason)}
 						</p>
 					) : (
-						<p className="comparison-note">{t("comparison.note")}</p>
+						<p className="muted">{t("comparison.note")}</p>
 					)}
 					{profiles.length >= 2 && (
 						<div className="comparison-toolbar">
-							<label>
+							<label className="form-field">
 								{t("comparison.baseline")}
 								<select
+									className="control-select"
 									value={profiles[resolvedBaselineIndex]?.id ?? ""}
 									onChange={(event) => setBaselineId(event.target.value)}
 								>
@@ -169,9 +219,10 @@ export function ComparisonPanel({
 								</select>
 							</label>
 							{availablePeriods.length > 0 && (
-								<label>
+								<label className="form-field">
 									{t("comparison.period")}
 									<select
+										className="control-select"
 										value={period}
 										onChange={(event) => setPeriod(event.target.value)}
 									>
@@ -186,20 +237,20 @@ export function ComparisonPanel({
 							)}
 						</div>
 					)}
-					<div className="comparison-table-wrap">
-						<table className="comparison-table">
+					<div className="data-table-wrap">
+						<table className="data-table">
 							<thead>
 								<tr>
 									<th scope="col">{t("comparison.indicator")}</th>
 									{profiles.map((profile) => (
-										<th scope="col" key={profile.id}>
+										<th scope="col" className="num" key={profile.id}>
 											{profile.displayName}
 										</th>
 									))}
 								</tr>
 							</thead>
 							<tbody>
-								{comparison.rows.map((row) => {
+								{sortedRows.map((row) => {
 									const presentCount = row.values.filter(
 										(value) => value !== null,
 									).length;
@@ -222,14 +273,18 @@ export function ComparisonPanel({
 									return (
 										<tr key={row.indicator}>
 											<th scope="row">
-												{indicatorLabel(locale, row.indicator, row.label)}
-												<small>
+												<div>
+													{indicatorLabel(locale, row.indicator, row.label)}
+												</div>
+												<small className="muted">
 													{unitLabel(locale, row.unit)}
 													{rowPeriod ? ` · ${rowPeriod}` : ""}
 													{` · ${presentCount}/${row.values.length}`}
 												</small>
 												{row.reason && (
-													<small>{tc(row.reasonCode, row.reason)}</small>
+													<small className="decision-mismatch">
+														{tc(row.reasonCode, row.reason)}
+													</small>
 												)}
 											</th>
 											{row.values.map((value, index) => {
@@ -253,6 +308,7 @@ export function ComparisonPanel({
 
 												return (
 													<td
+														className="num"
 														key={`${row.indicator}-${profiles[index]?.id ?? index}`}
 													>
 														{value === null ? (
@@ -261,7 +317,9 @@ export function ComparisonPanel({
 															</span>
 														) : (
 															<div className="compare-cell">
-																<span>{formatNumber(value)}</span>
+																<span className="tabular-nums">
+																	{formatNumber(value)}
+																</span>
 																{stat && stat.barPercent > 0 && (
 																	<div
 																		className="compare-bar-track"

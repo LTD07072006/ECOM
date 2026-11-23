@@ -23,6 +23,59 @@ function downloadText(content: string, filename: string, mime: string) {
 	URL.revokeObjectURL(url);
 }
 
+function ReviewStatusIcon({
+	status,
+}: {
+	status: LegalReadinessItem["reviewStatus"];
+}) {
+	if (status === "verified_by_counsel") {
+		return (
+			<svg
+				width="14"
+				height="14"
+				viewBox="0 0 16 16"
+				fill="none"
+				stroke="currentColor"
+				strokeWidth="2"
+				aria-hidden="true"
+			>
+				<path d="M3 8.5L6.5 12L13 4.5" />
+			</svg>
+		);
+	}
+	if (status === "needs_specialist_review") {
+		return (
+			<svg
+				width="14"
+				height="14"
+				viewBox="0 0 16 16"
+				fill="none"
+				stroke="currentColor"
+				strokeWidth="2"
+				aria-hidden="true"
+			>
+				<path d="M8 2.5L14 13H2L8 2.5Z" />
+				<path d="M8 6.5V9.5" />
+				<circle cx="8" cy="11.2" r="0.6" fill="currentColor" />
+			</svg>
+		);
+	}
+	return (
+		<svg
+			width="14"
+			height="14"
+			viewBox="0 0 16 16"
+			fill="none"
+			stroke="currentColor"
+			strokeWidth="2"
+			aria-hidden="true"
+		>
+			<circle cx="8" cy="8" r="5.5" />
+			<path d="M8 5V8.5L10.5 10" />
+		</svg>
+	);
+}
+
 export function LegalReadinessChecklist({
 	sector,
 	sectorLabel,
@@ -34,7 +87,7 @@ export function LegalReadinessChecklist({
 	items: readonly LegalReadinessItem[];
 	selectedProvinces: Array<{ id: string; name: string }>;
 }) {
-	const { t, locale } = useI18n();
+	const { t, locale, formatDate } = useI18n();
 	const [checkedBySector, setCheckedBySector] = useState<
 		Partial<Record<SectorId, string[]>>
 	>({});
@@ -111,15 +164,23 @@ export function LegalReadinessChecklist({
 		return t("legal.reviewToVerify");
 	};
 
+	const reviewBadgeVariant = (status: LegalReadinessItem["reviewStatus"]) => {
+		if (status === "verified_by_counsel") return "status-badge--success";
+		if (status === "needs_specialist_review") return "status-badge--warning";
+		return "status-badge--info";
+	};
+
 	return (
 		<section aria-labelledby="checklist-title" className="legal-readiness">
 			<h2 id="checklist-title">{t("retail.checklistTitle")}</h2>
-			<p className="legal-advisory-banner" role="note">
-				<strong>{t("legal.advisoryBadge")}</strong> —{" "}
-				{t("legal.advisoryDisclaimer")}
+			<p className="banner banner--warning" role="note">
+				<span>
+					<strong>{t("legal.advisoryBadge")}</strong> —{" "}
+					{t("legal.advisoryDisclaimer")}
+				</span>
 			</p>
 			<div className="legal-progress-bar" aria-live="polite">
-				<span>
+				<span className="tabular-nums">
 					{t("legal.progress", {
 						completed: summary.completedCount,
 						total: summary.totalCount,
@@ -127,7 +188,7 @@ export function LegalReadinessChecklist({
 					})}
 				</span>
 				<span
-					className="legal-outcome-pill"
+					className="status-badge status-badge--info"
 					data-outcome={summary.advisoryOutcome}
 				>
 					{t(outcomeKey)}
@@ -158,13 +219,14 @@ export function LegalReadinessChecklist({
 							<div className="legal-item-header">
 								<span className="legal-item-title">{itemTitle}</span>
 								<span
-									className="legal-review-badge"
+									className={`status-badge ${reviewBadgeVariant(item.reviewStatus)}`}
 									data-status={item.reviewStatus}
 								>
-									{reviewStateLabel(item.reviewStatus)}
+									<ReviewStatusIcon status={item.reviewStatus} />
+									<span>{reviewStateLabel(item.reviewStatus)}</span>
 								</span>
 							</div>
-							<label className="legal-checkbox-label">
+							<label className="checkbox-field">
 								<input
 									type="checkbox"
 									checked={isChecked}
@@ -174,16 +236,14 @@ export function LegalReadinessChecklist({
 							</label>
 							{note && <p className="legal-item-note">{note}</p>}
 							<div className="legal-item-meta">
-								<span>
-									{t("legal.documentMeta", {
-										code: item.reference.documentCode,
-										title: refTitle,
-										authority,
-									})}
+								<span className="legal-doc-badge">
+									{item.reference.documentCode}
 								</span>
+								<span className="legal-authority-badge">{authority}</span>
+								<span>{refTitle}</span>
 								<span>
 									{t("legal.effectiveDate", {
-										date: item.reference.effectiveFrom,
+										date: formatDate(item.reference.effectiveFrom),
 									})}
 								</span>
 								{safeUrl && (
@@ -198,9 +258,10 @@ export function LegalReadinessChecklist({
 			</ul>
 
 			<div className="legal-counsel-box">
-				<label>
+				<label className="form-field">
 					<span>{t("legal.counselLabel")}</span>
 					<input
+						className="control-input"
 						type="text"
 						maxLength={160}
 						value={counselReference}
@@ -208,13 +269,17 @@ export function LegalReadinessChecklist({
 						placeholder={t("legal.counselPlaceholder")}
 					/>
 				</label>
-				<div className="inquiry-report-actions">
-					<button type="button" onClick={() => handleExport("json")}>
+				<div className="action-row">
+					<button
+						type="button"
+						className="btn btn-primary btn-sm"
+						onClick={() => handleExport("json")}
+					>
 						{t("legal.exportJson")}
 					</button>
 					<button
 						type="button"
-						className="text-button"
+						className="btn btn-secondary btn-sm"
 						onClick={() => handleExport("csv")}
 					>
 						{t("legal.exportCsv")}

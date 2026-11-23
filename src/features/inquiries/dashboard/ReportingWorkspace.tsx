@@ -1,6 +1,7 @@
 "use client";
 
 import { useI18n } from "../../../lib/i18n/provider";
+import { chartColors } from "../../map/layers";
 import { VIETNAM_REPORT_TIME_ZONE } from "../reporting";
 import { buildFunnelBars, buildWeeklyBars } from "./sla";
 import {
@@ -73,16 +74,22 @@ export function ReportingWorkspace({
 					<dd>{currentPreview?.total ?? t("reports.previewHint")}</dd>
 				</dl>
 				{correctionId && (
-					<p>
-						{t("reports.correctionFrom", { id: correctionId })}{" "}
-						<button type="button" disabled={busy} onClick={onCancelCorrection}>
+					<div className="action-row">
+						<span>{t("reports.correctionFrom", { id: correctionId })}</span>
+						<button
+							type="button"
+							className="btn btn-quiet btn-sm"
+							disabled={busy}
+							onClick={onCancelCorrection}
+						>
 							{t("reports.cancelCorrection")}
 						</button>
-					</p>
+					</div>
 				)}
-				<div className="inquiry-report-actions">
+				<div className="action-row">
 					<button
 						type="button"
+						className="btn btn-secondary"
 						disabled={busy || !canAuthenticate || !validPeriod}
 						onClick={() => onPrepareSnapshot(true)}
 					>
@@ -90,7 +97,7 @@ export function ReportingWorkspace({
 					</button>
 					<button
 						type="button"
-						className="inquiry-primary"
+						className="btn btn-primary"
 						disabled={busy || !canAuthenticate || !currentPreview}
 						onClick={() => onPrepareSnapshot(false)}
 					>
@@ -150,15 +157,14 @@ export function ReportingWorkspace({
 												y={y}
 												width="26"
 												height={barHeight}
-												rx="3"
-												fill="#0f5c5a"
+												fill={chartColors.internal}
 											/>
 											<text
 												x={x + 13}
 												y={y - 4}
 												textAnchor="middle"
 												fontSize="9"
-												fill="#17211f"
+												fill={chartColors.ink}
 											>
 												{bar.count}
 											</text>
@@ -167,7 +173,7 @@ export function ReportingWorkspace({
 												y="96"
 												textAnchor="middle"
 												fontSize="8"
-												fill="#4f625e"
+												fill={chartColors.muted}
 											>
 												{bar.week.slice(-3)}
 											</text>

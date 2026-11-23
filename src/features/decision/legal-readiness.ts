@@ -42,7 +42,7 @@ export type LegalReadinessItem = {
 
 export type LegalChecklistBySector = Record<SectorId, LegalReadinessItem[]>;
 
-const LAW_INVESTMENT_2020 = {
+export const LAW_INVESTMENT_2020 = {
 	documentCode: "61/2020/QH14",
 	title: {
 		vi: "Luật Đầu tư 2020",
@@ -59,7 +59,7 @@ const LAW_INVESTMENT_2020 = {
 	status: "effective" as const,
 };
 
-const LAW_ENTERPRISES_2020 = {
+export const LAW_ENTERPRISES_2020 = {
 	documentCode: "59/2020/QH14",
 	title: {
 		vi: "Luật Doanh nghiệp 2020",

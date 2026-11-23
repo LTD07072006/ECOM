@@ -105,7 +105,6 @@ export const vi: Record<MessageKey, string> = {
 	"meta.releaseTitle": "Vận hành phát hành dữ liệu",
 	"meta.adminInquiriesTitle": "Yêu cầu của nhà đầu tư",
 
-	"home.eyebrow": "Đầu tư vào Việt Nam",
 	"home.title": "Vietnam Market Intelligence",
 	"home.lede":
 		"Tra cứu bối cảnh đã kiểm chứng, địa bàn và tín hiệu đầu tư trên toàn Việt Nam — bắt đầu từ bản đồ.",
@@ -243,7 +242,6 @@ export const vi: Record<MessageKey, string> = {
 	"shortlist.storageError": "Trình duyệt không cho lưu trữ.",
 
 	"comparison.aria": "So sánh địa bàn",
-	"comparison.eyebrow": "ĐỐI CHIẾU",
 	"comparison.title": "So sánh bối cảnh",
 	"comparison.note":
 		"Chỉ là bối cảnh. Giá trị hiển thị đúng như công bố; hệ thống không xếp hạng hay khuyến nghị.",
@@ -275,7 +273,7 @@ export const vi: Record<MessageKey, string> = {
 	"inquiry.country": "Quốc gia",
 	"inquiry.sector": "Lĩnh vực",
 	"inquiry.privacyBefore":
-		"Steward dùng thông tin của bạn để xem xét và phản hồi yêu cầu này. Yêu cầu được ẩn danh sau 12 tháng kể từ lần cập nhật cuối. Xem",
+		"Cán bộ phụ trách dùng thông tin của bạn để xem xét và phản hồi yêu cầu này. Yêu cầu được ẩn danh sau 12 tháng kể từ lần cập nhật cuối. Xem",
 	"inquiry.privacyLink": "thông báo quyền riêng tư (mở tab mới)",
 	"inquiry.privacyAfter": "để biết đầu mối liên hệ và các lựa chọn của bạn.",
 	"inquiry.consent":
@@ -285,7 +283,7 @@ export const vi: Record<MessageKey, string> = {
 	"inquiry.sending": "Đang gửi…",
 	"inquiry.received": "Đã nhận yêu cầu của bạn.",
 	"inquiry.reference": "Mã tham chiếu: {code}",
-	"inquiry.keepCode": "Giữ mã này khi trao đổi với steward.",
+	"inquiry.keepCode": "Giữ mã này khi trao đổi về yêu cầu của bạn.",
 	"inquiry.errorDefault": "Không gửi được yêu cầu.",
 	"inquiry.errorNetwork":
 		"Không gửi được yêu cầu. Kiểm tra kết nối rồi thử lại.",
@@ -296,16 +294,16 @@ export const vi: Record<MessageKey, string> = {
 		"{controller} chịu trách nhiệm về dữ liệu yêu cầu. Liên hệ",
 	"privacy.controllerAfter": ".",
 	"privacy.noContact":
-		"Bản cài này chưa cấu hình đầu mối quyền riêng tư. Dùng yêu cầu giả để thử cục bộ.",
+		"Thông tin đầu mối quyền riêng tư cho môi trường này chưa được công bố.",
 	"privacy.purposeTitle": "Mục đích và đồng ý",
 	"privacy.purposeBody":
 		"Chúng tôi dùng email, nội dung, các địa bàn đã chọn và thông tin tùy chọn bạn cung cấp để xem xét và phản hồi yêu cầu. Nếu bật email thông báo, email xác nhận được gửi qua nhà cung cấp dịch vụ email do đơn vị vận hành công bố. Khi chọn ô đồng ý và gửi biểu mẫu, bạn đồng ý với việc sử dụng này. Biểu mẫu ghi lại phiên bản thông báo và thời điểm gửi.",
 	"privacy.retentionTitle": "Truy cập và thời hạn lưu",
 	"privacy.retentionBody":
-		"Steward được cấp quyền có thể đọc yêu cầu của bạn và ghi nhận quá trình xử lý. Yêu cầu được ẩn danh sau 12 tháng kể từ lần steward cập nhật gần nhất hoặc thời điểm gửi, tùy mốc nào muộn hơn, và không quá 24 tháng kể từ khi gửi. Số liệu tổng hợp và dấu thời gian kiểm toán có thể được giữ để báo cáo. Bản sao lưu hết hạn theo lịch sao lưu của đơn vị vận hành.",
+		"Cán bộ được phân quyền có thể đọc yêu cầu của bạn và ghi nhận quá trình xử lý. Yêu cầu được ẩn danh sau 12 tháng kể từ lần cập nhật gần nhất hoặc thời điểm gửi, tùy mốc nào muộn hơn, và không quá 24 tháng kể từ khi gửi. Số liệu tổng hợp và dấu thời gian kiểm toán có thể được giữ để báo cáo. Bản sao lưu hết hạn theo lịch sao lưu của đơn vị vận hành.",
 	"privacy.requestsTitle": "Yêu cầu về dữ liệu cá nhân",
 	"privacy.requestsBody":
-		"Dùng đầu mối quyền riêng tư ở trên để yêu cầu truy cập, chỉnh sửa hoặc xóa dữ liệu, hoặc rút lại sự đồng ý. Ghi kèm mã tham chiếu nếu có. Steward được ủy quyền có thể ẩn danh yêu cầu khi có yêu cầu xóa hoặc rút lại sự đồng ý; khi rút lại sự đồng ý, việc xử lý tiếp theo đối với yêu cầu sẽ dừng lại. Vui lòng không gửi tài liệu nhạy cảm hoặc thông tin đăng nhập.",
+		"Dùng đầu mối quyền riêng tư ở trên để yêu cầu truy cập, chỉnh sửa hoặc xóa dữ liệu, hoặc rút lại sự đồng ý. Ghi kèm mã tham chiếu nếu có. Nhân sự được ủy quyền có thể ẩn danh yêu cầu khi có yêu cầu xóa hoặc rút lại sự đồng ý; khi rút lại sự đồng ý, việc xử lý tiếp theo đối với yêu cầu sẽ dừng lại. Vui lòng không gửi tài liệu nhạy cảm hoặc thông tin đăng nhập.",
 
 	"decision.title": "Khảo sát thị trường bán lẻ",
 	"decision.lede":
@@ -680,7 +678,7 @@ export const vi: Record<MessageKey, string> = {
 	"retail.whatIfHeading":
 		"So sánh bối cảnh tham khảo — KHÔNG phải điểm đánh giá chính thức",
 	"retail.whatIfDisclaimer":
-		"Chế độ này áp dụng trọng số lên các chỉ tiêu bối cảnh đã công bố có thể so sánh để tham khảo tương quan. Kết quả không thay thế bằng chứng nhu cầu khách hàng (T04) hay điều kiện chấm điểm chính thức (T05).",
+		"Chế độ này áp dụng trọng số lên các chỉ tiêu bối cảnh đã công bố có thể so sánh để tham khảo tương quan. Kết quả không thay thế bằng chứng nhu cầu khách hàng hay điều kiện chấm điểm chính thức.",
 	"retail.whatIfIneligible":
 		"Chỉ tiêu chưa phê duyệt cho chấm điểm chính thức: {labels}.",
 
@@ -793,4 +791,78 @@ export const vi: Record<MessageKey, string> = {
 		"Có cơ sở hỗ trợ: tổng hợp/đối soát từ nguồn chính thức (hiển thị độ mờ nhẹ hơn trên bản đồ).",
 	"layers.qualityUnavailableNote":
 		"Chưa có số liệu: địa bàn không có số liệu công bố (tách biệt hoàn toàn với giá trị 0).",
+
+	"common.skipToMain": "Chuyển đến nội dung chính",
+	"common.undo": "Hoàn tác",
+	"common.confirm": "Xác nhận",
+	"nav.mainAria": "Điều hướng chính",
+	"nav.map": "Bản đồ cấp tỉnh",
+	"nav.investorGuide": "Hướng dẫn nhà đầu tư",
+	"nav.requestSupport": "Yêu cầu hỗ trợ",
+	"notFound.title": "Không tìm thấy trang",
+	"notFound.body":
+		"Trang bạn yêu cầu không tồn tại hoặc đã được chuyển sang địa chỉ khác.",
+	"error.title": "Đã xảy ra sự cố",
+	"error.body":
+		"Một lỗi ngoài dự kiến đã làm gián đoạn trang này. Vui lòng thử tải lại hoặc quay về bản đồ cấp tỉnh.",
+	"error.retry": "Thử lại",
+	"layers.familyAria": "Nhóm chỉ tiêu",
+	"layers.family.population": "Dân số",
+	"layers.family.economy": "Kinh tế",
+	"layers.family.investment": "Đầu tư",
+	"layers.family.workforce": "Lao động",
+	"map.railAria": "Bảng tra cứu và lựa chọn tỉnh",
+	"map.provinceListAria": "Danh sách 34 tỉnh xếp từ Bắc vào Nam",
+	"map.provinceListHeader": "Danh sách tỉnh từ Bắc vào Nam ({count})",
+	"search.foundOne": "Tìm thấy 1 địa bàn.",
+	"search.noneHint":
+		"Thử nhập tên tỉnh hoặc thành phố, ví dụ Hà Nội, Hồ Chí Minh hoặc Đà Nẵng.",
+	"profile.defaultQualityNote":
+		"Tất cả số liệu dưới đây đều công bố từ nguồn chính thức trừ khi có ghi chú riêng.",
+	"layers.boundariesLegendSummary":
+		"{count} tỉnh · chỉ hiển thị ranh giới, không tô màu chỉ tiêu",
+	"layers.sourceDetails": "Chi tiết nguồn",
+	"comparison.capacity": "{count} / {max} đã chọn",
+	"region.clearedNotice": "Đã xóa các vùng.",
+	"decision.confirmReset": "Xác nhận đặt lại",
+	"decision.filterProvinces": "Lọc danh sách tỉnh",
+	"decision.loadShortlist": "Nạp từ danh sách đã lưu ({count})",
+	"retail.whatIfTwoProvinceNote":
+		"Chấm điểm min–max với 2 tỉnh sẽ chia nhị phân 100 và 0. Hãy thêm tỉnh thứ 3 để tính điểm tổng hợp có trọng số; tỷ lệ gốc được hiển thị bên dưới.",
+	"retail.whatIfRatioCol": "Tỷ trọng tương đối",
+	"retail.lowerIsBetter": "Càng thấp càng tốt",
+	"guide.glossaryTitle": "Thuật ngữ và phương pháp",
+	"guide.termVerifiedBody":
+		"Nguồn có thẩm quyền, metadata đầy đủ, đã được kiểm tra.",
+	"guide.termSupportedBody":
+		"Có nguồn hoặc phương pháp nhưng còn giới hạn, có thể được mô hình hóa hoặc chưa kiểm tra đầy đủ.",
+	"guide.termUnavailableBody":
+		"Không có số liệu, không được phép dùng, không tương thích hoặc thiếu metadata bắt buộc. Không bao giờ hiển thị thành số 0.",
+	"guide.termGrdpTitle": "GRDP",
+	"guide.termGrdpBody":
+		"Tổng sản phẩm trên địa bàn — kết quả sản xuất kinh tế cấp tỉnh. Mỗi số liệu công bố tự ghi rõ đơn vị tính và giá hiện hành hay giá so sánh.",
+	"guide.termIrcErcTitle": "IRC / ERC",
+	"guide.termIrcPrefix": "Giấy chứng nhận đăng ký đầu tư (IRC): được cấp theo ",
+	"guide.termIrcMid":
+		" đối với dự án thuộc diện cấp giấy chứng nhận đăng ký đầu tư. Giấy chứng nhận đăng ký doanh nghiệp (ERC): được cấp theo ",
+	"guide.termIrcSuffix":
+		" khi thành lập doanh nghiệp. Việc dự án cần loại giấy nào phụ thuộc vào nhà đầu tư và cơ cấu dự án; hãy xác nhận với cơ quan có thẩm quyền.",
+	"guide.termCatalogTitle": "Danh mục đơn vị hành chính",
+	"guide.termCatalogBody":
+		"34 đơn vị hành chính cấp tỉnh và các đơn vị cấp xã trực thuộc trong kỳ công bố hiện hành.",
+	"admin.auditAction.submitted": "Đã gửi",
+	"admin.auditAction.noteAdded": "Đã thêm ghi chú",
+	"admin.auditAction.statusChanged": "Đổi trạng thái",
+	"admin.auditAction.anonymized": "Đã ẩn danh",
+	"admin.auditAction.viewedDetail": "Đã xem chi tiết",
+	"admin.auditAction.exportedLiveCsv": "Đã xuất CSV trực tiếp",
+	"admin.auditAction.created": "Đã tạo",
+	"admin.auditAction.exported": "Đã xuất CSV",
+	"release.statusPublished": "Đã công bố",
+	"release.statusApproved": "Đã phê duyệt",
+	"release.statusStaged": "Bản nháp chờ duyệt",
+	"release.fourEyesTitle": "Kiểm soát hai người",
+	"release.fourEyesApprovedBy": "Người phê duyệt: {actor}",
+	"release.fourEyesNeedsApproval": "Đang chờ người rà soát độc lập phê duyệt",
+	"release.fourEyesPublishedBy": "Người công bố: {actor}",
 };

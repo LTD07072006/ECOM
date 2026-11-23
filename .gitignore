@@ -45,6 +45,13 @@ pgpass.conf
 !/.gitattributes
 !/.dockerignore
 !/.github/
+!/.impeccable/
+/.impeccable/mocks/
+/.impeccable/review/
+/.impeccable/critique/
+/.impeccable/shots/
+/.impeccable/questions/
+/.impeccable/config.local.json
 /skills/
 /agent/
 **/skills/

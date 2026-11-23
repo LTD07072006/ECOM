@@ -177,60 +177,77 @@ export function ReleaseDashboard() {
 	}
 
 	return (
-		<main className="release-shell">
-			<a href="/">{t("common.marketWorkspace")}</a>
-			<h1>{t("release.title")}</h1>
+		<main id="main-content" className="release-shell" tabIndex={-1}>
+			<header className="internal-page-header">
+				<h1>{t("release.title")}</h1>
+			</header>
 			{result ? (
-				<div className="release-toolbar">
+				<div className="session-bar">
 					<p>
 						{t("release.signedInAs")}{" "}
 						<strong>{result.actor ?? result.role}</strong> · {result.role}
 					</p>
-					<button type="button" disabled={busy} onClick={() => void request()}>
-						{t("release.refresh")}
-					</button>
-					<button
-						type="button"
-						disabled={busy}
-						onClick={() => {
-							setResult(undefined);
-							setToken("");
-							setStatus(t("release.signedOut"));
-							setProblem("");
-							setBatchId(undefined);
-							setAction(undefined);
-						}}
-					>
-						{t("release.signOut")}
-					</button>
+					<div className="action-row">
+						<button
+							type="button"
+							className="btn btn-secondary btn-sm"
+							disabled={busy}
+							onClick={() => void request()}
+						>
+							{t("release.refresh")}
+						</button>
+						<button
+							type="button"
+							className="btn btn-secondary btn-sm"
+							disabled={busy}
+							onClick={() => {
+								setResult(undefined);
+								setToken("");
+								setStatus(t("release.signedOut"));
+								setProblem("");
+								setBatchId(undefined);
+								setAction(undefined);
+							}}
+						>
+							{t("release.signOut")}
+						</button>
+					</div>
 				</div>
 			) : (
 				<form
+					className="session-bar"
 					onSubmit={(event) => {
 						event.preventDefault();
 						void request();
 					}}
 				>
-					<label htmlFor="release-token">{t("release.token")}</label>
-					<input
-						id="release-token"
-						type="password"
-						value={token}
-						onChange={(event) => setToken(event.target.value)}
-						autoComplete="off"
-						required
-						minLength={43}
-						maxLength={128}
-						disabled={busy}
-					/>
-					<button type="submit" disabled={busy}>
-						{t("release.open")}
-					</button>
+					<div className="session-bar-form">
+						<label className="form-field" htmlFor="release-token">
+							{t("release.token")}
+							<input
+								id="release-token"
+								className="control-input"
+								type="password"
+								value={token}
+								onChange={(event) => setToken(event.target.value)}
+								autoComplete="off"
+								required
+								minLength={43}
+								maxLength={128}
+								disabled={busy}
+							/>
+						</label>
+						<button type="submit" className="btn btn-primary" disabled={busy}>
+							{t("release.open")}
+						</button>
+					</div>
 				</form>
 			)}
-			<p role="status">{status}</p>
+			<p className="muted" role="status">
+				{status}
+			</p>
 			{problem && (
-				<p className="release-error" role="alert">
+				<p className="banner banner--error" role="alert">
 					{problem}
 				</p>
 			)}
@@ -265,7 +282,7 @@ export function ReleaseDashboard() {
 					</dl>
 					<h2>{t("release.queue")}</h2>
 					{result.data.batches.length === 0 && (
-						<p>{t("release.stagePrompt")}</p>
+						<p className="muted">{t("release.stagePrompt")}</p>
 					)}
 					{result.data.batches.map((batch) => {
 						const available =
@@ -278,14 +295,63 @@ export function ReleaseDashboard() {
 									: batch.kind === "wave2" && batch.published && !batch.retired
 										? "retire"
 										: null;
+						const buttonVariant =
+							available === "publish"
+								? "btn-primary"
+								: available === "retire"
+									? "btn-destructive"
+									: "btn-secondary";
+
+						const approvalEntry = batch.audit.find(
+							(entry) => entry.action === "approved",
+						);
+						const publishEntry = batch.audit.find(
+							(entry) => entry.action === "published",
+						);
+
 						return (
 							<section className="release-batch" key={batch.id}>
-								<h3>
-									{batch.kind === "foundation"
-										? t("release.foundation")
-										: t("release.wave2")}{" "}
-									· {batch.geography}
-								</h3>
+								<div className="release-batch-header">
+									<h3>
+										{batch.kind === "foundation"
+											? t("release.foundation")
+											: t("release.wave2")}{" "}
+										· {batch.geography}
+									</h3>
+									<span
+										className={`status-badge ${
+											batch.published
+												? "status-badge--success"
+												: batch.approved
+													? "status-badge--info"
+													: "status-badge--warning"
+										}`}
+									>
+										{batch.published
+											? t("release.statusPublished")
+											: batch.approved
+												? t("release.statusApproved")
+												: t("release.statusStaged")}
+									</span>
+								</div>
+								<div className="release-four-eyes">
+									<span>
+										<strong>{t("release.fourEyesTitle")}:</strong>{" "}
+										{approvalEntry
+											? t("release.fourEyesApprovedBy", {
+													actor: approvalEntry.actor,
+												})
+											: t("release.fourEyesNeedsApproval")}
+									</span>
+									{publishEntry && (
+										<span>
+											·{" "}
+											{t("release.fourEyesPublishedBy", {
+												actor: publishEntry.actor,
+											})}
+										</span>
+									)}
+								</div>
 								<p>
 									{t("release.manifestSha")} <code>{batch.fingerprint}</code>
 								</p>
@@ -320,12 +386,13 @@ export function ReleaseDashboard() {
 								</details>
 								{available &&
 									(batch.id === batchId && action ? (
-										<form onSubmit={submitAction}>
-											<label htmlFor="release-note">
+										<form className="form-stack" onSubmit={submitAction}>
+											<label className="form-field" htmlFor="release-note">
 												{t("release.reviewNote")}
 											</label>
 											<textarea
 												id="release-note"
+												className="control-textarea"
 												name="note"
 												required
 												minLength={10}
@@ -333,37 +400,47 @@ export function ReleaseDashboard() {
 												// biome-ignore lint/a11y/noAutofocus: the review note is the only field in the confirmation form the user just opened
 												autoFocus
 											/>
-											<button type="submit" disabled={busy}>
-												{t("release.confirm", {
-													action: t(actionKeys[action]),
-												})}
-											</button>
-											<button
-												type="button"
-												disabled={busy}
-												onClick={() => setAction(undefined)}
-											>
-												{t("common.cancel")}
-											</button>
+											<div className="action-row">
+												<button
+													type="submit"
+													className={`btn ${buttonVariant}`}
+													disabled={busy}
+												>
+													{t("release.confirm", {
+														action: t(actionKeys[action]),
+													})}
+												</button>
+												<button
+													type="button"
+													className="btn btn-quiet"
+													disabled={busy}
+													onClick={() => setAction(undefined)}
+												>
+													{t("common.cancel")}
+												</button>
+											</div>
 										</form>
 									) : (
-										<button
-											type="button"
-											disabled={busy}
-											onClick={() => {
-												setBatchId(batch.id);
-												setAction(available);
-											}}
-										>
-											{t(batchActionKeys[available])}
-										</button>
+										<div>
+											<button
+												type="button"
+												className={`btn ${buttonVariant}`}
+												disabled={busy}
+												onClick={() => {
+													setBatchId(batch.id);
+													setAction(available);
+												}}
+											>
+												{t(batchActionKeys[available])}
+											</button>
+										</div>
 									))}
 							</section>
 						);
 					})}
 					<h2>{t("release.outsideQueue")}</h2>
 					{result.data.datasets.every((dataset) => dataset.batch_id) && (
-						<p>{t("release.noUnregistered")}</p>
+						<p className="muted">{t("release.noUnregistered")}</p>
 					)}
 					{result.data.datasets
 						.filter((dataset) => !dataset.batch_id)

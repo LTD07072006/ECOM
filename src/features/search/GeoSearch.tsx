@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import {
 	indicatorLabel,
 	levelLabel,
@@ -20,6 +20,7 @@ export function GeoSearch({
 	onSelect: (profile: Profile) => void;
 }) {
 	const { t, locale } = useI18n();
+	const listboxId = useId();
 	const [query, setQuery] = useState("");
 	const [level, setLevel] = useState<"" | Geography["level"]>("");
 	const [indicator, setIndicator] = useState("");
@@ -28,6 +29,7 @@ export function GeoSearch({
 	const [minVal, setMinVal] = useState("");
 	const [maxVal, setMaxVal] = useState("");
 	const [results, setResults] = useState<Geography[]>([]);
+	const [activeIndex, setActiveIndex] = useState(-1);
 	const [filterMeta, setFilterMeta] =
 		useState<SearchNumericFilterSummary | null>(null);
 	const [selected, setSelected] = useState("");
@@ -54,6 +56,7 @@ export function GeoSearch({
 	useEffect(() => {
 		if (rangeInvalid) {
 			setResults([]);
+			setActiveIndex(-1);
 			setFilterMeta(null);
 			setStatus(t("search.invalidRange"));
 			return;
@@ -67,6 +70,7 @@ export function GeoSearch({
 		if (!canQueryByText && !canQueryByFilter) {
 			if (query !== selected) {
 				setResults([]);
+				setActiveIndex(-1);
 				setFilterMeta(null);
 				setStatus("");
 			}
@@ -97,12 +101,15 @@ export function GeoSearch({
 				} = await response.json();
 				if (controller.signal.aborted) return;
 				setResults(body.data);
+				setActiveIndex(-1);
 				setFilterMeta(body.meta?.numericFilter ?? null);
-				setStatus(
-					body.data.length
-						? t("search.found", { count: body.data.length })
-						: t("search.none"),
-				);
+				if (body.data.length === 0) {
+					setStatus(`${t("search.none")} ${t("search.noneHint")}`);
+				} else if (body.data.length === 1) {
+					setStatus(t("search.foundOne"));
+				} else {
+					setStatus(t("search.found", { count: body.data.length }));
+				}
 			} catch {
 				if (!controller.signal.aborted) setStatus(t("search.unavailable"));
 			}
@@ -145,9 +152,41 @@ export function GeoSearch({
 			setSelected(place.displayName);
 			setQuery(place.displayName);
 			setResults([]);
+			setActiveIndex(-1);
 			setStatus(t("search.profileLoaded", { name: place.displayName }));
 		} catch {
 			if (!controller.signal.aborted) setStatus(t("search.profileUnavailable"));
+		}
+	}
+
+	function handleKeyDown(event: React.KeyboardEvent<HTMLDivElement>) {
+		if (event.key === "Escape" && results.length > 0) {
+			event.preventDefault();
+			setResults([]);
+			setActiveIndex(-1);
+			document.getElementById("geo-search-input")?.focus();
+			return;
+		}
+		if (results.length === 0) return;
+		if (event.key === "ArrowDown") {
+			event.preventDefault();
+			setActiveIndex((current) =>
+				current < results.length - 1 ? current + 1 : 0,
+			);
+		} else if (event.key === "ArrowUp") {
+			event.preventDefault();
+			setActiveIndex((current) =>
+				current > 0 ? current - 1 : results.length - 1,
+			);
+		} else if (
+			event.key === "Enter" &&
+			document.activeElement?.id === "geo-search-input"
+		) {
+			const target = results[activeIndex >= 0 ? activeIndex : 0];
+			if (target) {
+				event.preventDefault();
+				void select(target);
+			}
 		}
 	}
 
@@ -162,178 +201,210 @@ export function GeoSearch({
 		setSelected("");
 		if (query.trim().length < 2) {
 			setResults([]);
+			setActiveIndex(-1);
 			setStatus("");
 		}
 	}
 
 	return (
-		<div className="geo-search">
-			<label htmlFor="geo-search-input">{t("search.label")}</label>
-			<input
-				id="geo-search-input"
-				value={query}
-				onChange={(event) => {
-					selection.current?.abort();
-					setQuery(event.target.value);
-					setSelected("");
-					setResults([]);
-					setStatus("");
-				}}
-				maxLength={120}
-				placeholder={t("search.placeholder")}
-				autoComplete="off"
-			/>
-			<p className="search-status" role="status">
-				{status}
-			</p>
-			{results.length > 0 ? (
-				<ul className="search-results">
-					{results.map((place) => (
-						<li key={place.id}>
-							<button type="button" onClick={() => select(place)}>
-								<strong>{place.displayName}</strong>
-								<span>
-									{t("search.resultMeta", {
-										level: levelLabel(locale, place.level),
-										parent: place.parentName ?? t("common.vietnam"),
-									})}
-								</span>
-							</button>
-						</li>
-					))}
-				</ul>
-			) : null}
+		// biome-ignore lint/a11y/noStaticElementInteractions: keyboard navigation wrapper for search input and result list
+		<div className="geo-search" onKeyDown={handleKeyDown}>
+			<div className="geo-search-field">
+				<div className="form-field">
+					<label htmlFor="geo-search-input">{t("search.label")}</label>
+					<input
+						id="geo-search-input"
+						className="control-input"
+						value={query}
+						onChange={(event) => {
+							selection.current?.abort();
+							setQuery(event.target.value);
+							setSelected("");
+							setResults([]);
+							setActiveIndex(-1);
+							setStatus("");
+						}}
+						maxLength={120}
+						placeholder={t("search.placeholder")}
+						autoComplete="off"
+					/>
+				</div>
+				<p className="search-status" role="status">
+					{status}
+				</p>
+				{results.length > 0 ? (
+					<ul id={listboxId} className="search-results">
+						{results.map((place, index) => (
+							<li key={place.id}>
+								<button
+									type="button"
+									data-active={index === activeIndex ? "true" : undefined}
+									onClick={() => select(place)}
+								>
+									<strong>{place.displayName}</strong>
+									<span>
+										{t("search.resultMeta", {
+											level: levelLabel(locale, place.level),
+											parent: place.parentName ?? t("common.vietnam"),
+										})}
+									</span>
+								</button>
+							</li>
+						))}
+					</ul>
+				) : null}
+			</div>
 			<details className="geo-search-filters">
 				<summary>{t("search.filtersToggle")}</summary>
-				<div className="layer-filter-row">
-					<label>
-						{t("search.level")}
-						<select
-							value={level}
-							onChange={(event) => {
-								setLevel(event.target.value as "" | Geography["level"]);
-								setSelected("");
-							}}
-						>
-							<option value="">{t("search.allLevels")}</option>
-							<option value="province">{levelLabel(locale, "province")}</option>
-							<option value="commune">{levelLabel(locale, "commune")}</option>
-						</select>
-					</label>
-					<label>
-						{t("search.indicator")}
-						<select
-							value={indicator}
-							onChange={(event) => {
-								const nextIndicator = event.target.value;
-								setIndicator(nextIndicator);
-								if (!nextIndicator) {
-									setMinVal("");
-									setMaxVal("");
-									setPeriod("");
-									setQuality("");
-									setFilterMeta(null);
-								}
-								setSelected("");
-							}}
-						>
-							<option value="">{t("search.noIndicator")}</option>
-							{searchableIndicators.map((code) => (
-								<option key={code} value={code}>
-									{indicatorLabel(locale, code, code)}
+				<div className="form-stack">
+					<div className="layer-filter-row">
+						<label className="form-field">
+							{t("search.level")}
+							<select
+								className="control-select"
+								value={level}
+								onChange={(event) => {
+									setLevel(event.target.value as "" | Geography["level"]);
+									setSelected("");
+								}}
+							>
+								<option value="">{t("search.allLevels")}</option>
+								<option value="province">
+									{levelLabel(locale, "province")}
 								</option>
-							))}
-						</select>
-					</label>
-				</div>
-				{indicator && (
-					<>
-						<div className="layer-filter-row">
-							<label>
-								{t("search.min")}
-								<input
-									type="number"
-									inputMode="decimal"
-									value={minVal}
-									onChange={(event) => {
-										setMinVal(event.target.value);
-										setSelected("");
-									}}
-								/>
-							</label>
-							<label>
-								{t("search.max")}
-								<input
-									type="number"
-									inputMode="decimal"
-									value={maxVal}
-									onChange={(event) => {
-										setMaxVal(event.target.value);
-										setSelected("");
-									}}
-								/>
-							</label>
-						</div>
-						<div className="layer-filter-row">
-							<label>
-								{t("search.period")}
-								<input
-									type="text"
-									maxLength={32}
-									placeholder="2025"
-									value={period}
-									onChange={(event) => {
-										setPeriod(event.target.value);
-										setSelected("");
-									}}
-								/>
-							</label>
-							<label>
-								{t("search.quality")}
-								<select
-									value={quality}
-									onChange={(event) => {
-										setQuality(
-											event.target.value as "" | "verified" | "supported",
-										);
-										setSelected("");
-									}}
-								>
-									<option value="">{t("search.allQuality")}</option>
-									<option value="verified">
-										{qualityLabel(locale, "verified")}
+								<option value="commune">{levelLabel(locale, "commune")}</option>
+							</select>
+						</label>
+						<label className="form-field">
+							{t("search.indicator")}
+							<select
+								className="control-select"
+								value={indicator}
+								onChange={(event) => {
+									const nextIndicator = event.target.value;
+									setIndicator(nextIndicator);
+									if (!nextIndicator) {
+										setMinVal("");
+										setMaxVal("");
+										setPeriod("");
+										setQuality("");
+										setFilterMeta(null);
+									}
+									setSelected("");
+								}}
+							>
+								<option value="">{t("search.noIndicator")}</option>
+								{searchableIndicators.map((code) => (
+									<option key={code} value={code}>
+										{indicatorLabel(locale, code, code)}
 									</option>
-									<option value="supported">
-										{qualityLabel(locale, "supported")}
-									</option>
-								</select>
-							</label>
-						</div>
-					</>
-				)}
-				{filterMeta && (
-					<div className="search-filter-meta" role="status">
-						<p className="muted">
-							<strong>
-								{indicatorLabel(locale, filterMeta.indicator, filterMeta.label)}
-							</strong>
-							{` (${unitLabel(locale, filterMeta.unit)}${filterMeta.period ? ` · ${filterMeta.period}` : ""})`}
-							{filterMeta.definition ? ` — ${filterMeta.definition}` : ""}
-						</p>
-						<p className="muted">
-							{t("search.exclusionSummary", {
-								matched: filterMeta.matchedCount,
-								missing: filterMeta.excludedMissingCount,
-								outOfRange: filterMeta.excludedOutOfRangeCount,
-							})}
-						</p>
+								))}
+							</select>
+						</label>
 					</div>
-				)}
-				{(level || indicator || period || quality || minVal || maxVal) && (
-					<button type="button" className="text-button" onClick={clearFilters}>
-						{t("search.clearFilters")}
-					</button>
-				)}
+					{indicator && (
+						<>
+							<div className="layer-filter-row">
+								<label className="form-field">
+									{t("search.min")}
+									<input
+										className="control-input"
+										type="number"
+										inputMode="decimal"
+										value={minVal}
+										onChange={(event) => {
+											setMinVal(event.target.value);
+											setSelected("");
+										}}
+									/>
+								</label>
+								<label className="form-field">
+									{t("search.max")}
+									<input
+										className="control-input"
+										type="number"
+										inputMode="decimal"
+										value={maxVal}
+										onChange={(event) => {
+											setMaxVal(event.target.value);
+											setSelected("");
+										}}
+									/>
+								</label>
+							</div>
+							<div className="layer-filter-row">
+								<label className="form-field">
+									{t("search.period")}
+									<input
+										className="control-input"
+										type="text"
+										maxLength={32}
+										placeholder="2025"
+										value={period}
+										onChange={(event) => {
+											setPeriod(event.target.value);
+											setSelected("");
+										}}
+									/>
+								</label>
+								<label className="form-field">
+									{t("search.quality")}
+									<select
+										className="control-select"
+										value={quality}
+										onChange={(event) => {
+											setQuality(
+												event.target.value as "" | "verified" | "supported",
+											);
+											setSelected("");
+										}}
+									>
+										<option value="">{t("search.allQuality")}</option>
+										<option value="verified">
+											{qualityLabel(locale, "verified")}
+										</option>
+										<option value="supported">
+											{qualityLabel(locale, "supported")}
+										</option>
+									</select>
+								</label>
+							</div>
+						</>
+					)}
+					{filterMeta && (
+						<div className="search-filter-meta" role="status">
+							<p className="muted">
+								<strong>
+									{indicatorLabel(
+										locale,
+										filterMeta.indicator,
+										filterMeta.label,
+									)}
+								</strong>
+								{` (${unitLabel(locale, filterMeta.unit)}${filterMeta.period ? ` · ${filterMeta.period}` : ""})`}
+								{filterMeta.definition ? ` — ${filterMeta.definition}` : ""}
+							</p>
+							<p className="muted">
+								{t("search.exclusionSummary", {
+									matched: filterMeta.matchedCount,
+									missing: filterMeta.excludedMissingCount,
+									outOfRange: filterMeta.excludedOutOfRangeCount,
+								})}
+							</p>
+						</div>
+					)}
+					{(level || indicator || period || quality || minVal || maxVal) && (
+						<div>
+							<button
+								type="button"
+								className="btn btn-quiet btn-sm"
+								onClick={clearFilters}
+							>
+								{t("search.clearFilters")}
+							</button>
+						</div>
+					)}
+				</div>
 			</details>
 		</div>
 	);

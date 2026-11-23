@@ -17,6 +17,23 @@ export function summarizeGeometryCoverage(geographies: Geography[]) {
 	};
 }
 
+const SEARCH_EXONYM_ALIASES: Record<string, string> = {
+	hanoi: "ha noi",
+	hcmc: "ho chi minh",
+	"ho chi minh city": "ho chi minh",
+	hochiminh: "ho chi minh",
+	hochiminhcity: "ho chi minh",
+	"tp hcm": "ho chi minh",
+	tphcm: "ho chi minh",
+	saigon: "ho chi minh",
+	"sai gon": "ho chi minh",
+	danang: "da nang",
+	haiphong: "hai phong",
+	cantho: "can tho",
+	"thua thien hue": "hue",
+	thuathienhue: "hue",
+};
+
 export function normalizeSearch(value: string): string {
 	return value
 		.normalize("NFD")
@@ -26,6 +43,13 @@ export function normalizeSearch(value: string): string {
 		.toLowerCase()
 		.trim()
 		.replace(/\s+/g, " ");
+}
+
+export function searchTerms(query: string): string[] {
+	const cleaned = normalizeSearch(query);
+	if (!cleaned) return [];
+	const alias = SEARCH_EXONYM_ALIASES[cleaned];
+	return alias && alias !== cleaned ? [cleaned, alias] : [cleaned];
 }
 
 export function getPublicCatalog(catalog: Catalog): Catalog {
@@ -57,7 +81,8 @@ export function searchGeographies(
 	filter?: SearchFilter,
 ): Geography[] {
 	const publicCatalog = getPublicCatalog(catalog);
-	const normalized = query ? normalizeSearch(query) : "";
+	const terms = query ? searchTerms(query) : [];
+	const compactTerms = terms.map((term) => term.replace(/\s+/g, ""));
 	const hasNumericFilter = Boolean(
 		filter?.indicator && (filter.min !== undefined || filter.max !== undefined),
 	);
@@ -74,16 +99,27 @@ export function searchGeographies(
 			)
 		: null;
 
+	const levelRank = (lvl: Geography["level"]) =>
+		lvl === "country" ? 0 : lvl === "province" ? 1 : 2;
+	const matchesExactCode = (code: string) =>
+		terms.length > 0 && terms.includes(code.toLowerCase());
+
 	return publicCatalog.geographies
 		.filter((geo) => {
 			if (level && geo.level !== level) return false;
-			if (
-				normalized &&
-				!normalizeSearch(
+			if (terms.length > 0) {
+				const haystack = normalizeSearch(
 					`${geo.name} ${geo.displayName} ${geo.normalizedName} ${geo.code}`,
-				).includes(normalized)
-			) {
-				return false;
+				);
+				const compactHaystack = haystack.replace(/\s+/g, "");
+				const matched = terms.some(
+					(term, index) =>
+						haystack.includes(term) ||
+						compactHaystack.includes(compactTerms[index]),
+				);
+				if (!matched) {
+					return false;
+				}
 			}
 			if (observationsByGeo) {
 				const value = observationsByGeo.get(geo.id);
@@ -95,8 +131,9 @@ export function searchGeographies(
 		})
 		.sort(
 			(left, right) =>
-				Number(normalized !== "" && right.code.toLowerCase() === normalized) -
-				Number(normalized !== "" && left.code.toLowerCase() === normalized),
+				Number(matchesExactCode(right.code)) -
+					Number(matchesExactCode(left.code)) ||
+				levelRank(left.level) - levelRank(right.level),
 		)
 		.slice(0, 50);
 }
