@@ -1,10 +1,11 @@
+import Link from "next/link";
 import { getI18n } from "../../lib/i18n/server";
 
 export default async function InvestorGuidePage() {
 	const { t } = await getI18n();
 	return (
 		<main className="decision-page">
-			<a href="/">{t("common.backToMap")}</a>
+			<Link href="/">{t("common.backToMap")}</Link>
 			<h1>{t("guide.title")}</h1>
 			<p>{t("guide.intro")}</p>
 			<ol className="investor-guide-steps">
@@ -15,7 +16,7 @@ export default async function InvestorGuidePage() {
 				<li>{t("guide.step5")}</li>
 			</ol>
 			<p>
-				<a href="/">{t("guide.explore")}</a>
+				<Link href="/">{t("guide.explore")}</Link>
 			</p>
 			<section aria-labelledby="guide-sources">
 				<h2 id="guide-sources">{t("guide.sources")}</h2>

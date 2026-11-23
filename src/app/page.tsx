@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { MapWorkspace } from "../features/map/MapWorkspace";
 import { loadPublicCatalogSummary } from "../features/geography/catalog";
 import { getI18n } from "../lib/i18n/server";
@@ -16,12 +17,12 @@ export default async function HomePage() {
 				<p className="eyebrow">{t("home.eyebrow")}</p>
 				<h1>{t("home.title")}</h1>
 				<p className="lede">{t("home.lede")}</p>
-				<a href="/decision" className="decision-link">
+				<Link href="/decision" className="decision-link">
 					{t("home.decisionLink")}
-				</a>
+				</Link>
 				<p>
-					<a href="/investor-guide">{t("guide.link")}</a> ·{" "}
-					<a href="/inquiries/status">{t("status.pageLink")}</a>
+					<Link href="/investor-guide">{t("guide.link")}</Link> ·{" "}
+					<Link href="/inquiries/status">{t("status.pageLink")}</Link>
 				</p>
 				{summary.dataset && (
 					<p className="catalog-release">

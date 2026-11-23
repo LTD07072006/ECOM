@@ -77,14 +77,14 @@ export function InquiryDashboard() {
 		})
 			.then(async (response) => {
 				if (!response.ok) return;
-				const body = (await response.json()) as {
+				const body = (await response.json().catch(() => null)) as {
 					authenticated?: boolean;
 					actor?: string;
 					role?: "steward" | "reviewer";
-				};
+				} | null;
 				if (
 					!controller.signal.aborted &&
-					body.authenticated &&
+					body?.authenticated &&
 					body.actor &&
 					body.role
 				) {
@@ -337,12 +337,15 @@ export function InquiryDashboard() {
 					headers: authHeaders(true),
 					body: JSON.stringify({ ...snapshotInput, preview: previewOnly }),
 				});
-				const body = (await response.json()) as {
+				const body = (await response.json().catch(() => null)) as {
 					data?: { total: number } & SnapshotRecord;
 					error?: string;
-				};
-				if (!response.ok || !body.data)
-					throw new Error(body.error ?? t("reports.error.prepare"));
+				} | null;
+				if (!response.ok || !body?.data)
+					throw new Error(
+						body?.error ??
+							(body ? t("reports.error.prepare") : t("admin.error.generic")),
+					);
 				if (previewOnly) {
 					setPreview({ key: previewKey, total: body.data.total });
 					setNotice(t("reports.notice.calculated"));
@@ -453,11 +456,15 @@ export function InquiryDashboard() {
 			const response = await fetch(
 				`/api/geographies?q=${encodeURIComponent(geographyQuery.trim())}`,
 			);
-			const body = (await response.json()) as {
+			const body = (await response.json().catch(() => null)) as {
 				data?: GeographyOption[];
 				error?: string;
-			};
-			if (!response.ok) throw new Error(body.error ?? t("admin.error.search"));
+			} | null;
+			if (!response.ok || !body)
+				throw new Error(
+					body?.error ??
+						(body ? t("admin.error.search") : t("admin.error.generic")),
+				);
 			setGeographyOptions(body.data ?? []);
 			setNotice(body.data?.length ? "" : t("admin.notice.geographyNone"));
 		});

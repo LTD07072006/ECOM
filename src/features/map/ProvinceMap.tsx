@@ -1,5 +1,6 @@
 "use client";
 
+import "maplibre-gl/dist/maplibre-gl.css";
 import { useEffect, useRef, useState } from "react";
 import type {
 	ExpressionSpecification,
@@ -44,6 +45,8 @@ export function ProvinceMap({
 	const previousIds = useRef<string[]>([]);
 	const onSelectRef = useRef(onSelect);
 	onSelectRef.current = onSelect;
+	const tRef = useRef(t);
+	tRef.current = t;
 	const popupRef = useRef<MapPopup | null>(null);
 	const [dataset, setDataset] = useState<DatasetMetadata | null>(null);
 	const [status, setStatus] = useState<
@@ -207,7 +210,7 @@ export function ProvinceMap({
 							typeof item.url === "string" ? safeSourceUrl(item.url) : null;
 						if (url) {
 							const source = document.createElement("a");
-							source.textContent = t("map.airportRecord");
+							source.textContent = tRef.current("map.airportRecord");
 							source.href = url;
 							content.append(source);
 						}
@@ -273,7 +276,7 @@ export function ProvinceMap({
 			previousIds.current = [];
 			popupRef.current = null;
 		};
-	}, [t]);
+	}, []);
 
 	useEffect(() => {
 		const map = mapRef.current;

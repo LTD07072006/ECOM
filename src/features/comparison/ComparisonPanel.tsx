@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { Profile } from "../geography/types";
 import { useI18n } from "../../lib/i18n/provider";
 import { indicatorLabel, unitLabel } from "../../lib/i18n/data-labels";
@@ -28,6 +28,8 @@ export function ComparisonPanel({
 	onClose: () => void;
 }) {
 	const { t, tc, locale, formatNumber } = useI18n();
+	const tRef = useRef(t);
+	tRef.current = t;
 	const [period, setPeriod] = useState("");
 	const key = `${ids.join(",")}|${period}`;
 	const [result, setResult] = useState<
@@ -56,9 +58,15 @@ export function ComparisonPanel({
 			signal: controller.signal,
 		})
 			.then(async (response) => {
-				const body = await response.json();
-				if (!response.ok)
-					throw new Error(body.error ?? t("comparison.unavailable"));
+				const body = (await response.json().catch(() => null)) as {
+					data?: { profiles: Profile[]; comparison: Comparison };
+					meta?: { availablePeriods?: unknown };
+					error?: string;
+				} | null;
+				if (!response.ok || !body?.data)
+					throw new Error(
+						body?.error ?? tRef.current("comparison.unavailable"),
+					);
 				return {
 					data: body.data,
 					availablePeriods: Array.isArray(body.meta?.availablePeriods)
@@ -77,11 +85,11 @@ export function ComparisonPanel({
 						error:
 							reason instanceof Error
 								? reason.message
-								: t("comparison.unavailable"),
+								: tRef.current("comparison.unavailable"),
 					});
 			});
 		return () => controller.abort();
-	}, [ids, period, t]);
+	}, [ids, period]);
 
 	async function copyLink() {
 		try {
