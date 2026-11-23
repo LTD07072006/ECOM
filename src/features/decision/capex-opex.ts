@@ -89,5 +89,63 @@ export function estimateFiveYears(
 		landSavings,
 		net: upfront + rent + labor + power + citPaid - landSavings,
 	};
-	return Object.values(result).every(Number.isFinite) ? result : null;
+	if (!Object.values(result).every(Number.isFinite)) return null;
+	return {
+		...result,
+		yearlyBreakdown: profit.map((value, index) => {
+			const capex = index === 0 ? upfront : 0;
+			const rent = annualRent - (index < years ? eligible : 0);
+			const wage = labor / 5;
+			const electricity = power / 5;
+			const cit = value * rates[index];
+			return {
+				year: index + 1,
+				capex,
+				rent,
+				wage,
+				electricity,
+				cit,
+				totalNet: capex + rent + wage + electricity + cit,
+			};
+		}),
+	};
+}
+
+export function estimateSensitivity(
+	input: FiveYearAssumptions,
+	relief: FiveYearRelief,
+	rentShock: number,
+	elecShock: number,
+) {
+	if (
+		![rentShock, elecShock].every(
+			(value) =>
+				Number.isFinite(value) && Math.abs(value) <= 20 && value % 5 === 0,
+		)
+	)
+		return null;
+	const baseline = estimateFiveYears(input, relief);
+	if (!baseline) return null;
+	const rentPerM2Year = input.rentPerM2Year * (1 + rentShock / 100);
+	const estimate = estimateFiveYears(
+		{
+			...input,
+			rentPerM2Year,
+			electricityPerKWh: input.electricityPerKWh * (1 + elecShock / 100),
+		},
+		{
+			...relief,
+			eligibleAnnualLandRent: Math.min(
+				relief.eligibleAnnualLandRent ?? 0,
+				input.areaM2 * rentPerM2Year,
+			),
+		},
+	);
+	if (!estimate) return null;
+	const delta = estimate.net - baseline.net;
+	return {
+		estimate,
+		delta,
+		percent: baseline.net > 0 ? (delta / baseline.net) * 100 : null,
+	};
 }

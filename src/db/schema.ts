@@ -76,6 +76,7 @@ export const investorInquiries = marketEntry.table(
 			.notNull()
 			.default(sql`ARRAY[]::uuid[]`),
 		provenance: jsonb("provenance").notNull(),
+		scenarioSnapshot: jsonb("scenario_snapshot"),
 		status: text("status").notNull().default("new"),
 		closeReason: text("close_reason"),
 		createdAt: timestamp("created_at", { withTimezone: true })

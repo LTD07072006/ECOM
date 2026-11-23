@@ -13,7 +13,12 @@ import {
 	type StatisticalLayer,
 } from "./layers";
 import type { LayerFilterSummary } from "./filters";
-import type { ProvinceProximityMatch } from "./proximity";
+import {
+	catchmentFacilities,
+	catchmentRadii,
+	type CatchmentCenter,
+	type ProvinceProximityMatch,
+} from "./proximity";
 import { useI18n } from "../../lib/i18n/provider";
 import {
 	indicatorLabel,
@@ -195,7 +200,13 @@ export function LayerControls({
 	proximityKm = "100",
 	proximityResult = null,
 	onProximityChange,
+	catchmentCenter,
+	catchmentRadius = 0,
+	onCatchmentRadius,
 }: {
+	catchmentCenter?: CatchmentCenter | null;
+	catchmentRadius?: number;
+	onCatchmentRadius?: (radius: number) => void;
 	data: MapLayers;
 	layer: StatisticalLayer | null;
 	setLayer: (id: string) => void;
@@ -249,6 +260,45 @@ export function LayerControls({
 		layer && province ? layer.valueDetails?.[province.id] : undefined;
 	return (
 		<section className="layer-controls" aria-label={t("layers.aria")}>
+			{onCatchmentRadius && (
+				<div className="layer-filter">
+					<label>
+						{t("site.catchment")}
+						<select
+							disabled={!catchmentCenter}
+							value={catchmentCenter ? catchmentRadius : 0}
+							onChange={(event) =>
+								onCatchmentRadius(Number(event.target.value))
+							}
+						>
+							<option value={0}>{t("proximity.none")}</option>
+							{catchmentRadii.map((km) => (
+								<option key={km} value={km}>
+									{km} km
+								</option>
+							))}
+						</select>
+					</label>
+					{catchmentCenter && catchmentRadius > 0 && (
+						<div className="site-coverage">
+							<small>{t("site.referenceOnly")}</small>
+							{catchmentRadii
+								.filter((km) => km <= catchmentRadius)
+								.map((km) => (
+									<details key={km}>
+										<summary>{km} km</summary>
+										<p>
+											{catchmentFacilities(catchmentCenter)
+												.filter((poi) => poi.distanceKm <= km)
+												.map((poi) => poi.name)
+												.join(" · ") || t("district.missing")}
+										</p>
+									</details>
+								))}
+						</div>
+					)}
+				</div>
+			)}
 			<div className="layer-share">
 				<button
 					type="button"

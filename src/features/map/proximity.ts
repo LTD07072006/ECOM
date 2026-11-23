@@ -1,4 +1,82 @@
 import { haversineKm, type InfrastructureKind } from "./layers";
+import type { FeatureCollection, Polygon } from "geojson";
+
+export type CatchmentCenter = [longitude: number, latitude: number];
+export const catchmentRadii = [15, 30, 60] as const;
+
+export function toCatchmentRingsGeoJson(
+	center: CatchmentCenter | null,
+	radiiKm: readonly number[],
+): FeatureCollection<Polygon, { radiusKm: number }> {
+	const result: FeatureCollection<Polygon, { radiusKm: number }> = {
+		type: "FeatureCollection",
+		features: [],
+	};
+	if (
+		!center ||
+		!center.every(Number.isFinite) ||
+		Math.abs(center[0]) > 180 ||
+		Math.abs(center[1]) > 90
+	)
+		return result;
+	const rad = Math.PI / 180;
+	const [longitude, latitude] = center;
+	const lat = latitude * rad;
+	for (const radiusKm of [...new Set(radiiKm)]
+		.filter((r) => Number.isFinite(r) && r > 0 && r <= 60)
+		.sort((a, b) => a - b)) {
+		const angle = radiusKm / 6371;
+		const coordinates = Array.from({ length: 64 }, (_, i) => {
+			const bearing = (-i * Math.PI) / 32;
+			const nextLat = Math.asin(
+				Math.sin(lat) * Math.cos(angle) +
+					Math.cos(lat) * Math.sin(angle) * Math.cos(bearing),
+			);
+			const delta = Math.atan2(
+				Math.sin(bearing) * Math.sin(angle) * Math.cos(lat),
+				Math.cos(angle) - Math.sin(lat) * Math.sin(nextLat),
+			);
+			return [longitude + delta / rad, nextLat / rad];
+		});
+		coordinates.push(coordinates[0]);
+		result.features.push({
+			type: "Feature",
+			properties: { radiusKm },
+			geometry: { type: "Polygon", coordinates: [coordinates] },
+		});
+	}
+	return result;
+}
+
+export function catchmentFacilities(center: CatchmentCenter) {
+	return canonicalInfrastructurePois
+		.filter((poi) =>
+			["airport", "seaport", "expressway_node", "border_gate"].includes(
+				poi.kind,
+			),
+		)
+		.map((poi) => ({
+			...poi,
+			distanceKm: catchmentDistanceKm(center, [poi.longitude, poi.latitude]),
+		}))
+		.filter((poi) => poi.distanceKm <= 60)
+		.sort(
+			(a, b) => a.distanceKm - b.distanceKm || a.code.localeCompare(b.code),
+		);
+}
+
+export function catchmentDistanceKm(
+	[lng, lat]: CatchmentCenter,
+	[otherLng, otherLat]: CatchmentCenter,
+) {
+	const rad = Math.PI / 180;
+	const a =
+		Math.sin(((otherLat - lat) * rad) / 2) ** 2 +
+		Math.cos(lat * rad) *
+			Math.cos(otherLat * rad) *
+			Math.sin(((otherLng - lng) * rad) / 2) ** 2;
+	return 12742 * Math.asin(Math.min(1, Math.sqrt(a)));
+}
 
 export type ReferenceInfrastructurePoi = {
 	code: string;

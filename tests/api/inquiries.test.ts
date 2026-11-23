@@ -1,6 +1,32 @@
 import { expect, test } from "bun:test";
 import { POST } from "../../src/app/api/inquiries/route";
 import { INQUIRY_NOTICE_VERSION } from "../../src/features/inquiries/privacy";
+import { inquirySubmissionSchema } from "../../src/features/inquiries/validation";
+
+test("accepts a bounded advisory scenario and rejects unexpected attachment keys", async () => {
+	const base = {
+		consent: true,
+		noticeVersion: INQUIRY_NOTICE_VERSION,
+		email: "a@example.com",
+		message: "Investment enquiry",
+	};
+	const scenarioSnapshot = {
+		provinceCodes: ["24", "31"],
+		sector: "manufacturing",
+		advisoryOnly: true,
+	};
+	expect(
+		inquirySubmissionSchema.safeParse({ ...base, scenarioSnapshot }).success,
+	).toBe(true);
+	const response = await POST(
+		request({
+			...base,
+			scenarioSnapshot: { ...scenarioSnapshot, extra: "not allowed" },
+		}),
+	);
+	expect(response.status).toBe(400);
+	expect((await response.json()).fields).toEqual(["scenarioSnapshot"]);
+});
 
 const consent = { consent: true, noticeVersion: INQUIRY_NOTICE_VERSION };
 

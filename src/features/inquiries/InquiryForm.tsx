@@ -3,12 +3,14 @@
 import { useId, useState, type FormEvent } from "react";
 import { INQUIRY_NOTICE_VERSION } from "./privacy";
 import { useI18n } from "../../lib/i18n/provider";
+import type { ScenarioSnapshot } from "./validation";
 
 export type InquiryFormProps = {
 	geographyIds: string[];
 	geographyLabels?: string[];
 	onSubmitted?: (referenceCode: string) => void;
 	defaultSector?: string;
+	scenarioSnapshot?: ScenarioSnapshot;
 };
 
 export function InquiryForm({
@@ -16,6 +18,7 @@ export function InquiryForm({
 	geographyLabels = [],
 	onSubmitted,
 	defaultSector = "",
+	scenarioSnapshot,
 }: InquiryFormProps) {
 	const { t } = useI18n();
 	const privacySummary = useId();
@@ -41,6 +44,9 @@ export function InquiryForm({
 					country: form.get("country"),
 					sector: form.get("sector"),
 					geographyIds,
+					scenarioSnapshot: form.has("attachScenario")
+						? scenarioSnapshot
+						: undefined,
 					honeypot: form.get("website"),
 					consent: form.has("consent"),
 					noticeVersion: INQUIRY_NOTICE_VERSION,
@@ -126,6 +132,11 @@ export function InquiryForm({
 				{t("inquiry.sector")}
 				<input name="sector" maxLength={160} defaultValue={defaultSector} />
 			</label>
+			{scenarioSnapshot && (
+				<label>
+					<input name="attachScenario" type="checkbox" /> {t("site.attach")}
+				</label>
+			)}
 			<label className="inquiry-honeypot" aria-hidden="true">
 				Website
 				<input name="website" tabIndex={-1} autoComplete="off" />

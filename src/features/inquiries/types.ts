@@ -1,4 +1,8 @@
-import type { InquiryCloseReason, InquiryStatus } from "./validation";
+import type {
+	InquiryCloseReason,
+	InquiryStatus,
+	ScenarioSnapshot,
+} from "./validation";
 
 export type InquirySubmission = {
 	email: string;
@@ -7,6 +11,7 @@ export type InquirySubmission = {
 	organization?: string;
 	country?: string;
 	sector?: string;
+	scenarioSnapshot?: ScenarioSnapshot;
 	geographyIds: string[];
 	noticeVersion: string;
 };

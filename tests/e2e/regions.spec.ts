@@ -9,7 +9,10 @@ test("builds and compares regions through accessible search", async ({
 	const search = page.getByLabel("Find a place");
 	await search.fill("ha noi");
 	await page
-		.getByRole("button", { name: "Hà Nội province · Việt Nam", exact: true })
+		.getByRole("button", {
+			name: "Hà Nội City centrally-governed city · Việt Nam",
+			exact: true,
+		})
 		.click();
 	await expect(page.getByTestId("geo-profile")).toContainText("Hà Nội");
 	await page.getByRole("button", { name: "Add current province" }).click();
@@ -19,7 +22,10 @@ test("builds and compares regions through accessible search", async ({
 	await page.getByLabel("Region B", { exact: true }).check();
 	await search.fill("da nang");
 	await page
-		.getByRole("button", { name: "Đà Nẵng province · Việt Nam", exact: true })
+		.getByRole("button", {
+			name: "Đà Nẵng City centrally-governed city · Việt Nam",
+			exact: true,
+		})
 		.click();
 	await expect(page.getByTestId("geo-profile")).toContainText("Đà Nẵng");
 	await page.getByRole("button", { name: "Add current province" }).click();

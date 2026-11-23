@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useI18n } from "../../lib/i18n/provider";
 import type { Profile } from "../geography/types";
 import type { ProvinceMicroLocation } from "../map/province-detail-locations";
+import { UtilitySpecs } from "./UtilitySpecs";
 import {
 	classifyDistrict,
 	type ProvinceDistrictProfile,
@@ -163,6 +164,7 @@ export function DistrictPanel({
 								<button type="button" onClick={() => onLocate(item)}>
 									{item.name[locale]}
 								</button>
+								<UtilitySpecs location={item} />
 							</li>
 						))}
 					</ul>

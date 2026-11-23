@@ -25,7 +25,7 @@ test("retail scenario filters and compares provinces before explaining why scori
 		.getByLabel("Minimum retail sales and consumer services (billion VND)")
 		.clear();
 	const places = page.getByRole("group", { name: "Provinces" });
-	const hanoi = places.getByLabel("Hà Nội", { exact: true });
+	const hanoi = places.getByLabel("Hà Nội City", { exact: true });
 	await hanoi.focus();
 	await hanoi.press("Space");
 	await expect(hanoi).toBeChecked();
@@ -35,14 +35,16 @@ test("retail scenario filters and compares provinces before explaining why scori
 		name: "Compare published context",
 	});
 	await expect(comparison).toBeVisible();
-	await expect(page.getByRole("table")).toContainText("2025");
-	await expect(page.getByRole("table")).toContainText("Cục Thống kê");
+	const comparisonTable = page
+		.getByRole("region", { name: "Compare published context" })
+		.getByRole("table");
+	await expect(comparisonTable).toContainText("2025");
+	await expect(comparisonTable).toContainText("Cục Thống kê");
 	await page
 		.getByLabel("Comparison baseline")
-		.selectOption({ label: "Hà Nội" });
+		.selectOption({ label: "Hà Nội City" });
 	await expect(
-		page
-			.getByRole("table")
+		comparisonTable
 			.getByText("Difference from Hà Nội", { exact: false })
 			.first(),
 	).toBeVisible();

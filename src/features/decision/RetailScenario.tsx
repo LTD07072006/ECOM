@@ -18,6 +18,9 @@ import {
 } from "./legal-readiness";
 import { LegalReadinessChecklist } from "./LegalReadinessChecklist";
 import { CapexOpexSimulator } from "./CapexOpexSimulator";
+import { SiteScreeningWizard } from "./SiteScreeningWizard";
+import { parseScenarioParams, type ScenarioParams } from "./scenario-url";
+import type { ScenarioSnapshot } from "../inquiries/validation";
 import {
 	canonicalInvestmentIncentives,
 	type InvestmentIncentiveItem,
@@ -136,6 +139,8 @@ export function RetailScenario({
 		useState<EvidenceDraft>(emptyEvidenceDraft);
 	const [scenarioExportStatus, setScenarioExportStatus] = useState("");
 	const [hydrated, setHydrated] = useState(false);
+	const [shared, setShared] = useState<ScenarioParams>({});
+	const [attachment, setAttachment] = useState<ScenarioSnapshot>();
 
 	useEffect(() => {
 		const validIds = new Set(provinces.map((profile) => profile.id));
@@ -184,12 +189,33 @@ export function RetailScenario({
 			// Ignore malformed browser storage
 		}
 		const params = new URLSearchParams(window.location.search);
+		const scenario = parseScenarioParams(params);
+		setShared(scenario);
+		if (scenario.sector) {
+			const preset = sectorScenarios[scenario.sector];
+			setSector(scenario.sector);
+			setMinimums(preset.criteria.map(() => ""));
+			setWeights([...preset.defaultWeights]);
+		}
+		if (scenario.geos) {
+			const ids = [
+				...new Set(
+					scenario.geos.flatMap((geo) => {
+						const province = provinces.find(
+							(p) => p.id === geo || p.code === geo,
+						);
+						return province ? [province.id] : [];
+					}),
+				),
+			];
+			if (ids.length >= 2) setSelected(ids);
+		}
 		const fromQuery = (params.get("provinces") ?? "")
 			.split(",")
 			.map((id) => id.trim())
 			.filter((id) => validIds.has(id))
 			.slice(0, 3);
-		if (fromQuery.length > 0) {
+		if (!scenario.geos && fromQuery.length > 0) {
 			setSelected(fromQuery);
 		}
 		setHydrated(true);
@@ -312,6 +338,12 @@ export function RetailScenario({
 			}),
 	);
 	const chosen = candidates.filter((profile) => selected.includes(profile.id));
+	const scenarioSnapshot =
+		attachment?.sector === sector &&
+		attachment.provinceCodes.length === chosen.length &&
+		chosen.every((item) => attachment.provinceCodes.includes(item.code))
+			? attachment
+			: undefined;
 	const comparison = chosen.length >= 2 ? compareProfiles(chosen) : null;
 	const benchmarkIndex = chosen.findIndex(
 		(profile) => profile.id === benchmarkId,
@@ -440,6 +472,14 @@ export function RetailScenario({
 
 	return (
 		<div className="decision-flow">
+			<SiteScreeningWizard
+				provinces={provinces}
+				onCompare={(next, ids) => {
+					handleSectorChange(next);
+					setProximityKind("");
+					setSelected(ids);
+				}}
+			/>
 			{activeScenario && (
 				<nav aria-label={t("retail.stepsAria")} className="decision-steps">
 					<a href="#sector-title">{t("retail.sector")}</a>
@@ -1269,6 +1309,7 @@ export function RetailScenario({
 								geographyIds={chosen.map((profile) => profile.id)}
 								geographyLabels={chosen.map((profile) => profile.displayName)}
 								defaultSector={t(activeScenario.labelKey)}
+								scenarioSnapshot={scenarioSnapshot}
 							/>
 						</section>
 					)}
@@ -1285,6 +1326,11 @@ export function RetailScenario({
 									provinces={chosen}
 									sector={sector}
 									incentives={investmentIncentives}
+									initialScenario={shared}
+									onAttach={(snapshot) => {
+										setAttachment(snapshot);
+										document.getElementById("contact-title")?.scrollIntoView();
+									}}
 								/>
 							)}
 							<InvestmentIncentivesPanel

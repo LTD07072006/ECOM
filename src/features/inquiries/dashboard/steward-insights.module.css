@@ -1,0 +1,153 @@
+.panel {
+	display: grid;
+	gap: 1rem;
+	margin-block: 0.75rem 1.25rem;
+	padding: 1rem 1.15rem;
+	border: 1px solid var(--line);
+	border-radius: var(--radius-md);
+	background: var(--panel);
+	font-variant-numeric: tabular-nums;
+}
+
+.header {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: space-between;
+	gap: 0.5rem 1rem;
+}
+
+.header h2 {
+	margin: 0;
+	font-family: var(--font-serif);
+	font-size: 1.15rem;
+}
+
+.exportBtn {
+	padding: 0.4rem 0.8rem;
+	border: 1px solid var(--line-strong);
+	border-radius: var(--radius-sm);
+	background: var(--panel-elevated);
+	color: var(--ink);
+	font: inherit;
+	font-size: 0.82rem;
+	font-weight: 600;
+	cursor: pointer;
+	transition:
+		background-color 150ms var(--ease-out),
+		border-color 150ms var(--ease-out),
+		transform 120ms var(--ease-out);
+}
+
+.exportBtn:hover:not(:disabled) {
+	border-color: var(--teal);
+	background: var(--teal-soft);
+}
+
+.exportBtn:active:not(:disabled) {
+	transform: scale(0.98);
+}
+
+.exportBtn:disabled {
+	opacity: 0.55;
+	cursor: not-allowed;
+}
+
+.kpiGrid {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(min(100%, 9.5rem), 1fr));
+	gap: 0.65rem;
+}
+
+.kpiCard {
+	padding: 0.7rem 0.85rem;
+	border: 1px solid var(--line);
+	border-radius: var(--radius-sm);
+	background: var(--panel-elevated);
+}
+
+.kpiLabel {
+	display: block;
+	font-size: 0.76rem;
+	font-weight: 600;
+	color: var(--muted);
+}
+
+.kpiValue {
+	display: block;
+	margin-top: 0.2rem;
+	font-size: 1.2rem;
+	font-weight: 700;
+	color: var(--ink);
+}
+
+.kpiAlert {
+	color: var(--copper);
+}
+
+.breakdowns {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr));
+	gap: 0.85rem;
+}
+
+.breakdownCard {
+	padding: 0.75rem 0.9rem;
+	border: 1px solid var(--line);
+	border-radius: var(--radius-sm);
+	background: var(--panel-elevated);
+}
+
+.breakdownCard h3 {
+	margin: 0 0 0.6rem;
+	font-size: 0.88rem;
+	color: var(--ink-secondary);
+}
+
+.barList {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	display: grid;
+	gap: 0.45rem;
+}
+
+.barRow {
+	display: grid;
+	grid-template-columns: minmax(5.5rem, 1fr) minmax(4rem, 1.3fr) auto;
+	align-items: center;
+	gap: 0.5rem;
+	font-size: 0.82rem;
+}
+
+.barLabel {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.barTrack {
+	height: 8px;
+	border-radius: 999px;
+	background: var(--panel-subtle);
+	overflow: hidden;
+}
+
+.barFill {
+	display: block;
+	height: 100%;
+	border-radius: 999px;
+	background: var(--teal);
+}
+
+.barValue {
+	font-family: var(--font-mono);
+	font-size: 0.76rem;
+	color: var(--muted);
+}
+
+.emptyNote {
+	margin: 0;
+	font-size: 0.84rem;
+	color: var(--muted);
+}

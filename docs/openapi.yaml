@@ -468,6 +468,32 @@ paths:
                 geographyIds: {type: array, maxItems: 20, items: {type: string, format: uuid}}
                 consent: {const: true}
                 noticeVersion: {const: inquiry-privacy-v1}
+                scenarioSnapshot:
+                  type: object
+                  additionalProperties: false
+                  required: [advisoryOnly, provinceCodes, sector]
+                  properties:
+                    advisoryOnly: {const: true}
+                    provinceCodes:
+                      type: array
+                      minItems: 2
+                      maxItems: 3
+                      uniqueItems: true
+                      items: {type: string, pattern: '^[0-9]{2}$'}
+                    sector: {type: string, enum: [retail, manufacturing, logistics, enterprise]}
+                    districtId: {type: string, pattern: '^[a-zA-Z0-9-]{1,80}$'}
+                    costs:
+                      description: If provided, include exactly one net five-year VND estimate per province code. Null indicates an incomplete estimate.
+                      type: array
+                      minItems: 2
+                      maxItems: 3
+                      items:
+                        type: object
+                        additionalProperties: false
+                        required: [code, net]
+                        properties:
+                          code: {type: string, pattern: '^[0-9]{2}$'}
+                          net: {type: [number, 'null'], minimum: 0, maximum: 9007199254740991}
                 honeypot: {const: ''}
       responses:
         '201':

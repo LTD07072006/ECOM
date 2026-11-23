@@ -113,6 +113,13 @@
       "when": 1795403096775,
       "tag": "0015_opportunities_and_contacts",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1795438780669,
+      "tag": "0016_inquiry_scenario_snapshot",
+      "breakpoints": true
     }
   ]
 }

@@ -1,3 +1,78 @@
+.cost-print-brief {
+	display: none;
+}
+
+.cost-chart {
+	margin-inline: 0;
+	font-variant-numeric: tabular-nums;
+}
+.cost-chart svg {
+	display: block;
+	width: 100%;
+	height: auto;
+	font-family: var(--font-mono);
+	font-size: 11px;
+}
+.cost-chart ul {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.5rem 1rem;
+	padding: 0;
+	list-style: none;
+}
+.cost-chart :where(li) span {
+	display: inline-block;
+	width: 0.75em;
+	height: 0.75em;
+	margin-inline-end: 0.35em;
+}
+.site-specs {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 0.35rem;
+	font-variant-numeric: tabular-nums;
+}
+.site-specs dd {
+	margin: 0;
+}
+.site-coverage {
+	font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 479px) {
+	.site-specs {
+		grid-template-columns: minmax(0, 1fr);
+	}
+}
+
+@media print {
+	:where(.printing-cost-brief body) * {
+		visibility: hidden;
+	}
+	.printing-cost-brief body :has(.cost-print-brief) {
+		overflow: visible;
+	}
+	.printing-cost-brief
+		body
+		:has(.cost-print-brief)
+		> :not(:has(.cost-print-brief), .cost-print-brief) {
+		display: none;
+	}
+	.printing-cost-brief .cost-print-brief {
+		display: block;
+		position: static;
+		color: black;
+		background: white;
+	}
+	.printing-cost-brief .cost-print-brief,
+	.printing-cost-brief .cost-print-brief * {
+		visibility: visible;
+	}
+	.cost-print-method {
+		break-before: page;
+	}
+}
+
 .district-panel {
 	display: grid;
 	gap: 0.8rem;

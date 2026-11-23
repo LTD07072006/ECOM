@@ -1,0 +1,258 @@
+[
+  {
+    "id": "HN-IZ-HOALAC",
+    "provinceCode": "01",
+    "name": "Hoa Lac High-Tech Park (HHTP)",
+    "utilitySpecs": {
+      "totalAreaHa": 1586,
+      "availableLandHa": 220,
+      "powerCapacityMva": 189,
+      "wastewaterCapacityM3Day": 42600,
+      "leaseTermUntilYear": null,
+      "esgCertification": "Eco & Smart City Master Plan"
+    },
+    "sourceUrl": "https://hhtp.gov.vn/",
+    "sourceName": "HHTP Management Board & NSO / Hanoi Investment Portal",
+    "verifiedNote": "3x63 MVA substation config (189 MVA; internal park summary also lists 320 MW regional capacity); 42,600 m3/day Column A wastewater capacity; 50–70 year lease term policy without single fixed expiry year."
+  },
+  {
+    "id": "HN-IZ-TLIP",
+    "provinceCode": "01",
+    "name": "Thang Long Industrial Park (TLIP I)",
+    "utilitySpecs": {
+      "totalAreaHa": 302,
+      "availableLandHa": null,
+      "powerCapacityMva": null,
+      "wastewaterCapacityM3Day": 3000,
+      "leaseTermUntilYear": 2047,
+      "esgCertification": null
+    },
+    "sourceUrl": "https://hpa.hanoi.gov.vn/",
+    "sourceName": "Hanoi HPA & NSO / Sumitomo Corp Park Profiles",
+    "verifiedNote": "302 ha total (approx. 95% occupied; exact remaining ha unverified -> null); dedicated 110kV substation (exact MVA unverified for TLIP I -> null); 3,000 m3/day WWTP; operational term through 2047."
+  },
+  {
+    "id": "HN-IZ-QUANGMINH",
+    "provinceCode": "01",
+    "name": "Quang Minh I & II Industrial Park",
+    "utilitySpecs": {
+      "totalAreaHa": 344,
+      "availableLandHa": null,
+      "powerCapacityMva": null,
+      "wastewaterCapacityM3Day": 3000,
+      "leaseTermUntilYear": 2053,
+      "esgCertification": null
+    },
+    "sourceUrl": "https://roxipark.vn/",
+    "sourceName": "ROX iPark & NSO Industrial Profile",
+    "verifiedNote": "Quang Minh I spans 344 ha (Quang Minh II adds ~266 ha); 110/22 kV substation reported as 60–125+ MVA range (kept null rather than picking midpoint); 3,000 m3/day WWTP Column A; lease term to 2053."
+  },
+  {
+    "id": "HP-IZ-DEEPC",
+    "provinceCode": "31",
+    "name": "DEEP C Hai Phong I, II, III Industrial Zones",
+    "utilitySpecs": {
+      "totalAreaHa": 1700,
+      "availableLandHa": 185,
+      "powerCapacityMva": 626,
+      "wastewaterCapacityM3Day": 12000,
+      "leaseTermUntilYear": null,
+      "esgCertification": "UNIDO-GEIPP Eco-Industrial Park (83%+ compliance)"
+    },
+    "sourceUrl": "https://heza.gov.vn/",
+    "sourceName": "HEZA / DEEP C & UNIDO GEIPP Vietnam Report",
+    "verifiedNote": "1,700 ha across Hai Phong zones (DEEP C I 541 ha, III 520 ha), 185 ha ready land; 626 MVA power capacity at DEEP C Hai Phong 1; 12,000 m3/day baseline WWTP (expanding to 20,000 m3/day)."
+  },
+  {
+    "id": "HP-IZ-VSIP",
+    "provinceCode": "31",
+    "name": "VSIP Hai Phong Integrated Township & Industrial Park",
+    "utilitySpecs": {
+      "totalAreaHa": 1600,
+      "availableLandHa": null,
+      "powerCapacityMva": 200,
+      "wastewaterCapacityM3Day": 4500,
+      "leaseTermUntilYear": null,
+      "esgCertification": "Green Industrial Park Award"
+    },
+    "sourceUrl": "https://www.vsip.com.vn/",
+    "sourceName": "VSIP Group & HEZA Hai Phong",
+    "verifiedNote": "1,600 ha master footprint (500 ha industrial + 1,100 ha urban township); ~200 MVA initial substation capacity (sources cite 200–210.9 MVA); 4,500 m3/day modular WWTP."
+  },
+  {
+    "id": "HP-IZ-TRANGDUE",
+    "provinceCode": "31",
+    "name": "Trang Due I, II & III Industrial Park",
+    "utilitySpecs": {
+      "totalAreaHa": 1088,
+      "availableLandHa": null,
+      "powerCapacityMva": 126,
+      "wastewaterCapacityM3Day": 5000,
+      "leaseTermUntilYear": null,
+      "esgCertification": null
+    },
+    "sourceUrl": "https://trangdue-ip.com.vn/",
+    "sourceName": "Trang Due IP / Kinh Bac City & InvestVietnam",
+    "verifiedNote": "401 ha Phases I–II + 687 ha Phase III (1,088 ha combined); 2x63 MVA (126 MVA) baseline substations; 5,000 m3/day initial WWTP (scaling toward 8,000+ m3/day)."
+  },
+  {
+    "id": "BN-IZ-YENPHONG",
+    "provinceCode": "24",
+    "name": "Yen Phong I, Expansion & Yen Phong II-C Cluster",
+    "utilitySpecs": {
+      "totalAreaHa": 658.71,
+      "availableLandHa": null,
+      "powerCapacityMva": 693,
+      "wastewaterCapacityM3Day": 40000,
+      "leaseTermUntilYear": null,
+      "esgCertification": null
+    },
+    "sourceUrl": "https://biza.bacninh.gov.vn/",
+    "sourceName": "Viglacera / BIZA Bac Ninh & IIPMap",
+    "verifiedNote": "Yen Phong I covers 658.71 ha (entire Yen Phong + II-C cluster >1,200 ha); four 110/22kV stations totaling 11x63 MVA (693 MVA); Phases 1+2 centralized WWTP total 40,000 m3/day."
+  },
+  {
+    "id": "BN-IZ-VSIP",
+    "provinceCode": "24",
+    "name": "VSIP Bac Ninh I & II Integrated Industrial Park",
+    "utilitySpecs": {
+      "totalAreaHa": 700,
+      "availableLandHa": null,
+      "powerCapacityMva": 126,
+      "wastewaterCapacityM3Day": 17520,
+      "leaseTermUntilYear": 2057,
+      "esgCertification": null
+    },
+    "sourceUrl": "https://www.vsip.com.vn/",
+    "sourceName": "VSIP Group / TDC Vietnam & NSO Profile",
+    "verifiedNote": "VSIP Bac Ninh I is 700 ha (VSIP II adds 273 ha); dedicated 110/22kV 126 MVA station; 17,520–24,000 m3/day WWTP capacity; 50-year lease valid to 2057."
+  },
+  {
+    "id": "DN-IZ-DHTP",
+    "provinceCode": "48",
+    "name": "Da Nang High-Tech Park & Lien Chieu FTZ",
+    "utilitySpecs": {
+      "totalAreaHa": 1128.4,
+      "availableLandHa": 140,
+      "powerCapacityMva": 40,
+      "wastewaterCapacityM3Day": 18000,
+      "leaseTermUntilYear": null,
+      "esgCertification": null
+    },
+    "sourceUrl": "https://dhtp.danang.gov.vn/",
+    "sourceName": "Da Nang Hi-Tech Park Board & GCG Infra",
+    "verifiedNote": "1,128.4 ha total, 140 ha ready land; initial 40 MVA 110/22kV Hoa Lien substation (upgradeable via dual 63 MVA); 18,000 m3/day total designed WWTP capacity; 50-year project policy."
+  },
+  {
+    "id": "DN-IZ-HOAKHANH",
+    "provinceCode": "48",
+    "name": "Hoa Khanh & Lien Chieu Industrial Parks",
+    "utilitySpecs": {
+      "totalAreaHa": 394,
+      "availableLandHa": null,
+      "powerCapacityMva": 80,
+      "wastewaterCapacityM3Day": 5000,
+      "leaseTermUntilYear": 2054,
+      "esgCertification": null
+    },
+    "sourceUrl": "https://ipa.danang.gov.vn/",
+    "sourceName": "Da Nang IPA / CVR / InvestVietnam",
+    "verifiedNote": "Hoa Khanh IP covers 394 ha (683 ha combined with Lien Chieu IP); 80 MVA internal 110/22kV grid (backed by 220kV Hoa Khanh substation); 5,000 m3/day WWTP; Expanded Hoa Khanh lease valid to 2054."
+  },
+  {
+    "id": "DNA-IZ-LONGTHANH",
+    "provinceCode": "75",
+    "name": "Amata Long Thanh High-Tech IP & Loc An - Binh Son IP",
+    "utilitySpecs": {
+      "totalAreaHa": 488,
+      "availableLandHa": 115,
+      "powerCapacityMva": 126,
+      "wastewaterCapacityM3Day": 10000,
+      "leaseTermUntilYear": 2053,
+      "esgCertification": null
+    },
+    "sourceUrl": "https://diza.dongnai.gov.vn/",
+    "sourceName": "DIZA Dong Nai & Sonadezi Long Thanh (SZL)",
+    "verifiedNote": "Long Thanh IP ~488 ha (907 ha combined with Loc An - Binh Son); 115 ha available reported in combined cluster; 2x63 MVA (126 MVA); 10,000 m3/day baseline WWTP (up to 15,000–25,000 m3/day); lease to 2053."
+  },
+  {
+    "id": "DNA-IZ-NHONTRACH",
+    "provinceCode": "75",
+    "name": "Nhon Trach I–VI Mega Industrial Park Complex",
+    "utilitySpecs": {
+      "totalAreaHa": 688,
+      "availableLandHa": null,
+      "powerCapacityMva": 63,
+      "wastewaterCapacityM3Day": 14000,
+      "leaseTermUntilYear": 2058,
+      "esgCertification": null
+    },
+    "sourceUrl": "https://diza.dongnai.gov.vn/",
+    "sourceName": "DIZA Dong Nai & Cushman & Wakefield / NSO",
+    "verifiedNote": "Multi-zone complex (>2,700 ha overall); benchmark sub-zone metrics: Nhon Trach III ~688 ha & 14,000 m3/day WWTP, Nhon Trach VI 110/22kV 63 MVA substation; sub-zone lease terms run 2053–2058."
+  },
+  {
+    "id": "HCM-IZ-SHTP",
+    "provinceCode": "79",
+    "name": "Saigon Hi-Tech Park (SHTP)",
+    "utilitySpecs": {
+      "totalAreaHa": 913,
+      "availableLandHa": null,
+      "powerCapacityMva": null,
+      "wastewaterCapacityM3Day": 5000,
+      "leaseTermUntilYear": 2065,
+      "esgCertification": null
+    },
+    "sourceUrl": "https://shtp.hochiminhcity.gov.vn/",
+    "sourceName": "SHTP Management Board & HCMC Portal",
+    "verifiedNote": "913 ha total across Phases 1–2; 220kV/110kV lines without verified park-wide MVA figure -> null; 5,000 m3/day WWTP (expandable to 20,000 m3/day); lease term to 2065."
+  },
+  {
+    "id": "HCM-IZ-HIEPPHUOC",
+    "provinceCode": "79",
+    "name": "Hiep Phuoc Port-Integrated Industrial Park",
+    "utilitySpecs": {
+      "totalAreaHa": 1686,
+      "availableLandHa": null,
+      "powerCapacityMva": null,
+      "wastewaterCapacityM3Day": 12000,
+      "leaseTermUntilYear": 2058,
+      "esgCertification": null
+    },
+    "sourceUrl": "https://hepza.hochiminhcity.gov.vn/",
+    "sourceName": "HEPZA / Hiep Phuoc JSC & VIIPIP",
+    "verifiedNote": "1,686 ha across 3 phases; 2x110kV substations cited broadly as 40–80 MVA range (kept null); 12,000 m3/day baseline Standard A WWTP (expandable to 18,000); Phase 1 to 2048, Phase 2 to 2058."
+  },
+  {
+    "id": "HUE-IZ-CHANMAY",
+    "provinceCode": "46",
+    "name": "Chan May – Lang Co Economic Zone & Phu Bai IP",
+    "utilitySpecs": {
+      "totalAreaHa": 657,
+      "availableLandHa": null,
+      "powerCapacityMva": 160,
+      "wastewaterCapacityM3Day": 4900,
+      "leaseTermUntilYear": 2078,
+      "esgCertification": null
+    },
+    "sourceUrl": "https://hue.gov.vn/",
+    "sourceName": "Hue Portal / Kland & NSO Saigon-Chan May Profiles",
+    "verifiedNote": "Saigon-Chan May IP sub-zone ~657 ha within 27,108 ha Chan May-Lang Co EZ; 2x80 MVA (160 MVA) 110/22kV station; 4,900 m3/day industrial WWTP; land lease term through 2078."
+  },
+  {
+    "id": "CT-IZ-VSIP",
+    "provinceCode": "92",
+    "name": "VSIP Can Tho (Vinh Thanh) & Tra Noc I, II",
+    "utilitySpecs": {
+      "totalAreaHa": 900,
+      "availableLandHa": null,
+      "powerCapacityMva": null,
+      "wastewaterCapacityM3Day": 6000,
+      "leaseTermUntilYear": 2072,
+      "esgCertification": null
+    },
+    "sourceUrl": "https://cantho.gov.vn/",
+    "sourceName": "Can Tho Portal / RSquare & Vietnam Industrial Hub",
+    "verifiedNote": "900 ha VSIP Can Tho master plan (Phase 1: 293.7 ha); dedicated 110kV substation under development (kept null); 6,000 m3/day Module 1 WWTP (expandable 12,000); lease term valid to 2072."
+  }
+]

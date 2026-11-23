@@ -30,6 +30,40 @@ const email = z
 	.max(254)
 	.transform((value) => value.toLowerCase());
 
+export const scenarioSnapshotSchema = z
+	.strictObject({
+		advisoryOnly: z.literal(true),
+		provinceCodes: z
+			.array(z.string().regex(/^\d{2}$/))
+			.min(2)
+			.max(3)
+			.refine((codes) => new Set(codes).size === codes.length),
+		sector: z.enum(["retail", "manufacturing", "logistics", "enterprise"]),
+		districtId: z
+			.string()
+			.regex(/^[a-z0-9-]{1,80}$/i)
+			.optional(),
+		costs: z
+			.array(
+				z.strictObject({
+					code: z.string().regex(/^\d{2}$/),
+					net: z.number().min(0).max(Number.MAX_SAFE_INTEGER).nullable(),
+				}),
+			)
+			.min(2)
+			.max(3)
+			.optional(),
+	})
+	.refine(
+		({ costs, provinceCodes }) =>
+			!costs ||
+			(costs.length === provinceCodes.length &&
+				new Set(costs.map(({ code }) => code)).size === costs.length &&
+				costs.every(({ code }) => provinceCodes.includes(code))),
+	);
+
+export type ScenarioSnapshot = z.infer<typeof scenarioSnapshotSchema>;
+
 export const inquirySubmissionSchema = z
 	.strictObject({
 		email,
@@ -38,6 +72,7 @@ export const inquirySubmissionSchema = z
 		organization: optionalText(200),
 		country: optionalText(100),
 		sector: optionalText(160),
+		scenarioSnapshot: scenarioSnapshotSchema.optional(),
 		geographyIds: z
 			.array(z.string().uuid())
 			.max(20)

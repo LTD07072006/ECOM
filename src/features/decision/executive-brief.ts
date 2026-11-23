@@ -1,4 +1,25 @@
 import type { Locale } from "../../lib/i18n/locale";
+
+export function executiveCostBrief<
+	T extends {
+		province: { code: string; displayName: string };
+		estimate: { net: number } | null;
+		sensitivity: { delta: number } | null;
+	},
+>(locations: readonly T[], rentShock: number, elecShock: number) {
+	return {
+		advisoryOnly: true as const,
+		currency: "VND",
+		rentShock,
+		elecShock,
+		rows: locations.map(({ province, estimate, sensitivity }) => ({
+			code: province.code,
+			name: province.displayName,
+			net: estimate?.net ?? null,
+			delta: sensitivity?.delta ?? null,
+		})),
+	};
+}
 import type { Profile } from "../geography/types";
 import { resolveIpaContactsForInquiry } from "../inquiries/ipa-directory";
 import {

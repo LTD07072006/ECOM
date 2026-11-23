@@ -1,0 +1,1 @@
+ALTER TABLE "market_entry"."investor_inquiries" ADD COLUMN "scenario_snapshot" jsonb;

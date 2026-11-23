@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
-import type { ReleaseAction, ReleaseOverview, ReleaseRole } from "./operations";
-import { useI18n } from "../../lib/i18n/provider";
+import { type FormEvent, useState } from "react";
 import type { MessageKey } from "../../lib/i18n";
+import { useI18n } from "../../lib/i18n/provider";
+import { CoverageFreshnessMatrix } from "./CoverageFreshnessMatrix";
+import type { ReleaseAction, ReleaseOverview, ReleaseRole } from "./operations";
 
 const actionKeys: Record<ReleaseAction, MessageKey> = {
 	approve: "release.approve",
@@ -131,12 +132,22 @@ export function ReleaseDashboard() {
 		try {
 			if (body) {
 				const response = await fetch(url, { method: "POST", headers, body });
-				if (!response.ok) throw new Error((await response.json()).error);
+				if (!response.ok) {
+					const errBody = (await response.json().catch(() => null)) as {
+						error?: string;
+					} | null;
+					throw new Error(errBody?.error ?? t("release.serviceUnavailable"));
+				}
 				setAction(undefined);
 			}
 			const response = await fetch(url, { headers, cache: "no-store" });
 			if (response.status === 401) setResult(undefined);
-			if (!response.ok) throw new Error((await response.json()).error);
+			if (!response.ok) {
+				const errBody = (await response.json().catch(() => null)) as {
+					error?: string;
+				} | null;
+				throw new Error(errBody?.error ?? t("release.serviceUnavailable"));
+			}
 			setResult(await response.json());
 			setStatus(
 				body ? t("release.actionRecorded") : t("release.overviewLoaded"),
@@ -246,6 +257,7 @@ export function ReleaseDashboard() {
 							<dd>{result.data.freshness.invalidGeometry}</dd>
 						</div>
 					</dl>
+					<CoverageFreshnessMatrix datasets={result.data.datasets} />
 					<h2>{t("release.queue")}</h2>
 					{result.data.batches.length === 0 && (
 						<p>{t("release.stagePrompt")}</p>

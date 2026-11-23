@@ -22,6 +22,7 @@ import {
 } from "../decision/investment-opportunities";
 import { IndicatorTrend } from "./IndicatorTrend";
 import { DistrictPanel } from "./DistrictPanel";
+import { UtilitySpecs } from "./UtilitySpecs";
 import type { ProvinceDistrictProfile } from "../map/province-districts";
 import { useI18n } from "../../lib/i18n/provider";
 import {
@@ -203,6 +204,7 @@ export function GeoProfilePanel({
 					<strong>{pick(loc.scaleSummary)}</strong>
 				</p>
 				<p className="micro-card-highlight">{pick(loc.highlightMetric)}</p>
+				<UtilitySpecs location={loc} />
 				<p className="micro-card-fit">
 					<span>{t("micro.targetFitLabel")}:</span> {pick(loc.targetFit)}
 				</p>

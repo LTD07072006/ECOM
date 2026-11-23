@@ -1,6 +1,40 @@
 import type { MessageKey } from "./en";
 
 export const vi: Record<MessageKey, string> = {
+	"site.specs": "Thông số mặt bằng và tiện ích",
+	"site.availableLandHa": "Đất khả dụng (ha)",
+	"site.powerCapacityMva": "Công suất điện (MVA)",
+	"site.wastewaterCapacityM3Day": "Công suất xử lý nước thải (m³/ngày)",
+	"site.leaseTermRemainingYears": "Thời hạn thuê còn lại (năm)",
+	"site.esgCertification": "Chứng nhận ESG",
+	"site.catchment": "Vòng bán kính kết nối",
+	"site.delta": "Chênh lệch so với cơ sở",
+	"site.rentShock": "Điều chỉnh giá thuê",
+	"site.elecShock": "Điều chỉnh giá điện",
+	"site.chart": "Chi phí từng năm theo tỉnh (VND)",
+	"site.copy": "Sao chép liên kết kịch bản",
+	"site.shareScope":
+		"Gồm tỉnh đã chọn, diện tích và độ nhạy. Vùng lương và đơn giá chỉ được chia sẻ khi giống nhau ở mọi địa điểm.",
+	"site.prepare": "Dùng ước tính này cho yêu cầu tư vấn",
+	"site.attach": "Đính kèm kịch bản tham khảo đã chuẩn bị vào yêu cầu tư vấn",
+	"site.print": "In bản tóm tắt điều hành / PDF",
+	"site.referenceOnly":
+		"Khoảng cách đường chim bay tới các điểm tham chiếu trong danh mục; danh mục không bao phủ toàn bộ.",
+	"screen.title": "Sàng lọc địa điểm đầu tư",
+	"screen.electronics": "Điện tử",
+	"screen.run": "Sàng lọc địa điểm",
+	"screen.verified": "Khớp theo dữ liệu hiện có",
+	"screen.unknown": "Cần xác minh",
+	"screen.compare": "So sánh các tỉnh khớp hàng đầu",
+	"screen.area": "Diện tích yêu cầu (không bắt buộc)",
+	"screen.sector": "Mức phù hợp ngành",
+	"screen.infrastructure": "Hạ tầng trong bán kính 60 km",
+	"screen.region": "Vùng lương",
+	"screen.deep_port": "Cảng nước sâu",
+	"screen.international_airport": "Sân bay quốc tế",
+	"screen.expressway": "Nút giao cao tốc",
+	"screen.caveat":
+		"Mức phù hợp ngành chỉ để tham khảo. Thiếu bằng chứng không được tính là đạt.",
 	"district.tab": "Quận / Khu vực trực thuộc",
 	"district.current": "Đơn vị cấp xã hiện hành",
 	"district.advisory":

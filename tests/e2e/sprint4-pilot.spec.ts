@@ -19,7 +19,7 @@ test("mobile and reduced-motion users can use keyboard search with visible focus
 	).toBeVisible();
 	await search.fill("ha noi");
 	const place = page.getByRole("button", {
-		name: "Hà Nội province · Việt Nam",
+		name: "Hà Nội City centrally-governed city · Việt Nam",
 		exact: true,
 	});
 	await expect(place).toBeVisible();

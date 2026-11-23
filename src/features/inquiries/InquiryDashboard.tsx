@@ -1,11 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import {
-	VIETNAM_REPORT_TIME_ZONE,
-	vietnamCalendarDay,
-	vietnamDateRange,
-} from "./reporting";
 import { useI18n } from "../../lib/i18n/provider";
 import { InquiryDetailDrawer } from "./dashboard/InquiryDetailDrawer";
 import { InquiryFilters } from "./dashboard/InquiryFilters";
@@ -13,8 +8,8 @@ import { InquiryList } from "./dashboard/InquiryList";
 import { ReportingWorkspace } from "./dashboard/ReportingWorkspace";
 import { SnapshotCompare } from "./dashboard/SnapshotCompare";
 import { SnapshotHistory } from "./dashboard/SnapshotHistory";
+import { StewardInsightsPanel } from "./dashboard/StewardInsightsPanel";
 import {
-	saveCsv,
 	type GeographyOption,
 	type InquiryDetail,
 	type InquiryMetrics,
@@ -23,7 +18,13 @@ import {
 	type OperatorSession,
 	type SnapshotComparison,
 	type SnapshotRecord,
+	saveCsv,
 } from "./dashboard/types";
+import {
+	VIETNAM_REPORT_TIME_ZONE,
+	vietnamCalendarDay,
+	vietnamDateRange,
+} from "./reporting";
 
 export function InquiryDashboard() {
 	const { t } = useI18n();
@@ -639,6 +640,7 @@ export function InquiryDashboard() {
 
 			{activeTab === "inquiries" && (
 				<>
+					<StewardInsightsPanel rows={rows} metrics={metrics} />
 					<InquiryList
 						busy={busy}
 						canAuthenticate={canAuthenticate}

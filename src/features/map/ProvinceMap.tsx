@@ -18,11 +18,14 @@ import {
 	type InfrastructureLayer,
 	type StatisticalLayer,
 } from "./layers";
-import type {
-	MicroLocationPointProperties,
-	MicroZonePolygonProperties,
-	ProvinceRoadProperties,
+import {
+	curatedProvinceMicroLocations,
+	utilityKeys,
+	type MicroLocationPointProperties,
+	type MicroZonePolygonProperties,
+	type ProvinceRoadProperties,
 } from "./province-detail-locations";
+import { toCatchmentRingsGeoJson } from "./proximity";
 import { useI18n } from "../../lib/i18n/provider";
 import {
 	toDistrictBoundaryGeoJson,
@@ -34,6 +37,7 @@ const provinceSource = "provinces";
 const fillLayer = "province-fill";
 const outlineLayer = "province-outline";
 const districtSource = "selected-sub-area";
+const catchmentSource = "site-catchment";
 const streetBasemapSource = "osm-street-tiles";
 const streetBasemapLayer = "street-basemap";
 const airportLayer = "civil-airports";
@@ -64,6 +68,8 @@ export function ProvinceMap({
 	zoneFootprints = null,
 	roadNetwork = null,
 	focusedLocation = null,
+	catchment,
+	onSiteSelect,
 	district = null,
 	onResetProvince,
 }: {
@@ -83,10 +89,14 @@ export function ProvinceMap({
 	> | null;
 	roadNetwork?: FeatureCollection<LineString, ProvinceRoadProperties> | null;
 	focusedLocation?: FocusedMicroLocation | null;
+	catchment?: ReturnType<typeof toCatchmentRingsGeoJson>;
+	onSiteSelect?: (selection: FocusedMicroLocation | null) => void;
 	district?: ProvinceDistrictProfile | null;
 	onResetProvince?: () => void;
 }) {
-	const { t } = useI18n();
+	const { t, formatNumber } = useI18n();
+	const siteSelect = useRef(onSiteSelect);
+	siteSelect.current = onSiteSelect;
 	const tRef = useRef(t);
 	tRef.current = t;
 	const container = useRef<HTMLDivElement>(null);
@@ -149,6 +159,27 @@ export function ProvinceMap({
 			fit.textContent = item.targetFit;
 
 			content.append(badge, title, district, scale, highlight, fit);
+			if (item.category === "industrial_zone") {
+				const heading = document.createElement("strong");
+				heading.textContent = t("site.specs");
+				const list = document.createElement("dl");
+				list.className = "site-specs";
+				const specs = curatedProvinceMicroLocations.find(
+					({ id }) => id === item.id,
+				)?.utilitySpecs;
+				for (const key of utilityKeys) {
+					const label = document.createElement("dt");
+					const value = document.createElement("dd");
+					label.textContent = t(`site.${key}`);
+					const raw = specs?.[key];
+					value.textContent =
+						typeof raw === "number"
+							? formatNumber(raw)
+							: (raw ?? t("district.missing"));
+					list.append(label, value);
+				}
+				content.append(heading, list);
+			}
 
 			const url = typeof item.url === "string" ? safeSourceUrl(item.url) : null;
 			if (url) {
@@ -165,7 +196,7 @@ export function ProvinceMap({
 				.setDOMContent(content)
 				.addTo(view);
 		},
-		[t],
+		[t, formatNumber],
 	);
 	const openPopupRef = useRef(openMicroLocationPopup);
 	openPopupRef.current = openMicroLocationPopup;
@@ -528,6 +559,7 @@ export function ProvinceMap({
 							feature.properties as unknown as MicroLocationPointProperties;
 						const [longitude, latitude] = feature.geometry.coordinates;
 						openPopupRef.current(view, Popup, item, longitude, latitude);
+						siteSelect.current?.({ ...item, longitude, latitude });
 					});
 
 					for (const zoneLayer of [
@@ -539,6 +571,15 @@ export function ProvinceMap({
 							if (!feature) return;
 							const item =
 								feature.properties as unknown as MicroZonePolygonProperties;
+							const location = curatedProvinceMicroLocations.find(
+								({ id }) => id === item.id,
+							);
+							if (location)
+								siteSelect.current?.({
+									...item,
+									longitude: location.longitude,
+									latitude: location.latitude,
+								});
 							openPopupRef.current(
 								view,
 								Popup,
@@ -954,6 +995,31 @@ export function ProvinceMap({
 			focusedLocation.latitude,
 		);
 	}, [focusedLocation, status, openMicroLocationPopup]);
+
+	useEffect(() => {
+		const map = mapRef.current;
+		if (!map || status !== "ready") return;
+		const data = catchment ?? toCatchmentRingsGeoJson(null, []);
+		const source = map.getSource<GeoJSONSource>(catchmentSource);
+		if (source) {
+			source.setData(data);
+			return;
+		}
+		map.addSource(catchmentSource, { type: "geojson", data });
+		map.addLayer(
+			{
+				id: catchmentSource,
+				source: catchmentSource,
+				type: "line",
+				paint: {
+					"line-color": "#0d5654",
+					"line-width": 2,
+					"line-dasharray": [3, 3],
+				},
+			},
+			microLocationLayer,
+		);
+	}, [catchment, status]);
 
 	return (
 		<>

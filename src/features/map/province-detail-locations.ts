@@ -14,6 +14,7 @@ export type MicroLocationCategory =
 	| "logistics_hub";
 
 export type ProvinceMicroLocation = {
+	utilitySpecs?: UtilitySpecs;
 	id: string;
 	code: string;
 	category: MicroLocationCategory;
@@ -28,6 +29,22 @@ export type ProvinceMicroLocation = {
 	targetFit: { vi: string; en: string };
 	officialUrl: string;
 };
+
+export type UtilitySpecs = {
+	availableLandHa: number | null;
+	powerCapacityMva: number | null;
+	wastewaterCapacityM3Day: number | null;
+	leaseTermRemainingYears: number | null;
+	esgCertification: string | null;
+};
+
+export const utilityKeys = [
+	"availableLandHa",
+	"powerCapacityMva",
+	"wastewaterCapacityM3Day",
+	"leaseTermRemainingYears",
+	"esgCertification",
+] as const;
 
 export type MicroLocationPointProperties = {
 	id: string;

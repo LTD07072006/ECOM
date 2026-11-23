@@ -20,7 +20,12 @@ import {
 	toProvinceZoneFootprintsGeoJson,
 	type MicroLocationCategory,
 } from "./province-detail-locations";
-import type { ProvinceProximityMatch } from "./proximity";
+import {
+	catchmentRadii,
+	toCatchmentRingsGeoJson,
+	type CatchmentCenter,
+	type ProvinceProximityMatch,
+} from "./proximity";
 import type { ProvinceDistrictProfile } from "./province-districts";
 import type { Profile } from "../geography/types";
 import { RegionPanel, type RegionIds } from "../regions/RegionPanel";
@@ -81,6 +86,32 @@ export function MapWorkspace({ coverage }: Props) {
 		null,
 	);
 	const [regionMode, setRegionMode] = useState(false);
+	const [pickedSite, setPickedSite] = useState<FocusedMicroLocation | null>(
+		null,
+	);
+	const [radius, setRadius] = useState(0);
+	const location = focusedLocation ?? pickedSite;
+	const longitude =
+		location?.longitude ??
+		(district?.scope === "advisory" ? district.longitude : null);
+	const latitude =
+		location?.latitude ??
+		(district?.scope === "advisory" ? district.latitude : null);
+	const center = useMemo<CatchmentCenter | null>(
+		() =>
+			!regionMode && longitude !== null && latitude !== null
+				? [longitude, latitude]
+				: null,
+		[regionMode, longitude, latitude],
+	);
+	const catchment = useMemo(
+		() =>
+			toCatchmentRingsGeoJson(
+				center,
+				catchmentRadii.filter((km) => km <= radius),
+			),
+		[center, radius],
+	);
 	const [activeRegion, setActiveRegion] = useState(0);
 	const [regions, setRegions] = useState<RegionIds>([[], []]);
 	const highlightedRegions = useMemo(
@@ -123,6 +154,7 @@ export function MapWorkspace({ coverage }: Props) {
 	const openProfile = useCallback((id: string) => {
 		setDistrict(null);
 		setFocusedLocation(null);
+		setPickedSite(null);
 		pending.current?.abort();
 		const request = new AbortController();
 		pending.current = request;
@@ -365,6 +397,7 @@ export function MapWorkspace({ coverage }: Props) {
 		setProfile(null);
 		setRequestedPlace("");
 		setFocusedLocation(null);
+		setPickedSite(null);
 		setDistrict(null);
 		setDetailExpanded(false);
 	}, []);
@@ -386,6 +419,11 @@ export function MapWorkspace({ coverage }: Props) {
 					zoneFootprints={provinceMicroData?.zones ?? null}
 					roadNetwork={provinceMicroData?.roads ?? null}
 					focusedLocation={focusedLocation}
+					catchment={catchment}
+					onSiteSelect={(site) => {
+						setFocusedLocation(null);
+						setPickedSite(site);
+					}}
 					district={regionMode ? null : district}
 					onResetProvince={resetProvinceSelection}
 				/>
@@ -440,6 +478,9 @@ export function MapWorkspace({ coverage }: Props) {
 				{layers && (
 					<LayerControls
 						data={layers}
+						catchmentCenter={center}
+						catchmentRadius={radius}
+						onCatchmentRadius={setRadius}
 						layer={activeLayer}
 						setLayer={selectLayer}
 						airports={showAirports}
@@ -480,6 +521,7 @@ export function MapWorkspace({ coverage }: Props) {
 						onDetailModeChange={setDetailExpanded}
 						onDistrictSelect={(item) => {
 							setFocusedLocation(null);
+							setPickedSite(null);
 							setDistrict(item);
 						}}
 					/>

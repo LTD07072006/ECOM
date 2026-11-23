@@ -23,7 +23,10 @@ test("published Sprint 1 release is visible through the real browser data flow",
 	const search = page.getByLabel("Find a place");
 	await search.fill("ha noi");
 	await page
-		.getByRole("button", { name: "Hà Nội province · Việt Nam", exact: true })
+		.getByRole("button", {
+			name: "Hà Nội City centrally-governed city · Việt Nam",
+			exact: true,
+		})
 		.click();
 
 	const profile = page.getByTestId("geo-profile");
@@ -51,7 +54,10 @@ test("Wave 2 layer controls and comparison use published sources", async ({
 	await expect(page.getByText("22 reference points")).toBeVisible();
 	await page.getByLabel("Find a place").fill("ha noi");
 	await page
-		.getByRole("button", { name: "Hà Nội province · Việt Nam", exact: true })
+		.getByRole("button", {
+			name: "Hà Nội City centrally-governed city · Việt Nam",
+			exact: true,
+		})
 		.click();
 	await expect(page.getByTestId("geo-profile")).toContainText("Hà Nội");
 	const legend = page.getByLabel("Indicator legend");

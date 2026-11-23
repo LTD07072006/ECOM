@@ -1,0 +1,275 @@
+.roadmap {
+	display: grid;
+	gap: 1.25rem;
+	margin-block: 1.5rem 2rem;
+	padding: 1.25rem;
+	border: 1px solid var(--line);
+	border-radius: var(--radius-lg);
+	background: var(--panel);
+	box-shadow: var(--shadow-sm);
+	font-variant-numeric: tabular-nums;
+}
+
+.headerRow {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: flex-start;
+	justify-content: space-between;
+	gap: 0.75rem 1rem;
+}
+
+.titleGroup h2 {
+	margin: 0;
+	font-family: var(--font-serif);
+	font-size: 1.4rem;
+}
+
+.subtitle {
+	margin: 0.3rem 0 0;
+	color: var(--muted);
+	font-size: 0.92rem;
+}
+
+.actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.5rem;
+}
+
+.actionBtn {
+	padding: 0.45rem 0.85rem;
+	border: 1px solid var(--line-strong);
+	border-radius: var(--radius-sm);
+	background: var(--panel-elevated);
+	color: var(--ink);
+	font: inherit;
+	font-size: 0.85rem;
+	font-weight: 600;
+	cursor: pointer;
+	transition:
+		background-color 150ms var(--ease-out),
+		border-color 150ms var(--ease-out),
+		transform 120ms var(--ease-out);
+}
+
+.actionBtn:hover {
+	border-color: var(--teal);
+	background: var(--teal-soft);
+}
+
+.actionBtn:active {
+	transform: scale(0.98);
+}
+
+.trackGrid {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(min(100%, 13rem), 1fr));
+	gap: 0.65rem;
+}
+
+.trackBtn {
+	display: grid;
+	gap: 0.25rem;
+	text-align: start;
+	padding: 0.75rem 0.85rem;
+	border: 1px solid var(--line);
+	border-radius: var(--radius-md);
+	background: var(--panel-elevated);
+	color: var(--ink);
+	font: inherit;
+	cursor: pointer;
+	transition:
+		border-color 150ms var(--ease-out),
+		background-color 150ms var(--ease-out),
+		transform 120ms var(--ease-out);
+}
+
+.trackBtn:hover {
+	border-color: var(--teal);
+}
+
+.trackBtn:active {
+	transform: scale(0.98);
+}
+
+.trackBtnActive {
+	border-color: var(--teal);
+	background: var(--teal-soft);
+	box-shadow: inset 0 0 0 1px var(--teal);
+}
+
+.trackTitle {
+	font-size: 0.9rem;
+	font-weight: 700;
+	color: var(--ink);
+}
+
+.trackNote {
+	margin: 0;
+	font-size: 0.85rem;
+	color: var(--ink-secondary);
+	padding: 0.65rem 0.85rem;
+	border-left: 3px solid var(--teal);
+	background: var(--panel-elevated);
+	border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+}
+
+.kpiStrip {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(min(100%, 10.5rem), 1fr));
+	gap: 0.65rem;
+}
+
+.kpiCard {
+	padding: 0.75rem 0.9rem;
+	border: 1px solid var(--line);
+	border-radius: var(--radius-md);
+	background: var(--panel-elevated);
+}
+
+.kpiLabel {
+	display: block;
+	font-size: 0.78rem;
+	font-weight: 600;
+	color: var(--muted);
+	text-transform: uppercase;
+	letter-spacing: 0.03em;
+}
+
+.kpiValue {
+	display: block;
+	margin-top: 0.2rem;
+	font-size: 1.25rem;
+	font-weight: 700;
+	color: var(--ink);
+}
+
+.progressTrack {
+	height: 7px;
+	width: 100%;
+	border-radius: 999px;
+	background: var(--panel-subtle);
+	overflow: hidden;
+}
+
+.progressFill {
+	height: 100%;
+	background: var(--teal);
+	transition: width 240ms var(--ease-out);
+}
+
+.stepList {
+	display: grid;
+	gap: 0.75rem;
+	list-style: none;
+	margin: 0;
+	padding: 0;
+}
+
+.stepCard {
+	padding: 0.9rem 1rem;
+	border: 1px solid var(--line);
+	border-radius: var(--radius-md);
+	background: var(--panel-elevated);
+	display: grid;
+	gap: 0.55rem;
+}
+
+.stepCardDone {
+	border-color: rgba(13, 86, 84, 0.35);
+	background: rgba(13, 86, 84, 0.035);
+}
+
+.stepTop {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: space-between;
+	gap: 0.5rem 1rem;
+}
+
+.checkLabel {
+	display: inline-flex;
+	align-items: flex-start;
+	gap: 0.6rem;
+	font-weight: 700;
+	font-size: 0.98rem;
+	color: var(--ink);
+	cursor: pointer;
+}
+
+.checkLabel input {
+	margin-top: 0.22rem;
+	width: 1.05rem;
+	height: 1.05rem;
+	accent-color: var(--teal);
+}
+
+.slaBadge {
+	font-family: var(--font-mono);
+	font-size: 0.78rem;
+	font-weight: 600;
+	padding: 0.2rem 0.55rem;
+	border-radius: 999px;
+	background: var(--copper-soft);
+	color: var(--copper);
+	white-space: nowrap;
+}
+
+.metaRow {
+	font-size: 0.85rem;
+	color: var(--ink-secondary);
+	margin: 0;
+}
+
+.docsDetails {
+	font-size: 0.85rem;
+}
+
+.docsDetails summary {
+	cursor: pointer;
+	font-weight: 600;
+	color: var(--teal);
+}
+
+.docsDetails ul {
+	margin: 0.45rem 0 0.25rem;
+	padding-left: 1.25rem;
+	display: grid;
+	gap: 0.25rem;
+}
+
+.legalMeta {
+	font-family: var(--font-mono);
+	font-size: 0.76rem;
+	color: var(--muted);
+	margin: 0;
+}
+
+.disclaimer {
+	margin: 0;
+	font-size: 0.8rem;
+	color: var(--muted);
+}
+
+@media (max-width: 480px) {
+	.roadmap {
+		padding: 0.9rem;
+	}
+	.stepCard {
+		padding: 0.75rem;
+	}
+}
+
+@media print {
+	.actions,
+	.trackGrid {
+		display: none;
+	}
+	.roadmap {
+		box-shadow: none;
+		border: 1px solid #888;
+		background: #fff;
+		break-inside: avoid;
+	}
+}

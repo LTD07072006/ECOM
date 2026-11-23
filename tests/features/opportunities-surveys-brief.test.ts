@@ -7,7 +7,10 @@ import {
 } from "../../src/app/api/internal/surveys/route";
 import { GET as getOpportunities } from "../../src/app/api/opportunities/route";
 import { demoCatalog } from "../../src/db/seed-data";
-import { buildExecutiveBriefMarkdown } from "../../src/features/decision/executive-brief";
+import {
+	buildExecutiveBriefMarkdown,
+	executiveCostBrief,
+} from "../../src/features/decision/executive-brief";
 import {
 	canonicalInvestmentOpportunities,
 	filterOpportunities,
@@ -335,4 +338,31 @@ test("levelLabel and formalPlaceName distinguish Vietnam's 6 centrally-governed 
 	expect(formalPlaceName("vi", hcmc)).toBe("Thành phố Hồ Chí Minh");
 	expect(formalPlaceName("vi", bacNinh)).toBe("Tỉnh Bắc Ninh");
 	expect(formalPlaceName("en", bacNinh)).toBe("Bắc Ninh Province");
+});
+test("print brief preserves missing estimates and explicit zero deltas", () => {
+	const brief = executiveCostBrief(
+		[
+			{
+				province: { code: "24", displayName: "Bắc Ninh" },
+				estimate: null,
+				sensitivity: null,
+			},
+			{
+				province: { code: "31", displayName: "Hải Phòng" },
+				estimate: { net: 100 },
+				sensitivity: { delta: 0 },
+			},
+		],
+		-5,
+		10,
+	);
+	expect(brief).toMatchObject({
+		advisoryOnly: true,
+		rentShock: -5,
+		elecShock: 10,
+		rows: [
+			{ net: null, delta: null },
+			{ net: 100, delta: 0 },
+		],
+	});
 });

@@ -1,5 +1,8 @@
 import { expect, test } from "bun:test";
-import { estimateFiveYears } from "../../src/features/decision/capex-opex";
+import {
+	estimateFiveYears,
+	estimateSensitivity,
+} from "../../src/features/decision/capex-opex";
 
 const assumptions = {
 	areaM2: 100,
@@ -13,6 +16,18 @@ const assumptions = {
 	upfront: 500,
 	baselineCit: 0.2,
 };
+
+test("annual cash costs reconcile and shocks affect the selected inputs", () => {
+	const result = estimateFiveYears(assumptions);
+	expect(result?.yearlyBreakdown).toHaveLength(5);
+	expect(
+		result?.yearlyBreakdown.reduce((sum, year) => sum + year.totalNet, 0),
+	).toBeCloseTo(result?.net ?? NaN);
+	expect(estimateSensitivity(assumptions, {}, 20, -10)?.delta).toBeCloseTo(
+		-2000,
+	);
+	expect(estimateSensitivity(assumptions, {}, 25, 0)).toBeNull();
+});
 
 test("uses five years of costs, converts MWh, and applies only the selected scenario", () => {
 	const result = estimateFiveYears(assumptions, {

@@ -56,7 +56,11 @@ test("investor can search, open a profile, inspect provenance, and save shortlis
 
 	const search = page.getByLabel("Find a place");
 	await search.fill("ha noi");
-	await page.getByRole("button", { name: "Hà Nội province · Vietnam" }).click();
+	await page
+		.getByRole("button", {
+			name: "Hà Nội City centrally-governed city · Vietnam",
+		})
+		.click();
 
 	await expect(page.getByTestId("geo-profile")).toContainText("Hà Nội");
 	await expect(page.getByTestId("geo-profile")).toContainText(
@@ -81,7 +85,10 @@ test("Sprint 2 saves two places, compares, downloads and synchronizes removal", 
 	const search = page.getByLabel("Find a place");
 	await search.fill("ha noi");
 	await page
-		.getByRole("button", { name: "Hà Nội province · Vietnam", exact: true })
+		.getByRole("button", {
+			name: "Hà Nội City centrally-governed city · Vietnam",
+			exact: true,
+		})
 		.click();
 	await expect(page.getByTestId("geo-profile")).toContainText("people/km²");
 	await page
@@ -89,7 +96,10 @@ test("Sprint 2 saves two places, compares, downloads and synchronizes removal", 
 		.click();
 	await search.fill("hai phong");
 	await page
-		.getByRole("button", { name: "Hải Phòng province · Vietnam", exact: true })
+		.getByRole("button", {
+			name: "Hải Phòng City centrally-governed city · Vietnam",
+			exact: true,
+		})
 		.click();
 	await page
 		.getByRole("button", { name: "Save to shortlist", exact: true })

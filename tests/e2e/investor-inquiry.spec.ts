@@ -24,13 +24,18 @@ test("visitor can open Hanoi inquiry form and receive a reference code", async (
 			/^\/api\/geographies\/[^/]+$/.test(new URL(response.url()).pathname),
 		),
 		page
-			.getByRole("button", { name: "Hà Nội province · Việt Nam", exact: true })
+			.getByRole("button", {
+				name: "Hà Nội City centrally-governed city · Việt Nam",
+				exact: true,
+			})
 			.click(),
 	]);
 	expect(profileResponse.ok()).toBe(true);
 
 	const profile = page.getByTestId("geo-profile");
-	await expect(profile.getByRole("heading", { name: "Hà Nội" })).toBeVisible();
+	await expect(
+		profile.getByRole("heading", { name: "Hà Nội City" }),
+	).toBeVisible();
 	await profile
 		.getByText("Request investment support", { exact: true })
 		.click();
@@ -152,7 +157,9 @@ test("reports preview the selected week, download stored CSV, and compare compat
 	const search = page.getByLabel("Tìm địa bàn theo tên");
 	await search.fill("Hà Nội");
 	await search.press("Enter");
-	await page.getByRole("button", { name: /^Hà Nội · tỉnh/ }).click();
+	await page
+		.getByRole("button", { name: /^Hà Nội · thành phố trực thuộc trung ương/ })
+		.click();
 	await expect(page.getByRole("button", { name: "Bỏ Hà Nội" })).toBeVisible();
 
 	const preview = page.getByRole("region", { name: "Xem trước báo cáo" });

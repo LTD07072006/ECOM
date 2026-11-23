@@ -94,10 +94,10 @@ export async function createInquiry(
 			>`
         insert into market_entry.investor_inquiries
           (reference_code, email, message, name, organization, country, sector,
-           geography_ids, provenance, status, retention_at, created_at, updated_at)
+           geography_ids, provenance, scenario_snapshot, status, retention_at, created_at, updated_at)
         values (${referenceFor(now)}, ${submission.email}, ${submission.message}, ${submission.name ?? null},
           ${submission.organization ?? null}, ${submission.country ?? null}, ${submission.sector ?? null},
-          ${submission.geographyIds}::uuid[], ${tx.json(provenance)}, 'new',
+          ${submission.geographyIds}::uuid[], ${tx.json(provenance)}, ${submission.scenarioSnapshot ? tx.json(submission.scenarioSnapshot) : null}, 'new',
           (${now}::timestamptz at time zone 'UTC' + interval '1 year') at time zone 'UTC', ${now}, ${now})
         on conflict (reference_code) do nothing
         returning inquiry_id, reference_code
@@ -363,7 +363,7 @@ export async function cleanupExpiredInquiries(apply = false, now = new Date()) {
 		const rows = await tx<{ inquiry_id: string }[]>`
       update market_entry.investor_inquiries
       set email = null, message = null, name = null, organization = null,
-          country = null, sector = null, anonymized_at = ${now}, updated_at = ${now}
+          country = null, sector = null, scenario_snapshot = null, anonymized_at = ${now}, updated_at = ${now}
       where retention_at <= ${now} and anonymized_at is null
       returning inquiry_id
     `;

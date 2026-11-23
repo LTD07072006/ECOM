@@ -1,3 +1,4 @@
+import { InvestorLicensingRoadmap } from "../../features/guide/InvestorLicensingRoadmap";
 import { getI18n } from "../../lib/i18n/server";
 
 export default async function InvestorGuidePage() {
@@ -14,6 +15,7 @@ export default async function InvestorGuidePage() {
 				<li>{t("guide.step4")}</li>
 				<li>{t("guide.step5")}</li>
 			</ol>
+			<InvestorLicensingRoadmap />
 			<p>
 				<a href="/">{t("guide.explore")}</a>
 			</p>
