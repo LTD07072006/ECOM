@@ -15,8 +15,10 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function InternalInquiriesPage() {
 	const { t } = await getI18n();
 	return (
-		<main className="internal-page inquiry-page">
-			<h1>{t("meta.adminInquiriesTitle")}</h1>
+		<main id="main-content" className="internal-page" tabIndex={-1}>
+			<header className="internal-page-header">
+				<h1>{t("meta.adminInquiriesTitle")}</h1>
+			</header>
 			<InquiryDashboard />
 		</main>
 	);

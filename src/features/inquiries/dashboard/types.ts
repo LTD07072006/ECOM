@@ -109,6 +109,25 @@ export const closeReasons: Array<{ value: string; key: MessageKey }> = [
 	{ value: "resolved", key: "admin.reasonResolved" },
 ];
 
+const auditActionKeys: Record<string, MessageKey> = {
+	submitted: "admin.auditAction.submitted",
+	note_added: "admin.auditAction.noteAdded",
+	status_changed: "admin.auditAction.statusChanged",
+	anonymized: "admin.auditAction.anonymized",
+	viewed_detail: "admin.auditAction.viewedDetail",
+	exported_live_csv: "admin.auditAction.exportedLiveCsv",
+	created: "admin.auditAction.created",
+	exported: "admin.auditAction.exported",
+};
+
+export function formatAuditAction(
+	action: string,
+	t: (key: MessageKey) => string,
+): string {
+	const key = auditActionKeys[action];
+	return key ? t(key) : action;
+}
+
 export function saveCsv(blob: Blob, filename: string) {
 	const url = URL.createObjectURL(blob);
 	const link = document.createElement("a");

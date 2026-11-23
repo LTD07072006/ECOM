@@ -17,12 +17,14 @@ import {
 import type { MessageKey } from "../../lib/i18n";
 
 function DatasetDetails({ dataset }: { dataset: DatasetMetadata }) {
-	const { t } = useI18n();
+	const { t, formatDate } = useI18n();
 	return (
 		<dl className="dataset-details">
 			<div>
 				<dt>{t("profile.dataset")}</dt>
-				<dd>{dataset.version}</dd>
+				<dd>
+					{dataset.code} · {dataset.version}
+				</dd>
 			</div>
 			<div>
 				<dt>{t("profile.owner")}</dt>
@@ -30,11 +32,11 @@ function DatasetDetails({ dataset }: { dataset: DatasetMetadata }) {
 			</div>
 			<div>
 				<dt>{t("profile.dataAsOf")}</dt>
-				<dd>{dataset.dataAsOf}</dd>
+				<dd>{formatDate(dataset.dataAsOf)}</dd>
 			</div>
 			<div>
 				<dt>{t("profile.reviewDue")}</dt>
-				<dd>{dataset.reviewDueAt.slice(0, 10)}</dd>
+				<dd>{formatDate(dataset.reviewDueAt)}</dd>
 			</div>
 			<div>
 				<dt>{t("profile.status")}</dt>
@@ -56,7 +58,7 @@ export function GeoProfilePanel({
 	profile: Profile;
 	infrastructure?: ProvinceInfrastructureItem[];
 }) {
-	const { t, locale, formatNumber } = useI18n();
+	const { t, locale, formatNumber, formatDate } = useI18n();
 	const industrialParks = infrastructure.filter(
 		(item) => item.kind === "industrial_park",
 	);
@@ -79,16 +81,16 @@ export function GeoProfilePanel({
 		<article className="profile-panel" data-testid="geo-profile">
 			<div className="profile-heading">
 				<div>
-					<span className="map-label">{levelLabel(locale, profile.level)}</span>
+					<span className="status-badge status-badge--info">
+						{levelLabel(locale, profile.level)}
+					</span>
 					<h2>{profile.displayName}</h2>
-					<p>
-						{profile.parentName ?? t("common.vietnam")} ·{" "}
-						{profile.geographyVersion}
-					</p>
+					<p>{profile.parentName ?? t("common.vietnam")}</p>
 				</div>
 				<span className="profile-code">{profile.code}</span>
 			</div>
 			<p className="muted">{t("profile.contextOnly")}</p>
+			<p className="muted">{t("profile.defaultQualityNote")}</p>
 			<details className="inquiry-entry">
 				<summary>{t("profile.requestSupport")}</summary>
 				<InquiryForm
@@ -129,7 +131,17 @@ export function GeoProfilePanel({
 											observation.label,
 										)}
 									</strong>
-									<span>{qualityLabel(locale, observation.quality)}</span>
+									{observation.quality !== "supported" && (
+										<span
+											className={`status-badge ${
+												observation.quality === "verified"
+													? "status-badge--success"
+													: "status-badge--warning"
+											}`}
+										>
+											{qualityLabel(locale, observation.quality)}
+										</span>
+									)}
 								</div>
 								<div className="observation-value">
 									{observation.value === null ? (
@@ -161,7 +173,8 @@ export function GeoProfilePanel({
 										<div>
 											<dt>{t("profile.period")}</dt>
 											<dd>
-												{observation.periodStart} – {observation.periodEnd}
+												{formatDate(observation.periodStart)} –{" "}
+												{formatDate(observation.periodEnd)}
 											</dd>
 										</div>
 										<div>
@@ -173,7 +186,7 @@ export function GeoProfilePanel({
 										</div>
 										<div>
 											<dt>{t("profile.updated")}</dt>
-											<dd>{observation.source.updatedAt}</dd>
+											<dd>{formatDate(observation.source.updatedAt)}</dd>
 										</div>
 										<div>
 											<dt>{t("profile.datasetVersion")}</dt>

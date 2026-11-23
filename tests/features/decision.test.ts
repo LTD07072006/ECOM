@@ -7,6 +7,7 @@ import {
 	calculateSectorScore,
 	criteria,
 	sectorScenarios,
+	twoWayShare,
 	validateCustomerEvidence,
 	type CriterionDefinition,
 	type Evidence,
@@ -294,4 +295,13 @@ test("exports decision scenario as provenance-rich JSON and formula-safe CSV (EC
 	expect(csv).toContain("'=1+1 Urban shoppers");
 	expect(csv).toContain("'@SUM(1,2) Omnichannel hypothesis");
 	expect(csv).toContain("RETAIL_TOTAL");
+});
+
+test("computes two-way proportional share only for finite strictly positive values", () => {
+	expect(twoWayShare(100, 300)).toEqual([25, 75]);
+	expect(twoWayShare(1, 2)).toEqual([33, 67]);
+	expect(twoWayShare(-2, 8)).toBeNull();
+	expect(twoWayShare(0, 5)).toBeNull();
+	expect(twoWayShare(Number.NaN, 1)).toBeNull();
+	expect(twoWayShare(Number.POSITIVE_INFINITY, 1)).toBeNull();
 });

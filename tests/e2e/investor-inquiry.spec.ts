@@ -213,7 +213,9 @@ test("reports preview the selected week, download stored CSV, and compare compat
 	expect(csv).not.toContain("reports-e2e@example.test");
 	await openSavedReport();
 	await expect(
-		detail.getByText(/^exported · (steward|[a-zA-Z0-9._-]+-steward)/),
+		detail.getByText(
+			/^(Đã xuất CSV|Đã xuất CSV trực tiếp) · (steward|[a-zA-Z0-9._-]+-steward)/,
+		),
 	).toBeVisible();
 
 	const comparison = detail.getByRole("combobox", {
@@ -303,13 +305,13 @@ test("steward dashboard refreshes the inquiry list, detail, and audit after savi
 	const load = page.getByRole("button", { name: "Tải danh sách" });
 	await load.click();
 
-	const list = page.getByRole("list", { name: "Danh sách yêu cầu" });
+	const list = page.getByRole("table", { name: "Danh sách yêu cầu" });
 	const reference = list.getByRole("button", {
 		name: referenceCode,
 		exact: true,
 	});
-	const row = list.getByRole("listitem").filter({ hasText: referenceCode });
-	await expect(row).toContainText(" · Mới · ");
+	const row = list.getByRole("row").filter({ hasText: referenceCode });
+	await expect(row).toContainText("Mới");
 	const [download] = await Promise.all([
 		page.waitForEvent("download"),
 		page.getByRole("button", { name: "Tải CSV an toàn" }).click(),
@@ -331,9 +333,9 @@ test("steward dashboard refreshes the inquiry list, detail, and audit after savi
 	const save = detail.getByRole("button", { name: "Lưu cập nhật" });
 	await save.click();
 	await expect(
-		detail.getByText(/note_added.*Note saved without changing status/),
+		detail.getByText(/Đã thêm ghi chú.*Note saved without changing status/),
 	).toBeVisible();
-	await expect(row).toContainText(" · Mới · ");
+	await expect(row).toContainText("Mới");
 
 	await detail
 		.getByRole("combobox", { name: "Cập nhật trạng thái", exact: true })
@@ -343,9 +345,9 @@ test("steward dashboard refreshes the inquiry list, detail, and audit after savi
 		detail.getByText("Trạng thái: Đã liên hệ", { exact: true }),
 	).toBeVisible();
 	await expect(
-		detail.getByText(/status_changed.*Mới → Đã liên hệ/),
+		detail.getByText(/Đổi trạng thái.*Mới → Đã liên hệ/),
 	).toBeVisible();
-	await expect(row).toContainText(" · Đã liên hệ · ");
+	await expect(row).toContainText("Đã liên hệ");
 
 	await page
 		.getByRole("combobox", { name: "Trạng thái", exact: true })

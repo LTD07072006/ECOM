@@ -1,3 +1,6 @@
+export const SHORTLIST_LIMIT = 20;
+export const COMPARISON_LIMIT = 3;
+
 const uuidPattern =
 	/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -12,7 +15,7 @@ export function readShortlist(raw: string | null): string[] {
 								typeof id === "string" && uuidPattern.test(id),
 						),
 					),
-				].slice(0, 20)
+				].slice(0, SHORTLIST_LIMIT)
 			: [];
 	} catch {
 		return [];
@@ -23,7 +26,7 @@ export function toggleShortlist(ids: string[], id: string): string[] {
 	const unique = [...new Set(ids)];
 	return unique.includes(id)
 		? unique.filter((value) => value !== id)
-		: [...unique, id].slice(0, 20);
+		: [...unique, id].slice(0, SHORTLIST_LIMIT);
 }
 
 export function removeFromShortlist(ids: string[], id: string): string[] {
@@ -31,5 +34,5 @@ export function removeFromShortlist(ids: string[], id: string): string[] {
 }
 
 export function selectForComparison(ids: string[]): string[] {
-	return [...new Set(ids)].slice(0, 3);
+	return [...new Set(ids)].slice(0, COMPARISON_LIMIT);
 }

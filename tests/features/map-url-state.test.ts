@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
 import {
+	BOUNDARIES_LAYER,
 	compareQuery,
 	mapStateQuery,
 	parseLayerId,
@@ -55,6 +56,8 @@ test("omits empty state and keeps numbers unformatted", () => {
 
 test("rejects layer identifiers that are not six-part tuples of short strings", () => {
 	expect(parseLayerId(layerId)).toBe(layerId);
+	expect(parseLayerId(BOUNDARIES_LAYER)).toBe(BOUNDARIES_LAYER);
+	expect(parseLayerId("boundaries-other")).toBe("");
 	expect(parseLayerId(null)).toBe("");
 	expect(parseLayerId("not-json")).toBe("");
 	expect(parseLayerId(JSON.stringify(["a", "b"]))).toBe("");
@@ -65,6 +68,15 @@ test("rejects layer identifiers that are not six-part tuples of short strings", 
 	expect(
 		parseLayerId(JSON.stringify(["a", "b", "c", "d", "e", "f"])).length,
 	).toBeGreaterThan(0);
+
+	const boundariesQuery = mapStateQuery({
+		layer: BOUNDARIES_LAYER,
+		province: "",
+		filter: { min: null, max: null },
+		airports: false,
+	});
+	expect(boundariesQuery).toBe("layer=boundaries");
+	expect(readMapState(`?${boundariesQuery}`).layer).toBe(BOUNDARIES_LAYER);
 });
 
 test("ignores malformed province ids and non-numeric bounds", () => {

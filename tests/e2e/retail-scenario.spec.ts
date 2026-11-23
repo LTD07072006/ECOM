@@ -57,9 +57,9 @@ test("retail scenario filters and compares provinces before explaining why scori
 	await expect(
 		page.getByText("No customer needs study is available", { exact: false }),
 	).toBeVisible();
-	await page
-		.getByRole("button", { name: "Assess evidence and calculate" })
-		.click();
+	await expect(
+		page.getByRole("button", { name: "Assess evidence and calculate" }),
+	).toBeDisabled();
 	await expect(page.getByText("Assessment unavailable")).toBeVisible();
 	await expect(
 		page.getByText("Customer needs evidence with a segment", { exact: false }),

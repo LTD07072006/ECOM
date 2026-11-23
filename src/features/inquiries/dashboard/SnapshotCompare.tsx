@@ -22,18 +22,18 @@ export function SnapshotCompare({ comparison, geographyNames }: Props) {
 			<h2>{t("reports.comparisonTitle")}</h2>
 			{comparison.compatible ? (
 				<div
-					className="inquiry-report-scroll"
+					className="data-table-wrap"
 					role="region"
 					aria-label={t("reports.tableCompareAria")}
 					// biome-ignore lint/a11y/noNoninteractiveTabindex: vùng bảng cuộn phải focus được bằng bàn phím (WCAG 2.1.1)
 					tabIndex={0}
 				>
-					<table>
+					<table className="data-table">
 						<thead>
 							<tr>
 								<th scope="col">{t("reports.metricCol")}</th>
 								{[comparison.left, comparison.right].map((item) => (
-									<th scope="col" key={item.snapshotId}>
+									<th scope="col" className="num" key={item.snapshotId}>
 										{formatReportPeriod(
 											{
 												period_start: item.periodStart,
@@ -44,7 +44,9 @@ export function SnapshotCompare({ comparison, geographyNames }: Props) {
 										)}
 									</th>
 								))}
-								<th scope="col">{t("reports.deltaCol")}</th>
+								<th scope="col" className="num">
+									{t("reports.deltaCol")}
+								</th>
 							</tr>
 						</thead>
 						<tbody>
@@ -73,9 +75,9 @@ export function SnapshotCompare({ comparison, geographyNames }: Props) {
 							].map((row) => (
 								<tr key={row.label}>
 									<th scope="row">{row.label}</th>
-									<td>{row.left}</td>
-									<td>{row.right}</td>
-									<td>
+									<td className="num">{row.left}</td>
+									<td className="num">{row.right}</td>
+									<td className="num">
 										{row.delta > 0 ? "+" : ""}
 										{row.delta}
 									</td>

@@ -103,7 +103,6 @@ export const en = {
 	"meta.releaseTitle": "Release operations",
 	"meta.adminInquiriesTitle": "Investor inquiries",
 
-	"home.eyebrow": "Invest in Vietnam",
 	"home.title": "Vietnam Market Intelligence",
 	"home.lede":
 		"Explore verified context, places, and investment signals across Vietnam — starting with the map.",
@@ -240,7 +239,6 @@ export const en = {
 	"shortlist.storageError": "Browser storage is unavailable.",
 
 	"comparison.aria": "Place comparison",
-	"comparison.eyebrow": "SIDE BY SIDE",
 	"comparison.title": "Compare context",
 	"comparison.note":
 		"Context only. Values are shown as published; no ranking or recommendation is calculated.",
@@ -272,7 +270,7 @@ export const en = {
 	"inquiry.country": "Country",
 	"inquiry.sector": "Sector",
 	"inquiry.privacyBefore":
-		"Stewards use your details to review and respond to this inquiry. It is due for anonymization 12 months after the last update. See the",
+		"Reviewers use your details to respond to this inquiry. It is due for anonymization 12 months after the last update. See the",
 	"inquiry.privacyLink": "inquiry privacy notice (opens in a new tab)",
 	"inquiry.privacyAfter": "for the privacy contact and your options.",
 	"inquiry.consent": "I consent to the use of my data to handle this inquiry.",
@@ -281,7 +279,7 @@ export const en = {
 	"inquiry.sending": "Sending…",
 	"inquiry.received": "Your request has been received.",
 	"inquiry.reference": "Reference code: {code}",
-	"inquiry.keepCode": "Keep this code when communicating with the steward.",
+	"inquiry.keepCode": "Keep this code when following up on your request.",
 	"inquiry.errorDefault": "Unable to submit your request.",
 	"inquiry.errorNetwork":
 		"The request could not be sent. Check your connection and try again.",
@@ -292,16 +290,16 @@ export const en = {
 		"{controller} is responsible for inquiry data. Contact",
 	"privacy.controllerAfter": ".",
 	"privacy.noContact":
-		"This installation has no configured privacy contact. Use synthetic inquiries for local testing.",
+		"Privacy contact details have not been published for this environment yet.",
 	"privacy.purposeTitle": "Purpose and consent",
 	"privacy.purposeBody":
 		"We use your email, message, selected places and any optional details you provide to review your request and respond to you. If email notifications are enabled, confirmation emails are sent through the email service provider disclosed by the operator. By selecting the consent box and sending the form, you agree to this use. The form records the notice version and submission time.",
 	"privacy.retentionTitle": "Access and retention",
 	"privacy.retentionBody":
-		"Authorized stewards can read your inquiry and record its handling. The inquiry is due for anonymization 12 months after its last steward update or submission, whichever is later, and no later than 24 months after submission. Aggregate activity and audit timestamps can be kept for reporting. Backup copies expire under the operator’s backup schedule.",
+		"Authorized reviewers can read your inquiry and record its handling. The inquiry is due for anonymization 12 months after its last team update or submission, whichever is later, and no later than 24 months after submission. Aggregate activity and audit timestamps can be kept for reporting. Backup copies expire under the operator’s backup schedule.",
 	"privacy.requestsTitle": "Privacy requests",
 	"privacy.requestsBody":
-		"Use the privacy contact above to request access, correction or deletion, or to withdraw your consent. Include your inquiry reference code if available. Authorized stewards can anonymize your inquiry upon an erasure request or withdrawal of consent, and withdrawing consent stops further processing. Please avoid sending sensitive documents or credentials.",
+		"Use the privacy contact above to request access, correction or deletion, or to withdraw your consent. Include your inquiry reference code if available. Authorized staff can anonymize your inquiry upon an erasure request or withdrawal of consent, and withdrawing consent stops further processing. Please avoid sending sensitive documents or credentials.",
 
 	"decision.title": "Explore a retail market",
 	"decision.lede":
@@ -676,7 +674,7 @@ export const en = {
 	"retail.whatIfHeading":
 		"Exploratory contextual comparison — NOT an official score",
 	"retail.whatIfDisclaimer":
-		"This preview applies your weights to comparable published context indicators for side-by-side exploration only. It does not satisfy T04 customer evidence or T05 official scoring eligibility.",
+		"This preview applies your weights to comparable published context indicators for side-by-side exploration only. It does not replace published customer needs evidence or formal weighted scoring eligibility.",
 	"retail.whatIfIneligible":
 		"Indicators not approved for official scoring: {labels}.",
 
@@ -756,8 +754,8 @@ export const en = {
 	"legal.exportCsv": "Export checklist (CSV)",
 	"legal.exported": "Exported {sector} advisory checklist as {format}.",
 
-	"comparison.period": "Cohort period",
-	"comparison.latestCommon": "Latest common cohort",
+	"comparison.period": "Reference period",
+	"comparison.latestCommon": "Latest shared period",
 	"search.period": "Period",
 	"search.quality": "Quality",
 	"search.allQuality": "All verified/supported",
@@ -788,6 +786,80 @@ export const en = {
 		"Supported: derived or reconciled from official releases (shown with softer map fill opacity).",
 	"layers.qualityUnavailableNote":
 		"Unavailable: no published figure for this province (distinct from zero).",
+
+	"common.skipToMain": "Skip to main content",
+	"common.undo": "Undo",
+	"common.confirm": "Confirm",
+	"nav.mainAria": "Primary navigation",
+	"nav.map": "Provincial Map",
+	"nav.investorGuide": "Investor Guide",
+	"nav.requestSupport": "Request Support",
+	"notFound.title": "Page not found",
+	"notFound.body": "The page you requested does not exist or may have moved.",
+	"error.title": "Something went wrong",
+	"error.body":
+		"An unexpected error interrupted this page. Try reloading or return to the provincial map.",
+	"error.retry": "Try again",
+	"layers.familyAria": "Indicator groups",
+	"layers.family.population": "Population",
+	"layers.family.economy": "Economy",
+	"layers.family.investment": "Investment",
+	"layers.family.workforce": "Workforce",
+	"map.railAria": "Province index and selection rail",
+	"map.provinceListAria": "All 34 provinces ordered north to south",
+	"map.provinceListHeader": "Provinces north to south ({count})",
+	"search.foundOne": "1 place found.",
+	"search.noneHint":
+		"Try a province name, such as Hanoi, Ho Chi Minh City, or Da Nang.",
+	"profile.defaultQualityNote":
+		"All figures below are published from official sources unless otherwise noted.",
+	"layers.boundariesLegendSummary":
+		"{count} provinces · outlines only, no indicator colouring",
+	"layers.sourceDetails": "Source details",
+	"comparison.capacity": "{count} / {max} compared",
+	"region.clearedNotice": "Regions cleared.",
+	"decision.confirmReset": "Confirm reset",
+	"decision.filterProvinces": "Filter provinces",
+	"decision.loadShortlist": "Load from saved shortlist ({count})",
+	"retail.whatIfTwoProvinceNote":
+		"Min-max scoring with only two provinces forces a binary 100 vs 0 split. Add a third province for a weighted composite score; raw ratios are shown below.",
+	"retail.whatIfRatioCol": "Proportional share",
+	"retail.lowerIsBetter": "Lower is better",
+	"guide.glossaryTitle": "Key terms and methodology",
+	"guide.termVerifiedBody":
+		"From an authoritative source, with complete metadata, and checked.",
+	"guide.termSupportedBody":
+		"Has a source or method but with limitations; it may be modelled or not fully checked.",
+	"guide.termUnavailableBody":
+		"No data, not permitted for use, incompatible, or missing required metadata. It is never shown as zero.",
+	"guide.termGrdpTitle": "GRDP",
+	"guide.termGrdpBody":
+		"Gross Regional Domestic Product — provincial economic output. Each published figure states its own unit and whether it is measured at current or comparable prices.",
+	"guide.termIrcErcTitle": "IRC / ERC",
+	"guide.termIrcPrefix":
+		"Investment Registration Certificate (IRC): issued under the ",
+	"guide.termIrcMid":
+		" for projects subject to investment registration. Enterprise Registration Certificate (ERC): issued under the ",
+	"guide.termIrcSuffix":
+		" when an enterprise is established. Whether a project needs either depends on the investor and structure; confirm with the competent authority.",
+	"guide.termCatalogTitle": "Administrative catalog",
+	"guide.termCatalogBody":
+		"The 34 provincial administrative units and component communes published in the current reference release.",
+	"admin.auditAction.submitted": "Submitted",
+	"admin.auditAction.noteAdded": "Note added",
+	"admin.auditAction.statusChanged": "Status changed",
+	"admin.auditAction.anonymized": "Anonymized",
+	"admin.auditAction.viewedDetail": "Viewed detail",
+	"admin.auditAction.exportedLiveCsv": "Exported live CSV",
+	"admin.auditAction.created": "Created",
+	"admin.auditAction.exported": "Exported CSV",
+	"release.statusPublished": "Published",
+	"release.statusApproved": "Approved",
+	"release.statusStaged": "Staged",
+	"release.fourEyesTitle": "Dual-control verification",
+	"release.fourEyesApprovedBy": "Approved by {actor}",
+	"release.fourEyesNeedsApproval": "Awaiting independent reviewer approval",
+	"release.fourEyesPublishedBy": "Published by {actor}",
 } as const;
 
 export type MessageKey = keyof typeof en;

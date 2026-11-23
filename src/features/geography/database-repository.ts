@@ -2,7 +2,7 @@ import type postgres from "postgres";
 import type { MultiPolygon, Polygon } from "geojson";
 import { databasePool } from "../../db/pool";
 import { safeSourceUrl } from "../../lib/source-url";
-import { normalizeSearch } from "./domain";
+import { searchTerms } from "./domain";
 import type {
 	Catalog,
 	DatasetMetadata,
@@ -650,9 +650,20 @@ export type SearchGeographiesResult = {
 export async function searchDatabaseGeographies(
 	options: DatabaseSearchOptions,
 ): Promise<SearchGeographiesResult> {
-	const normalized = options.query ? normalizeSearch(options.query) : "";
-	const pattern = normalized ? `%${escapeLike(normalized)}%` : null;
-	const exactCode = normalized || null;
+	const terms = options.query ? searchTerms(options.query).slice(0, 2) : [];
+	const primary = terms[0] ?? "";
+	const secondary = terms[1] ?? "";
+	const primaryCompact = primary.replace(/\s+/g, "");
+	const secondaryCompact = secondary.replace(/\s+/g, "");
+	const pattern = primary ? `%${escapeLike(primary)}%` : null;
+	const compactPattern = primaryCompact
+		? `%${escapeLike(primaryCompact)}%`
+		: null;
+	const secondaryPattern = secondary ? `%${escapeLike(secondary)}%` : null;
+	const secondaryCompactPattern = secondaryCompact
+		? `%${escapeLike(secondaryCompact)}%`
+		: null;
+	const exactCode = primary || null;
 	const level = options.level ?? null;
 	const limit = Math.min(Math.max(options.limit ?? 50, 1), 50);
 	const hasNumericFilter = Boolean(
@@ -746,7 +757,20 @@ export async function searchDatabaseGeographies(
         and geo.valid_from <= current_date
         and (geo.valid_to is null or geo.valid_to >= current_date)
         and (${level}::text is null or geo.level = ${level}::text)
-        and (${pattern}::text is null or geo.normalized_name ilike ${pattern} escape '\\' or geo.admin_code ilike ${pattern} escape '\\')
+        and (
+          ${pattern}::text is null
+          or geo.normalized_name ilike ${pattern} escape '\\'
+          or replace(geo.normalized_name, ' ', '') ilike ${compactPattern} escape '\\'
+          or geo.admin_code ilike ${pattern} escape '\\'
+          or (
+            ${secondaryPattern}::text is not null
+            and (
+              geo.normalized_name ilike ${secondaryPattern} escape '\\'
+              or replace(geo.normalized_name, ' ', '') ilike ${secondaryCompactPattern} escape '\\'
+              or geo.admin_code ilike ${secondaryPattern} escape '\\'
+            )
+          )
+        )
         and (${indicatorCode}::text is null or exists (select 1 from filtered_obs fo where fo.geo_id = geo.geo_id))
       order by
         case when ${exactCode}::text is not null and lower(geo.admin_code) = ${exactCode} then 0 else 1 end,

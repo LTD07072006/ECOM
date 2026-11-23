@@ -51,7 +51,7 @@ test("steward can anonymize an inquiry by privacy request with a ticket referenc
 	await page.getByLabel("Lĩnh vực", { exact: true }).fill(sector);
 	await page.getByRole("button", { name: "Tải danh sách" }).click();
 
-	const list = page.getByRole("list", { name: "Danh sách yêu cầu" });
+	const list = page.getByRole("table", { name: "Danh sách yêu cầu" });
 	await list.getByRole("button", { name: referenceCode, exact: true }).click();
 
 	const detail = page.getByRole("article").filter({
@@ -86,5 +86,5 @@ test("steward can anonymize an inquiry by privacy request with a ticket referenc
 	await expect(detail).not.toContainText(email);
 	await expect(detail).not.toContainText(message);
 	await expect(privacySection).toHaveCount(0);
-	await expect(detail.getByText(/anonymized · /)).toBeVisible();
+	await expect(detail.getByText(/Đã ẩn danh · /)).toBeVisible();
 });

@@ -2,6 +2,7 @@
 
 import { useI18n } from "../../../lib/i18n/provider";
 import {
+	formatAuditAction,
 	formatFilterSummary,
 	formatReportPeriod,
 	type SnapshotRecord,
@@ -45,10 +46,11 @@ export function SnapshotHistory({
 	return (
 		<>
 			<section aria-label={t("reports.history")}>
-				<div className="inquiry-report-actions">
+				<div className="action-row action-row--split">
 					<h2>{t("reports.history")}</h2>
 					<button
 						type="button"
+						className="btn btn-secondary btn-sm"
 						disabled={busy || !canAuthenticate}
 						onClick={onRefreshHistory}
 					>
@@ -57,19 +59,21 @@ export function SnapshotHistory({
 				</div>
 				{snapshots.length > 0 ? (
 					<div
-						className="inquiry-report-scroll"
+						className="data-table-wrap"
 						role="region"
 						aria-label={t("reports.tableAria")}
 						// biome-ignore lint/a11y/noNoninteractiveTabindex: vùng bảng cuộn phải focus được bằng bàn phím (WCAG 2.1.1)
 						tabIndex={0}
 					>
-						<table>
+						<table className="data-table">
 							<thead>
 								<tr>
 									<th scope="col">{t("reports.periodCol")}</th>
 									<th scope="col">{t("reports.typeCol")}</th>
 									<th scope="col">{t("reports.createdCol")}</th>
-									<th scope="col">{t("reports.totalCol")}</th>
+									<th scope="col" className="num">
+										{t("reports.totalCol")}
+									</th>
 									<th scope="col">{t("reports.csvCol")}</th>
 								</tr>
 							</thead>
@@ -82,6 +86,7 @@ export function SnapshotHistory({
 										<th scope="row">
 											<button
 												type="button"
+												className="btn btn-quiet btn-sm"
 												disabled={busy}
 												onClick={() => onOpenSnapshot(snapshot.snapshot_id)}
 											>
@@ -100,10 +105,11 @@ export function SnapshotHistory({
 												true,
 											)}
 										</td>
-										<td>{snapshot.metrics.total}</td>
+										<td className="num">{snapshot.metrics.total}</td>
 										<td>
 											<button
 												type="button"
+												className="btn btn-secondary btn-sm"
 												disabled={busy}
 												onClick={() => onExportSnapshot(snapshot.snapshot_id)}
 											>
@@ -116,7 +122,7 @@ export function SnapshotHistory({
 						</table>
 					</div>
 				) : (
-					<p>
+					<p className="muted">
 						{snapshotsLoaded ? t("reports.noReports") : t("reports.tokenFirst")}
 					</p>
 				)}
@@ -151,6 +157,7 @@ export function SnapshotHistory({
 								<dd>
 									<button
 										type="button"
+										className="btn btn-quiet btn-sm"
 										disabled={busy}
 										onClick={() => {
 											if (selectedSnapshot.corrects_snapshot_id)
@@ -163,13 +170,19 @@ export function SnapshotHistory({
 							</>
 						)}
 					</dl>
-					<div className="inquiry-report-actions">
-						<button type="button" disabled={busy} onClick={onCreateCorrection}>
+					<div className="action-row">
+						<button
+							type="button"
+							className="btn btn-secondary btn-sm"
+							disabled={busy}
+							onClick={onCreateCorrection}
+						>
 							{t("reports.createCorrection")}
 						</button>
-						<label>
+						<label className="form-field">
 							{t("reports.compareWith")}
 							<select
+								className="control-select"
 								value={compareId}
 								disabled={busy}
 								onChange={(event) => onCompareIdChange(event.target.value)}
@@ -201,6 +214,7 @@ export function SnapshotHistory({
 						</label>
 						<button
 							type="button"
+							className="btn btn-primary btn-sm"
 							disabled={!compareId || busy}
 							onClick={onCompareSnapshot}
 						>
@@ -208,10 +222,13 @@ export function SnapshotHistory({
 						</button>
 					</div>
 					<h3>{t("reports.auditLog")}</h3>
-					<ol>
+					<ol className="inquiry-audit-list">
 						{(selectedSnapshot.audit ?? []).map((event) => (
 							<li key={event.event_id}>
-								{event.action} · {event.actor} ·{" "}
+								<span className="status-badge">
+									{formatAuditAction(event.action, t)}
+								</span>{" "}
+								· {event.actor} ·{" "}
 								{reportDate(
 									event.happened_at,
 									selectedSnapshot.time_zone,
