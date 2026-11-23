@@ -25,6 +25,7 @@ export function SnapshotCompare({ comparison, geographyNames }: Props) {
 					className="inquiry-report-scroll"
 					role="region"
 					aria-label={t("reports.tableCompareAria")}
+					// biome-ignore lint/a11y/noNoninteractiveTabindex: vùng bảng cuộn phải focus được bằng bàn phím (WCAG 2.1.1)
 					tabIndex={0}
 				>
 					<table>
