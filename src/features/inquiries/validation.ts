@@ -51,6 +51,18 @@ export const inquirySubmissionSchema = z
 		({ honeypot: _honeypot, consent: _consent, ...submission }) => submission,
 	);
 
+export const inquiryReferencePattern = /^INQ-\d{4}-[A-F0-9]{8}$/;
+
+export const erasureReasons = ["erasure_request", "consent_withdrawn"] as const;
+export type InquiryErasureReason = (typeof erasureReasons)[number];
+
+export const inquiryTicketPattern = /^[A-Za-z0-9._:#/-]{3,64}$/;
+
+export const inquiryErasureSchema = z.strictObject({
+	reason: z.enum(erasureReasons),
+	ticket: z.string().trim().regex(inquiryTicketPattern),
+});
+
 export const inquiryStatusLookupSchema = z.strictObject({
 	referenceCode: z
 		.string()
@@ -59,7 +71,7 @@ export const inquiryStatusLookupSchema = z.strictObject({
 		.pipe(
 			z
 				.string()
-				.regex(/^INQ-\d{4}-[A-F0-9]{8}$/, "Invalid inquiry reference code."),
+				.regex(inquiryReferencePattern, "Invalid inquiry reference code."),
 		),
 	email,
 });

@@ -1,16 +1,16 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import type { SearchNumericFilterSummary } from "../geography/database-repository";
-import type { Profile, Geography } from "../geography/types";
-import { indicatorGroups } from "../map/layers";
-import { useI18n } from "../../lib/i18n/provider";
 import {
 	indicatorLabel,
 	levelLabel,
 	qualityLabel,
 	unitLabel,
 } from "../../lib/i18n/data-labels";
+import { useI18n } from "../../lib/i18n/provider";
+import type { SearchNumericFilterSummary } from "../geography/database-repository";
+import type { Geography, Profile } from "../geography/types";
+import { indicatorGroups } from "../map/layers";
 
 const searchableIndicators = Object.keys(indicatorGroups);
 
@@ -131,9 +131,12 @@ export function GeoSearch({
 		selection.current = controller;
 		setStatus(t("search.loadingProfile"));
 		try {
-			const response = await fetch(`/api/geographies/${place.id}`, {
-				signal: controller.signal,
-			});
+			const response = await fetch(
+				`/api/geographies/${encodeURIComponent(place.id)}`,
+				{
+					signal: controller.signal,
+				},
+			);
 			if (!response.ok) throw new Error();
 			const body: { data: Profile } = await response.json();
 			if (controller.signal.aborted) return;

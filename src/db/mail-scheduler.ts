@@ -20,15 +20,18 @@ const errorBackoffMs = parseInterval(
 let stopping = false;
 let activeChild: ChildProcess | null = null;
 
-function handleSignal() {
+function handleSignal(signal: NodeJS.Signals) {
 	stopping = true;
 	if (!activeChild) {
 		process.exit(0);
 	}
+	if (activeChild.exitCode === null && activeChild.signalCode === null) {
+		activeChild.kill(signal);
+	}
 }
 
-process.on("SIGINT", handleSignal);
-process.on("SIGTERM", handleSignal);
+process.on("SIGINT", () => handleSignal("SIGINT"));
+process.on("SIGTERM", () => handleSignal("SIGTERM"));
 
 async function runFlush() {
 	return new Promise<number>((resolve) => {

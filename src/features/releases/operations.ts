@@ -278,7 +278,7 @@ export async function applyReleaseAction(
       join market_entry.dataset_versions dataset using (dataset_version_id)
       join market_entry.source_registry source using (source_id)
       where member.batch_id = ${id}
-      order by dataset.dataset_version_id for update of dataset, source
+      order by dataset.dataset_version_id for update of dataset
     `;
 
 		const datasets = await readDatasets(tx, id);
@@ -313,6 +313,16 @@ export async function applyReleaseAction(
 						status: 409,
 						message: "Reviewer approval is required before publication.",
 					};
+				if (
+					batch.audit.some(
+						(event) => event.action === "approve" && event.actor === actor,
+					)
+				) {
+					return {
+						status: 403,
+						message: "The approving reviewer cannot publish the same batch.",
+					};
+				}
 				const [geography] = await tx<
 					{ id: string; status: string; ready: boolean }[]
 				>`

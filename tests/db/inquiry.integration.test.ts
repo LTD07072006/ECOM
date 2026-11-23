@@ -1,10 +1,10 @@
 import { expect, test } from "bun:test";
 import { POST as submitInquiry } from "../../src/app/api/inquiries/route";
-import { GET as listInquiries } from "../../src/app/api/internal/inquiries/route";
 import {
 	GET as getInquiry,
 	PATCH as updateInquiry,
 } from "../../src/app/api/internal/inquiries/[referenceCode]/route";
+import { GET as listInquiries } from "../../src/app/api/internal/inquiries/route";
 import { databasePool } from "../../src/db/pool";
 import { loadDatabaseCatalog } from "../../src/features/geography/database-repository";
 import { INQUIRY_NOTICE_VERSION } from "../../src/features/inquiries/privacy";
@@ -237,7 +237,7 @@ databaseTest(
 		if (!found) throw new Error("Expected inquiry record");
 		const updated = found.inquiry;
 		expect(updated.retention_at.getUTCFullYear()).toBe(
-			updated.updated_at.getUTCFullYear() + 1,
+			updated.created_at.getUTCFullYear() + 2,
 		);
 		await sql`update market_entry.investor_inquiries set retention_at = '2020-12-01' where reference_code = ${referenceCode}`;
 		const runAt = new Date("2021-01-01T00:00:00Z");
@@ -321,7 +321,6 @@ databaseTest(
 		});
 		await updateRecord(referenceCode, { note: "Synthetic personal note." });
 		await sql`update market_entry.investor_inquiries set retention_at = '2020-01-01' where reference_code = ${referenceCode}`;
-		await sql`insert into market_entry.inquiry_retention_runs (status, started_at, finished_at) values ('failed', now(), now())`;
 		const command = (argument: string) =>
 			Bun.spawn(
 				[process.execPath, "run", "src/db/cleanup-inquiries.ts", argument],
@@ -332,6 +331,23 @@ databaseTest(
 					signal: AbortSignal.timeout(20_000),
 				},
 			).exited;
+		await sql`delete from market_entry.inquiry_retention_runs`;
+		expect(await command("--monitor")).toBe(1);
+		await sql`
+      insert into market_entry.inquiry_retention_runs (status, started_at, finished_at)
+      values
+        ('succeeded', now() - interval '1 hour', now() - interval '1 hour'),
+        ('running', now() - interval '5 seconds', null)
+    `;
+		expect(await command("--monitor")).toBe(0);
+		await sql`
+      update market_entry.inquiry_retention_runs
+      set started_at = now() - interval '30 minutes'
+      where status = 'running'
+    `;
+		expect(await command("--monitor")).toBe(1);
+		await sql`delete from market_entry.inquiry_retention_runs where status = 'running'`;
+		await sql`insert into market_entry.inquiry_retention_runs (status, started_at, finished_at) values ('failed', now(), now())`;
 		expect(await command("--monitor")).toBe(1);
 		expect(await command("--apply")).toBe(0);
 		expect(await command("--monitor")).toBe(0);

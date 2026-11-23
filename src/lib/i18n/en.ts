@@ -295,13 +295,13 @@ export const en = {
 		"This installation has no configured privacy contact. Use synthetic inquiries for local testing.",
 	"privacy.purposeTitle": "Purpose and consent",
 	"privacy.purposeBody":
-		"We use your email, message, selected places and any optional details you provide to review your request and respond to you. By selecting the consent box and sending the form, you agree to this use. The form records the notice version and submission time.",
+		"We use your email, message, selected places and any optional details you provide to review your request and respond to you. If email notifications are enabled, confirmation emails are sent through the email service provider disclosed by the operator. By selecting the consent box and sending the form, you agree to this use. The form records the notice version and submission time.",
 	"privacy.retentionTitle": "Access and retention",
 	"privacy.retentionBody":
-		"Authorized stewards can read your inquiry and record its handling. The inquiry is due for anonymization 12 months after its last steward update or submission, whichever is later. Aggregate activity and audit timestamps can be kept for reporting. Backup copies expire under the operator’s backup schedule.",
+		"Authorized stewards can read your inquiry and record its handling. The inquiry is due for anonymization 12 months after its last steward update or submission, whichever is later, and no later than 24 months after submission. Aggregate activity and audit timestamps can be kept for reporting. Backup copies expire under the operator’s backup schedule.",
 	"privacy.requestsTitle": "Privacy requests",
 	"privacy.requestsBody":
-		"Use the privacy contact above to request access, correction or deletion, or to withdraw your consent. Include your inquiry reference code if available. Please avoid sending sensitive documents or credentials.",
+		"Use the privacy contact above to request access, correction or deletion, or to withdraw your consent. Include your inquiry reference code if available. Authorized stewards can anonymize your inquiry upon an erasure request or withdrawal of consent, and withdrawing consent stops further processing. Please avoid sending sensitive documents or credentials.",
 
 	"decision.title": "Explore a retail market",
 	"decision.lede":
@@ -446,6 +446,15 @@ export const en = {
 	"admin.reasonResolved": "Resolved",
 	"admin.internalNote": "Internal note",
 	"admin.saveUpdate": "Save update",
+	"admin.erasureTitle": "Privacy request",
+	"admin.erasureReason": "Reason",
+	"admin.erasureReasonRequest": "Erasure request",
+	"admin.erasureReasonConsent": "Consent withdrawn",
+	"admin.erasureTicket": "Ticket reference",
+	"admin.erasureTicketPlaceholder": "DSAR-2026-001",
+	"admin.erasureSubmit": "Anonymize personal data",
+	"admin.erasureConfirm":
+		"Anonymize personal data for {code} ({reason}, ticket {ticket})? This cannot be undone.",
 	"admin.auditHistory": "Audit history",
 	"admin.notice.loading": "Loading inquiries…",
 	"admin.notice.loaded": "Inquiries loaded.",
@@ -456,6 +465,8 @@ export const en = {
 	"admin.notice.loadingDetail": "Loading inquiry…",
 	"admin.notice.saving": "Saving inquiry…",
 	"admin.notice.saved": "Inquiry updated.",
+	"admin.notice.erasing": "Anonymizing personal data…",
+	"admin.notice.erased": "Personal data anonymized and audited.",
 	"admin.notice.stale":
 		"The update was saved. Load inquiries to refresh the dashboard.",
 	"admin.notice.searching": "Searching geographies…",
@@ -463,6 +474,7 @@ export const en = {
 	"admin.error.load": "Unable to load inquiries.",
 	"admin.error.detail": "Unable to load inquiry.",
 	"admin.error.update": "Unable to update inquiry.",
+	"admin.error.erasure": "Unable to process privacy erasure.",
 	"admin.error.export": "Unable to export inquiries.",
 	"admin.error.search": "Unable to search geographies.",
 	"admin.error.generic": "Unable to complete the inquiry operation.",

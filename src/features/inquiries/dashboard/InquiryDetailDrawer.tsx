@@ -1,12 +1,13 @@
 "use client";
 
 import { useI18n } from "../../../lib/i18n/provider";
+import type { InquiryErasureReason } from "../validation";
 import { inquiryAgeHours, isInquirySlaOverdue } from "./sla";
 import {
 	closeReasons,
 	formatStatusLabel,
-	statusOptions,
 	type InquiryDetail,
+	statusOptions,
 } from "./types";
 
 type Props = {
@@ -15,12 +16,18 @@ type Props = {
 	nextStatus: string;
 	closeReason: string;
 	note: string;
+	erasureReason: InquiryErasureReason;
+	erasureTicket: string;
 	needsCloseReason: boolean;
 	canSave: boolean;
+	canErase: boolean;
 	onNextStatusChange: (value: string) => void;
 	onCloseReasonChange: (value: string) => void;
 	onNoteChange: (value: string) => void;
+	onErasureReasonChange: (value: InquiryErasureReason) => void;
+	onErasureTicketChange: (value: string) => void;
 	onSave: () => void;
+	onErase: () => void;
 };
 
 export function InquiryDetailDrawer({
@@ -29,12 +36,18 @@ export function InquiryDetailDrawer({
 	nextStatus,
 	closeReason,
 	note,
+	erasureReason,
+	erasureTicket,
 	needsCloseReason,
 	canSave,
+	canErase,
 	onNextStatusChange,
 	onCloseReasonChange,
 	onNoteChange,
+	onErasureReasonChange,
+	onErasureTicketChange,
 	onSave,
+	onErase,
 }: Props) {
 	const { t } = useI18n();
 	const overdue = isInquirySlaOverdue({
@@ -120,11 +133,51 @@ export function InquiryDetailDrawer({
 			<button type="button" disabled={busy || !canSave} onClick={onSave}>
 				{t("admin.saveUpdate")}
 			</button>
+			{!selected.inquiry.anonymized_at && (
+				<section
+					className="inquiry-erasure"
+					aria-label={t("admin.erasureTitle")}
+				>
+					<h3>{t("admin.erasureTitle")}</h3>
+					<label>
+						{t("admin.erasureReason")}
+						<select
+							value={erasureReason}
+							disabled={busy}
+							onChange={(event) =>
+								onErasureReasonChange(
+									event.target.value as InquiryErasureReason,
+								)
+							}
+						>
+							<option value="erasure_request">
+								{t("admin.erasureReasonRequest")}
+							</option>
+							<option value="consent_withdrawn">
+								{t("admin.erasureReasonConsent")}
+							</option>
+						</select>
+					</label>
+					<label>
+						{t("admin.erasureTicket")}
+						<input
+							value={erasureTicket}
+							disabled={busy}
+							placeholder={t("admin.erasureTicketPlaceholder")}
+							maxLength={64}
+							onChange={(event) => onErasureTicketChange(event.target.value)}
+						/>
+					</label>
+					<button type="button" disabled={busy || !canErase} onClick={onErase}>
+						{t("admin.erasureSubmit")}
+					</button>
+				</section>
+			)}
 			<h3>{t("admin.auditHistory")}</h3>
 			<ol>
 				{selected.audit.map((event, index) => (
 					<li key={`${event.happened_at}-${index}`}>
-						{event.action}
+						{event.action} · {event.actor}
 						{event.from_status
 							? `: ${formatStatusLabel(event.from_status, t)} → ${formatStatusLabel(event.to_status ?? "", t)}`
 							: ""}

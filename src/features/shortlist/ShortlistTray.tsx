@@ -1,16 +1,16 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import type { Geography } from "../geography/types";
-import {
-	removeFromShortlist,
-	readShortlist,
-	selectForComparison,
-} from "./store";
+import { useI18n } from "../../lib/i18n/provider";
 import { ComparisonPanel } from "../comparison/ComparisonPanel";
+import type { Geography } from "../geography/types";
 import { InquiryForm } from "../inquiries/InquiryForm";
 import { readCompareIds } from "../map/url-state";
-import { useI18n } from "../../lib/i18n/provider";
+import {
+	readShortlist,
+	removeFromShortlist,
+	selectForComparison,
+} from "./store";
 
 function syncCompareUrl(ids: string[] | null) {
 	if (typeof window === "undefined") return;
@@ -70,9 +70,12 @@ export function ShortlistTray() {
 		setError(null);
 		if (!ids.length) return;
 		const controller = new AbortController();
-		fetch(`/api/geographies/batch?ids=${encodeURIComponent(ids.join(","))}`, {
-			signal: controller.signal,
-		})
+		fetch(
+			`/api/geographies/batch?ids=${ids.map((id) => encodeURIComponent(id)).join(",")}`,
+			{
+				signal: controller.signal,
+			},
+		)
 			.then(async (response) => {
 				if (response.status === 404) {
 					return { places: [] as Geography[], someMissing: true };
@@ -124,7 +127,7 @@ export function ShortlistTray() {
 		setError(null);
 		try {
 			const response = await fetch(
-				`/api/geographies/export?ids=${ids.join(",")}&format=${format}`,
+				`/api/geographies/export?ids=${ids.map((id) => encodeURIComponent(id)).join(",")}&format=${format}`,
 			);
 			if (!response.ok) {
 				const body = (await response.json().catch(() => null)) as {

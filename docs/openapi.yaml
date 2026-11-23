@@ -328,6 +328,7 @@ paths:
             application/json:
               schema: {type: object}
         '304': {description: Not modified when If-None-Match matches the current boundary release ETag.}
+        '429': {$ref: '#/components/responses/TooManyRequests'}
         '503': {$ref: '#/components/responses/Unavailable'}
   /api/map/layers:
     get:
@@ -339,6 +340,7 @@ paths:
             application/json:
               schema: {type: object}
         '304': {description: Not modified when If-None-Match matches the current layers ETag.}
+        '429': {$ref: '#/components/responses/TooManyRequests'}
         '503': {$ref: '#/components/responses/Unavailable'}
   /api/inquiries:
     post:
@@ -359,7 +361,7 @@ paths:
                 sector: {type: string, maxLength: 160}
                 geographyIds: {type: array, maxItems: 20, items: {type: string, format: uuid}}
                 consent: {const: true}
-                noticeVersion: {const: inquiry-privacy-v1}
+                noticeVersion: {const: inquiry-privacy-v2}
                 honeypot: {const: ''}
       responses:
         '201':
@@ -367,7 +369,11 @@ paths:
           content:
             application/json:
               schema: {$ref: '#/components/schemas/InquiryCreatedResponse'}
-        '400': {$ref: '#/components/responses/BadRequest'}
+        '400':
+          description: Request validation failed, unexpected query parameters, or one or more selected places are no longer available.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ErrorResponse'}
         '413': {description: Request exceeds the 64 KB byte limit.}
         '415': {description: Unsupported Content-Type (application/json required).}
         '429': {$ref: '#/components/responses/TooManyRequests'}
@@ -442,7 +448,7 @@ paths:
         - {name: reference, in: query, schema: {type: string, maxLength: 32}}
         - {name: from, in: query, schema: {type: string, format: date-time}}
         - {name: to, in: query, schema: {type: string, format: date-time}}
-        - {name: geographyIds, in: query, schema: {type: string}}
+        - {name: geographyIds, in: query, schema: {type: string}, description: Comma-separated unique UUIDs (max 20).}
         - {name: page, in: query, schema: {type: integer, minimum: 1}}
         - {name: pageSize, in: query, schema: {type: integer, minimum: 1, maximum: 100}}
         - {name: limit, in: query, schema: {type: integer, minimum: 1, maximum: 100}}
@@ -458,9 +464,11 @@ paths:
         '400': {$ref: '#/components/responses/BadRequest'}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '413': {description: Matching inquiry count exceeds synchronous CSV limit (5,000 rows).}
+        '429': {$ref: '#/components/responses/TooManyRequests'}
+        '503': {$ref: '#/components/responses/Unavailable'}
   /api/internal/inquiries/{referenceCode}:
     parameters:
-      - {name: referenceCode, in: path, required: true, schema: {type: string}}
+      - {name: referenceCode, in: path, required: true, schema: {type: string, pattern: '^INQ-\d{4}-[A-F0-9]{8}$'}}
     get:
       summary: Steward inquiry detail and audit history
       security: [{operatorToken: []}, {cookieAuth: []}]
@@ -470,8 +478,15 @@ paths:
           content:
             application/json:
               schema: {type: object}
+        '400': {$ref: '#/components/responses/BadRequest'}
         '401': {$ref: '#/components/responses/Unauthorized'}
-        '404': {$ref: '#/components/responses/NotFound'}
+        '404':
+          description: Inquiry was not found or the reference code format is invalid.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ErrorResponse'}
+        '429': {$ref: '#/components/responses/TooManyRequests'}
+        '503': {$ref: '#/components/responses/Unavailable'}
     patch:
       summary: Record status transition or internal note
       security: [{operatorToken: []}, {cookieAuth: []}]
@@ -493,8 +508,52 @@ paths:
               schema: {type: object}
         '400': {$ref: '#/components/responses/BadRequest'}
         '401': {$ref: '#/components/responses/Unauthorized'}
-        '409': {description: Invalid status transition.}
+        '404':
+          description: Inquiry was not found or the reference code format is invalid.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ErrorResponse'}
+        '409': {description: Invalid status transition or note on anonymized inquiry.}
         '413': {description: Request body exceeds 32 KB.}
+        '415': {description: Unsupported Content-Type (application/json required).}
+        '429': {$ref: '#/components/responses/TooManyRequests'}
+        '503': {$ref: '#/components/responses/Unavailable'}
+  /api/internal/inquiries/{referenceCode}/erasure:
+    parameters:
+      - {name: referenceCode, in: path, required: true, schema: {type: string, pattern: '^INQ-\d{4}-[A-F0-9]{8}$'}}
+    post:
+      summary: Anonymize personal data for an inquiry upon erasure request or consent withdrawal
+      security: [{operatorToken: []}, {cookieAuth: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [reason, ticket]
+              properties:
+                reason: {type: string, enum: [erasure_request, consent_withdrawn]}
+                ticket: {type: string, pattern: '^[A-Za-z0-9._:#/-]{3,64}$'}
+      responses:
+        '200':
+          description: Inquiry anonymized (or already anonymized, idempotent) and audited.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [erased, referenceCode, alreadyAnonymized]
+                properties:
+                  erased: {type: boolean}
+                  referenceCode: {type: string}
+                  alreadyAnonymized: {type: boolean}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '413': {description: Request body exceeds 2 KB.}
+        '415': {description: Unsupported Content-Type (application/json required).}
+        '429': {$ref: '#/components/responses/TooManyRequests'}
+        '503': {$ref: '#/components/responses/Unavailable'}
   /api/internal/inquiries/snapshots:
     get:
       summary: List stored immutable report snapshots
@@ -515,6 +574,7 @@ paths:
           application/json:
             schema:
               type: object
+              additionalProperties: false
               required: [periodStart, periodEnd, filters]
               properties:
                 periodStart: {type: string, format: date-time}
@@ -524,6 +584,7 @@ paths:
                 preview: {type: boolean}
                 filters:
                   type: object
+                  additionalProperties: false
                   properties:
                     status: {type: string, enum: [new, contacted, qualified, closed]}
                     country: {type: string}
@@ -531,7 +592,7 @@ paths:
                     referenceCode: {type: string}
                     from: {type: string, format: date-time}
                     to: {type: string, format: date-time}
-                    geographyIds: {type: array, items: {type: string, format: uuid}}
+                    geographyIds: {type: array, maxItems: 20, items: {type: string, format: uuid}}
       responses:
         '200':
           description: Preview count.

@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import {
 	boolean,
 	check,
@@ -15,7 +16,6 @@ import {
 	unique,
 	uuid,
 } from "drizzle-orm/pg-core";
-import { sql } from "drizzle-orm";
 
 export const marketEntry = pgSchema("market_entry");
 
@@ -149,6 +149,41 @@ export const inquiryAudit = marketEntry.table(
 		check(
 			"inquiry_audit_note_length_check",
 			sql`${table.note} is null or length(${table.note}) between 1 and 5000`,
+		),
+	],
+);
+
+export const inquiryAccessAudit = marketEntry.table(
+	"inquiry_access_audit",
+	{
+		accessId: uuid("access_id").defaultRandom().primaryKey(),
+		actor: text("actor").notNull(),
+		action: text("action").notNull(),
+		inquiryId: uuid("inquiry_id"),
+		rowCount: integer("row_count"),
+		ticketRef: text("ticket_ref"),
+		happenedAt: timestamp("happened_at", { withTimezone: true })
+			.default(sql`clock_timestamp()`)
+			.notNull(),
+	},
+	(table) => [
+		foreignKey({
+			name: "inquiry_access_audit_inquiry_fkey",
+			columns: [table.inquiryId],
+			foreignColumns: [investorInquiries.inquiryId],
+		}).onDelete("set null"),
+		index("inquiry_access_audit_happened_idx").on(table.happenedAt),
+		check(
+			"inquiry_access_audit_action_check",
+			sql`${table.action} in ('viewed_detail', 'exported_live_csv', 'erased_by_request', 'consent_withdrawn')`,
+		),
+		check(
+			"inquiry_access_audit_row_count_check",
+			sql`${table.rowCount} is null or ${table.rowCount} >= 0`,
+		),
+		check(
+			"inquiry_access_audit_ticket_ref_check",
+			sql`${table.ticketRef} is null or char_length(${table.ticketRef}) between 3 and 64`,
 		),
 	],
 );

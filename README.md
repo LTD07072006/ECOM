@@ -104,14 +104,19 @@ Lệnh thực hiện lần lượt các bước sau.
 | `REQUIRE_RELEASE_APPROVAL` | Setup local tạo giá trị `0`. Đặt `1` cho trình import ở staging và production để yêu cầu quy trình duyệt release. |
 | `INQUIRY_PRIVACY_CONTROLLER`, `INQUIRY_PRIVACY_EMAIL` | Tên đơn vị phụ trách và địa chỉ nhận yêu cầu về dữ liệu. Bắt buộc để nhận inquiry trong bản chạy production. |
 | `ECOM_TRUSTED_PROXY_TOKEN` | Secret riêng của reverse proxy và ứng dụng. Cấu hình khi mở dịch vụ ra Internet để áp dụng hạn mức theo client. Chế độ local dùng một hạn mức chung. |
-| `ECOM_OPERATORS` | JSON lưu trong secret manager, chứa danh sách operator với `id`, `role` và token riêng. Không ghi giá trị thật vào Git. |
+| `ECOM_ALLOW_DIRECT_INGRESS` | Chỉ đặt `1` cho preview loopback/CI không qua reverse proxy; không bao giờ bật trên production công khai (mặc định production fail-closed trả `503` khi thiếu proxy token). |
+| `ECOM_DATABASE_ALLOW_INSECURE` | Chỉ đặt `1` trên mạng nội bộ Docker/local khi `NODE_ENV=production` dùng PostgreSQL không có `sslmode=require\|verify-ca\|verify-full`. |
+| `ECOM_OPERATORS` | JSON lưu trong secret manager, chứa danh sách operator với `id`, `role`, `token` riêng và `expiresAt` (ISO-8601) tùy chọn. Không ghi giá trị thật vào Git. |
 | `ECOM_REQUIRE_NAMED_OPERATORS` | Đặt `1` trong staging và production để yêu cầu operator định danh. |
+| `ECOM_SESSION_SECRET` | Secret tùy chọn (>=32 ký tự) trộn vào khóa ký HMAC của cookie phiên operator (`ecom_operator_session`). |
+| `ECOM_MAIL_TRANSPORT` | Transport gửi mail: `log`, `resend` hoặc `disabled` (mặc định production là `disabled`; dùng `resend` cần pháp chế duyệt notice và chuyển dữ liệu). |
+| `ECOM_MAIL_FROM`, `RESEND_API_KEY`, `ECOM_STEWARD_NOTIFY_EMAIL` | Địa chỉ gửi, API key Resend (chỉ dùng khi `ECOM_MAIL_TRANSPORT=resend`) và email steward nhận cảnh báo inquiry mới. |
 
 - Git theo dõi [`.env.example`](.env.example) với các giá trị trống. Cất secret thật trong `.env` cục bộ hoặc secret manager. Khi gửi ảnh chụp hay log lỗi, che mật khẩu, token và toàn bộ chuỗi kết nối.
 - Web local và cổng PostgreSQL mặc định đều bind vào loopback. Token steward dùng chung ghi nhận vai trò steward trong audit. Quy trình cấp quyền cho pilot và production nằm trong [release runbook](docs/sprint4-release-runbook.md).
 - Nếu chạy hai bản checkout trên cùng máy, chọn bộ giá trị riêng cho `COMPOSE_PROJECT_NAME`, `ECOM_DB_CONTAINER`, `ECOM_DB_PORT` và cổng web `PORT`. Giữ cùng bộ giá trị khi chạy lại bản checkout đó.
 
-Trong môi trường dùng chung, cấp cho mỗi người một token ngẫu nhiên riêng và đặt `ECOM_OPERATORS` từ secret manager. Danh sách JSON có dạng `[{"id":"operator-id","role":"steward","token":"<token-rieng>"}]`. Vai trò hỗ trợ `steward` và `reviewer`. ID và token phải duy nhất, token phải là chuỗi base64url ngẫu nhiên dài 43–128 ký tự. Thu hồi bằng cách xóa operator hoặc thay token trong secret manager và cập nhật cấu hình ứng dụng. Chế độ production yêu cầu operator định danh. Token chung chỉ được hỗ trợ ở chế độ phát triển local.
+Trong môi trường dùng chung, cấp cho mỗi người một token ngẫu nhiên riêng và đặt `ECOM_OPERATORS` từ secret manager. Danh sách JSON có dạng `[{"id":"operator-id","role":"steward","token":"<token-rieng>","expiresAt":"2026-12-31T23:59:59Z"}]` (`expiresAt` tùy chọn theo ISO-8601). Vai trò hỗ trợ `steward` và `reviewer`. ID và token phải duy nhất, token phải là chuỗi base64url ngẫu nhiên dài 43–128 ký tự. Thu hồi hoặc xoay vòng bằng cách xóa operator, đổi token hoặc hạ `expiresAt` trong secret manager và cập nhật cấu hình ứng dụng. Chế độ production yêu cầu operator định danh. Token chung chỉ được hỗ trợ ở chế độ phát triển local.
 
 Tài liệu kỹ thuật chuẩn: [OpenAPI 3.1](docs/openapi.yaml) · [Ma trận nghiệm thu F01–F07 / T01–T06](docs/acceptance-matrix.md) · [Từ điển dữ liệu](docs/data-dictionary.md) · [Ma trận thực thể & quy ước migration/lint](docs/entity-feature-matrix.md) · [Báo cáo chồng lấn ranh giới](docs/boundary-overlap-audit.md).
 
@@ -177,7 +182,7 @@ bun run test
 bun run build
 ~~~
 
-Chạy `bun run build` trong cùng thư mục dự án. Với một bản đã build và có cấu hình database phù hợp, `bun run start` khởi động Next.js ở chế độ production. Dashboard nội bộ ở chế độ này yêu cầu `ECOM_OPERATORS` như phần cấu hình ở trên. Dùng hướng dẫn triển khai trong [release runbook](docs/sprint4-release-runbook.md) khi đưa lên staging hoặc production.
+Chạy `bun run build` trong cùng thư mục dự án. Với một bản đã build và có cấu hình database phù hợp, `bun run start` khởi động Next.js ở chế độ production. Dashboard nội bộ ở chế độ này yêu cầu `ECOM_OPERATORS` như phần cấu hình ở trên; khi chạy thử trên loopback không có reverse proxy đặt `ECOM_TRUSTED_PROXY_TOKEN`, cần bật `ECOM_ALLOW_DIRECT_INGRESS=1` (chỉ dùng cho loopback/CI). Dùng hướng dẫn triển khai trong [release runbook](docs/sprint4-release-runbook.md) khi đưa lên staging hoặc production.
 
 ### Test với PostgreSQL thật
 
@@ -258,7 +263,7 @@ Khi phát triển một thay đổi schema mới, cập nhật [`src/db/schema.t
 
 ### Chạy bằng Docker Production Image & Cold-Start Smoke
 
-`Dockerfile` dùng multi-stage build (`oven/bun:1.4.5`, `bun install --frozen-lockfile`, `next build` với `output: "standalone"`), chạy bằng user không có quyền root (`USER bun`), có sẵn `HEALTHCHECK` kiểm tra `/api/health` và không đóng gói file `.env` hay token vào image.
+`Dockerfile` dùng multi-stage build (`oven/bun:1.4.5`, stage `prod-dependencies` tách riêng production dependencies cho `maintenance`, `next build` với `output: "standalone"`), chạy bằng user không có quyền root (`USER bun`), có sẵn `HEALTHCHECK` kiểm tra `/api/health` và không đóng gói file `.env` hay token vào image. Với Compose chạy loopback không có reverse proxy đặt `ECOM_TRUSTED_PROXY_TOKEN`, hãy đặt `ECOM_ALLOW_DIRECT_INGRESS=1` trong `.env`.
 
 ```bash
 # 1. Khởi chạy PostGIS + ứng dụng production container (không dùng next dev)
@@ -280,7 +285,7 @@ docker compose --profile app ps
 
 `bun run db:cleanup:inquiries` và `bun run db:cleanup:reports` gọi cùng một CLI kiểm tra inquiry và snapshot đến hạn. Chạy trước ở chế độ xem số lượng. Khi người phụ trách dữ liệu đã duyệt và có bản sao lưu, truyền `--apply`. Lệnh xóa dữ liệu nhận diện và nội dung ghi chú đã hết hạn, giữ sự kiện xử lý và phiên bản thông báo đã xác nhận. Snapshot tổng hợp hết hạn được dọn cùng nhật ký. Bản gốc của đính chính còn hiệu lực được giữ đến khi cả chuỗi hết hạn.
 
-Để bật tác vụ tự động cho database Docker local sau khi đã chạy migration, dùng `docker compose --profile retention up -d --build retention`. Tác vụ chạy ngay khi khởi động, lặp lại sau 24 giờ và thử lại sau một giờ khi gặp lỗi. Kiểm tra `docker compose --profile retention ps` và `bun run db:retention:monitor`. Lệnh monitor trả mã lỗi nếu lần chạy gần nhất thất bại, đang chạy hoặc thành công quá 30 giờ trước. Kết quả và số bản ghi đã xử lý được ghi vào bảng `market_entry.inquiry_retention_runs`. Khi triển khai trên môi trường khác, chạy cùng scheduler như một dịch vụ riêng và giám sát mã thoát của lệnh monitor.
+Để bật tác vụ tự động cho database Docker local sau khi đã chạy migration, dùng `docker compose --profile retention up -d --build retention`. Tác vụ chạy ngay khi khởi động, lặp lại sau 24 giờ và thử lại sau một giờ khi gặp lỗi. Kiểm tra `docker compose --profile retention ps` và `bun run db:retention:monitor`. Lệnh monitor trả mã `0` khi lần `succeeded` gần nhất kết thúc trong vòng 30 giờ, không có lần `failed` nào bắt đầu sau đó, và không có lần `running` nào bắt đầu quá 15 phút trước (một job đang `running` hợp lệ dưới 15 phút vẫn healthy); ngược lại trả mã lỗi. Kết quả và số bản ghi đã xử lý được ghi vào bảng `market_entry.inquiry_retention_runs`. Khi triển khai trên môi trường khác, chạy cùng scheduler như một dịch vụ riêng và giám sát mã thoát của lệnh monitor.
 
 Báo cáo mới dùng công thức `inquiry-funnel-v4`. Tỷ lệ và thời gian liên hệ hoặc đủ điều kiện dựa trên lần đầu xuất hiện sự kiện chuyển sang trạng thái tương ứng. Tuần được tính theo lịch Việt Nam. Snapshot đã lưu giữ phiên bản và số liệu tại thời điểm tạo, các bản dùng công thức khác nhau được đánh dấu không tương thích khi so sánh.
 

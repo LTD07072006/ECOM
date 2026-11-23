@@ -1,4 +1,5 @@
 import { createHash, createHmac, timingSafeEqual } from "node:crypto";
+import { z } from "zod";
 import type { ReleaseRole } from "./operations";
 
 export type OperatorIdentity = {
@@ -10,53 +11,108 @@ export const OPERATOR_SESSION_COOKIE = "ecom_operator_session";
 export const OPERATOR_SESSION_TTL_SECONDS = 2 * 60 * 60;
 
 const tokenPattern = /^[A-Za-z0-9_-]{43,128}$/;
+const operatorIdPattern = /^[a-zA-Z0-9][a-zA-Z0-9._-]{2,63}$/;
+const isoExpiresAtSchema = z.union([
+	z.iso.datetime({ offset: true }),
+	z.iso.date(),
+]);
+
+let warnedInvalidOperatorConfig = false;
+
+function warnInvalidOperatorConfig() {
+	if (warnedInvalidOperatorConfig || process.env.NODE_ENV === "test") return;
+	warnedInvalidOperatorConfig = true;
+	console.warn(JSON.stringify({ event: "operator_config_invalid" }));
+}
+
+function parseExpiresAtMs(value: unknown): number | null {
+	if (
+		typeof value !== "string" ||
+		!isoExpiresAtSchema.safeParse(value).success
+	) {
+		return null;
+	}
+	const ms = Date.parse(value);
+	return Number.isFinite(ms) ? ms : null;
+}
 
 function digest(value: string) {
 	return createHash("sha256").update(value).digest();
 }
 
+type ConfiguredOperator = {
+	id: string;
+	role: ReleaseRole;
+	token: string;
+	expiresAtMs?: number;
+};
+
 type ConfiguredOperators = {
-	entries: Array<{ id: string; role: ReleaseRole; token: string }>;
+	entries: ConfiguredOperator[];
 	keyMaterial: string;
 };
+
+function isOperatorExpired(entry: ConfiguredOperator, nowMs: number) {
+	return entry.expiresAtMs !== undefined && entry.expiresAtMs <= nowMs;
+}
 
 function loadConfiguredOperators(): ConfiguredOperators | null {
 	if (process.env.ECOM_OPERATORS) {
 		try {
-			const entries: unknown = JSON.parse(process.env.ECOM_OPERATORS);
+			const parsed: unknown = JSON.parse(process.env.ECOM_OPERATORS);
 			if (
-				!Array.isArray(entries) ||
-				entries.length === 0 ||
-				entries.length > 100
+				!Array.isArray(parsed) ||
+				parsed.length === 0 ||
+				parsed.length > 100
 			) {
+				warnInvalidOperatorConfig();
 				return null;
 			}
-			const valid = entries.every(
-				(entry) =>
-					entry &&
-					typeof entry.id === "string" &&
-					/^[a-zA-Z0-9][a-zA-Z0-9._-]{2,63}$/.test(entry.id) &&
-					(entry.role === "reviewer" || entry.role === "steward") &&
-					typeof entry.token === "string" &&
-					tokenPattern.test(entry.token),
-			);
+			const entries: ConfiguredOperator[] = [];
+			for (const entry of parsed) {
+				if (
+					!entry ||
+					typeof entry !== "object" ||
+					Array.isArray(entry) ||
+					typeof entry.id !== "string" ||
+					!operatorIdPattern.test(entry.id) ||
+					(entry.role !== "reviewer" && entry.role !== "steward") ||
+					typeof entry.token !== "string" ||
+					!tokenPattern.test(entry.token)
+				) {
+					warnInvalidOperatorConfig();
+					return null;
+				}
+				let expiresAtMs: number | undefined;
+				if (entry.expiresAt !== undefined) {
+					const parsedMs = parseExpiresAtMs(entry.expiresAt);
+					if (parsedMs === null) {
+						warnInvalidOperatorConfig();
+						return null;
+					}
+					expiresAtMs = parsedMs;
+				}
+				entries.push({
+					id: entry.id,
+					role: entry.role,
+					token: entry.token,
+					expiresAtMs,
+				});
+			}
 			if (
-				!valid ||
 				new Set(entries.map((entry) => entry.id.toLowerCase())).size !==
 					entries.length ||
 				new Set(entries.map((entry) => entry.token)).size !== entries.length
 			) {
+				warnInvalidOperatorConfig();
 				return null;
 			}
 			return {
-				entries: entries as Array<{
-					id: string;
-					role: ReleaseRole;
-					token: string;
-				}>,
+				entries,
 				keyMaterial: process.env.ECOM_OPERATORS,
 			};
 		} catch {
+			warnInvalidOperatorConfig();
 			return null;
 		}
 	}
@@ -100,15 +156,22 @@ function sessionSigningKey(config: ConfiguredOperators): Buffer {
 		.digest();
 }
 
-export function verifyOperatorToken(token: string): OperatorIdentity | null {
+export function verifyOperatorToken(
+	token: string,
+	nowMs = Date.now(),
+): OperatorIdentity | null {
 	if (!tokenPattern.test(token)) return null;
 	const config = loadConfiguredOperators();
 	if (!config) return null;
 	const actual = digest(token);
-	const match = config.entries.find((entry) =>
-		timingSafeEqual(actual, digest(entry.token)),
-	);
-	return match ? { role: match.role, actor: match.id } : null;
+	let match: ConfiguredOperator | null = null;
+	for (const entry of config.entries) {
+		if (timingSafeEqual(actual, digest(entry.token))) {
+			match = entry;
+		}
+	}
+	if (!match || isOperatorExpired(match, nowMs)) return null;
+	return { role: match.role, actor: match.id };
 }
 
 export function createOperatorSessionCookie(
@@ -117,7 +180,19 @@ export function createOperatorSessionCookie(
 ): { value: string; expiresAt: string; header: string } | null {
 	const config = loadConfiguredOperators();
 	if (!config) return null;
-	const expSeconds = Math.floor(nowMs / 1000) + OPERATOR_SESSION_TTL_SECONDS;
+	const entry = config.entries.find(
+		(candidate) =>
+			candidate.id === identity.actor && candidate.role === identity.role,
+	);
+	if (!entry || isOperatorExpired(entry, nowMs)) return null;
+	const nowSeconds = Math.floor(nowMs / 1000);
+	const defaultExpSeconds = nowSeconds + OPERATOR_SESSION_TTL_SECONDS;
+	const expSeconds =
+		entry.expiresAtMs === undefined
+			? defaultExpSeconds
+			: Math.min(defaultExpSeconds, Math.floor(entry.expiresAtMs / 1000));
+	const maxAge = expSeconds - nowSeconds;
+	if (maxAge <= 0) return null;
 	const payload = Buffer.from(
 		JSON.stringify({
 			actor: identity.actor,
@@ -131,7 +206,7 @@ export function createOperatorSessionCookie(
 		.digest("base64url");
 	const value = `${payload}.${sig}`;
 	const secure = process.env.NODE_ENV === "production" ? "; Secure" : "";
-	const header = `${OPERATOR_SESSION_COOKIE}=${value}; HttpOnly; SameSite=Strict; Path=/; Max-Age=${OPERATOR_SESSION_TTL_SECONDS}${secure}`;
+	const header = `${OPERATOR_SESSION_COOKIE}=${value}; HttpOnly; SameSite=Strict; Path=/; Max-Age=${maxAge}${secure}`;
 	return {
 		value,
 		expiresAt: new Date(expSeconds * 1000).toISOString(),
@@ -194,9 +269,12 @@ export function verifyOperatorSessionCookie(
 		) {
 			return null;
 		}
-		// Ensure the operator is still active in the current configuration.
+		// Ensure the operator is still active and unexpired in the current configuration.
 		const active = config.entries.some(
-			(entry) => entry.id === decoded.actor && entry.role === decoded.role,
+			(entry) =>
+				entry.id === decoded.actor &&
+				entry.role === decoded.role &&
+				!isOperatorExpired(entry, nowMs),
 		);
 		return active ? { actor: decoded.actor, role: decoded.role } : null;
 	} catch {

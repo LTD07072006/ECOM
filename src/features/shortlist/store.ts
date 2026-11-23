@@ -1,10 +1,16 @@
+const uuidPattern =
+	/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
 export function readShortlist(raw: string | null): string[] {
 	try {
 		const value: unknown = JSON.parse(raw ?? "[]");
 		return Array.isArray(value)
 			? [
 					...new Set(
-						value.filter((id): id is string => typeof id === "string"),
+						value.filter(
+							(id): id is string =>
+								typeof id === "string" && uuidPattern.test(id),
+						),
 					),
 				].slice(0, 20)
 			: [];

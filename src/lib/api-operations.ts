@@ -12,6 +12,8 @@ const limits = {
 	internal: 120,
 	inquiries: 10,
 	inquiry_status: 20,
+	boundaries: 60,
+	layers: 60,
 } as const;
 const ceilings = {
 	search: 1800,
@@ -21,15 +23,18 @@ const ceilings = {
 	internal: 1200,
 	inquiries: 100,
 	inquiry_status: 200,
+	boundaries: 600,
+	layers: 600,
 } as const;
 type QuotaRoute = keyof typeof limits;
-type Route = QuotaRoute | "boundaries" | "layers" | "health";
+type Route = QuotaRoute | "health";
 const minute = 60_000;
 const localQuotas = new Map<string, number>();
 const quotaRoutes = new Set<string>(Object.keys(limits));
 const tokenPattern = /^[A-Za-z0-9_-]{43,128}$/;
 let localWindow = -1;
 let nextQuotaCleanup = 0;
+let warnedIngressUnconfigured = false;
 
 export const uuidPattern =
 	/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -74,7 +79,19 @@ function canonicalClientIp(address: string) {
 
 function trustedClient(request: Request, scope: string) {
 	const secret = process.env.ECOM_TRUSTED_PROXY_TOKEN;
-	if (!secret) return "direct";
+	if (!secret) {
+		if (
+			process.env.NODE_ENV === "production" &&
+			process.env.ECOM_ALLOW_DIRECT_INGRESS !== "1"
+		) {
+			if (!warnedIngressUnconfigured) {
+				warnedIngressUnconfigured = true;
+				console.warn(JSON.stringify({ event: "ingress_unconfigured" }));
+			}
+			return null;
+		}
+		return "direct";
+	}
 	const proof = request.headers.get("x-ecom-ingress-token") ?? "";
 	if (
 		!tokenPattern.test(secret) ||
@@ -202,7 +219,7 @@ export async function observeApi(
 		}
 		response = error("The service is temporarily unavailable.", 503);
 	}
-	if (privateResponse) {
+	if (privateResponse || route === "internal") {
 		response.headers.set("Cache-Control", "private, no-store");
 		response.headers.set("Vary", "Authorization, Cookie");
 	} else if (!response.headers.has("Cache-Control")) {

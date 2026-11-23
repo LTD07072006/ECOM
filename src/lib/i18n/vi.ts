@@ -299,13 +299,13 @@ export const vi: Record<MessageKey, string> = {
 		"Bản cài này chưa cấu hình đầu mối quyền riêng tư. Dùng yêu cầu giả để thử cục bộ.",
 	"privacy.purposeTitle": "Mục đích và đồng ý",
 	"privacy.purposeBody":
-		"Chúng tôi dùng email, nội dung, các địa bàn đã chọn và thông tin tùy chọn bạn cung cấp để xem xét và phản hồi yêu cầu. Khi chọn ô đồng ý và gửi biểu mẫu, bạn đồng ý với việc sử dụng này. Biểu mẫu ghi lại phiên bản thông báo và thời điểm gửi.",
+		"Chúng tôi dùng email, nội dung, các địa bàn đã chọn và thông tin tùy chọn bạn cung cấp để xem xét và phản hồi yêu cầu. Nếu bật email thông báo, email xác nhận được gửi qua nhà cung cấp dịch vụ email do đơn vị vận hành công bố. Khi chọn ô đồng ý và gửi biểu mẫu, bạn đồng ý với việc sử dụng này. Biểu mẫu ghi lại phiên bản thông báo và thời điểm gửi.",
 	"privacy.retentionTitle": "Truy cập và thời hạn lưu",
 	"privacy.retentionBody":
-		"Steward được cấp quyền có thể đọc yêu cầu của bạn và ghi nhận quá trình xử lý. Yêu cầu được ẩn danh sau 12 tháng kể từ lần steward cập nhật gần nhất hoặc thời điểm gửi, tùy mốc nào muộn hơn. Số liệu tổng hợp và dấu thời gian kiểm toán có thể được giữ để báo cáo. Bản sao lưu hết hạn theo lịch sao lưu của đơn vị vận hành.",
+		"Steward được cấp quyền có thể đọc yêu cầu của bạn và ghi nhận quá trình xử lý. Yêu cầu được ẩn danh sau 12 tháng kể từ lần steward cập nhật gần nhất hoặc thời điểm gửi, tùy mốc nào muộn hơn, và không quá 24 tháng kể từ khi gửi. Số liệu tổng hợp và dấu thời gian kiểm toán có thể được giữ để báo cáo. Bản sao lưu hết hạn theo lịch sao lưu của đơn vị vận hành.",
 	"privacy.requestsTitle": "Yêu cầu về dữ liệu cá nhân",
 	"privacy.requestsBody":
-		"Dùng đầu mối quyền riêng tư ở trên để yêu cầu truy cập, chỉnh sửa hoặc xóa dữ liệu, hoặc rút lại sự đồng ý. Ghi kèm mã tham chiếu nếu có. Vui lòng không gửi tài liệu nhạy cảm hoặc thông tin đăng nhập.",
+		"Dùng đầu mối quyền riêng tư ở trên để yêu cầu truy cập, chỉnh sửa hoặc xóa dữ liệu, hoặc rút lại sự đồng ý. Ghi kèm mã tham chiếu nếu có. Steward được ủy quyền có thể ẩn danh yêu cầu khi có yêu cầu xóa hoặc rút lại sự đồng ý; khi rút lại sự đồng ý, việc xử lý tiếp theo đối với yêu cầu sẽ dừng lại. Vui lòng không gửi tài liệu nhạy cảm hoặc thông tin đăng nhập.",
 
 	"decision.title": "Khảo sát thị trường bán lẻ",
 	"decision.lede":
@@ -451,6 +451,15 @@ export const vi: Record<MessageKey, string> = {
 	"admin.reasonResolved": "Đã giải quyết",
 	"admin.internalNote": "Ghi chú nội bộ",
 	"admin.saveUpdate": "Lưu cập nhật",
+	"admin.erasureTitle": "Yêu cầu quyền riêng tư",
+	"admin.erasureReason": "Lý do",
+	"admin.erasureReasonRequest": "Yêu cầu xóa dữ liệu",
+	"admin.erasureReasonConsent": "Rút lại sự đồng ý",
+	"admin.erasureTicket": "Mã ticket",
+	"admin.erasureTicketPlaceholder": "DSAR-2026-001",
+	"admin.erasureSubmit": "Ẩn danh dữ liệu cá nhân",
+	"admin.erasureConfirm":
+		"Ẩn danh dữ liệu cá nhân cho {code} ({reason}, mã ticket {ticket})? Thao tác này không thể hoàn tác.",
 	"admin.auditHistory": "Nhật ký xử lý",
 	"admin.notice.loading": "Đang tải danh sách…",
 	"admin.notice.loaded": "Đã tải danh sách.",
@@ -461,6 +470,8 @@ export const vi: Record<MessageKey, string> = {
 	"admin.notice.loadingDetail": "Đang tải yêu cầu…",
 	"admin.notice.saving": "Đang lưu yêu cầu…",
 	"admin.notice.saved": "Đã cập nhật yêu cầu.",
+	"admin.notice.erasing": "Đang ẩn danh dữ liệu cá nhân…",
+	"admin.notice.erased": "Đã ẩn danh dữ liệu cá nhân và ghi nhận kiểm toán.",
 	"admin.notice.stale":
 		"Đã lưu thay đổi. Tải lại danh sách để làm mới bảng điều khiển.",
 	"admin.notice.searching": "Đang tìm địa bàn…",
@@ -468,6 +479,7 @@ export const vi: Record<MessageKey, string> = {
 	"admin.error.load": "Không tải được danh sách yêu cầu.",
 	"admin.error.detail": "Không tải được yêu cầu.",
 	"admin.error.update": "Không cập nhật được yêu cầu.",
+	"admin.error.erasure": "Không xử lý được yêu cầu ẩn danh quyền riêng tư.",
 	"admin.error.export": "Không xuất được danh sách yêu cầu.",
 	"admin.error.search": "Không tìm được địa bàn.",
 	"admin.error.generic": "Không hoàn tất được thao tác.",

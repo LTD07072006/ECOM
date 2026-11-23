@@ -1,11 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import {
-	VIETNAM_REPORT_TIME_ZONE,
-	vietnamCalendarDay,
-	vietnamDateRange,
-} from "./reporting";
 import { useI18n } from "../../lib/i18n/provider";
 import { InquiryDetailDrawer } from "./dashboard/InquiryDetailDrawer";
 import { InquiryFilters } from "./dashboard/InquiryFilters";
@@ -14,7 +9,6 @@ import { ReportingWorkspace } from "./dashboard/ReportingWorkspace";
 import { SnapshotCompare } from "./dashboard/SnapshotCompare";
 import { SnapshotHistory } from "./dashboard/SnapshotHistory";
 import {
-	saveCsv,
 	type GeographyOption,
 	type InquiryDetail,
 	type InquiryMetrics,
@@ -23,7 +17,14 @@ import {
 	type OperatorSession,
 	type SnapshotComparison,
 	type SnapshotRecord,
+	saveCsv,
 } from "./dashboard/types";
+import {
+	VIETNAM_REPORT_TIME_ZONE,
+	vietnamCalendarDay,
+	vietnamDateRange,
+} from "./reporting";
+import { type InquiryErasureReason, inquiryTicketPattern } from "./validation";
 
 export function InquiryDashboard() {
 	const { t } = useI18n();
@@ -64,6 +65,9 @@ export function InquiryDashboard() {
 	const [note, setNote] = useState("");
 	const [nextStatus, setNextStatus] = useState("");
 	const [closeReason, setCloseReason] = useState("");
+	const [erasureReason, setErasureReason] =
+		useState<InquiryErasureReason>("erasure_request");
+	const [erasureTicket, setErasureTicket] = useState("");
 	const [busy, setBusy] = useState(false);
 	const [notice, setNotice] = useState("");
 	const [metrics, setMetrics] = useState<InquiryMetrics | null>(null);
@@ -129,6 +133,11 @@ export function InquiryDashboard() {
 	const canSave = Boolean(
 		(statusChanged || note.trim()) && (!needsCloseReason || closeReason),
 	);
+	const canErase = Boolean(
+		selected &&
+			!selected.inquiry.anonymized_at &&
+			inquiryTicketPattern.test(erasureTicket.trim()),
+	);
 
 	function authHeaders(jsonBody = false): HeadersInit {
 		return {
@@ -184,7 +193,7 @@ export function InquiryDashboard() {
 
 	async function fetchDetail(referenceCode: string) {
 		const body = await request<{ data: InquiryDetail }>(
-			`/api/internal/inquiries/${referenceCode}`,
+			`/api/internal/inquiries/${encodeURIComponent(referenceCode)}`,
 			t("admin.error.detail"),
 		);
 		return body.data;
@@ -195,6 +204,8 @@ export function InquiryDashboard() {
 		setNextStatus(detail?.inquiry.status ?? "");
 		setCloseReason("");
 		setNote("");
+		setErasureReason("erasure_request");
+		setErasureTicket("");
 	}
 
 	function resetDashboardState() {
@@ -379,7 +390,7 @@ export function InquiryDashboard() {
 	function openSnapshot(snapshotId: string) {
 		void run(t("reports.notice.snapshotLoading"), async () => {
 			const body = await request<{ data: SnapshotRecord }>(
-				`/api/internal/inquiries/snapshots/${snapshotId}`,
+				`/api/internal/inquiries/snapshots/${encodeURIComponent(snapshotId)}`,
 				t("reports.error.snapshot"),
 			);
 			setSelectedSnapshot(body.data);
@@ -506,7 +517,7 @@ export function InquiryDashboard() {
 		};
 		void run(t("admin.notice.saving"), async () => {
 			await request(
-				`/api/internal/inquiries/${referenceCode}`,
+				`/api/internal/inquiries/${encodeURIComponent(referenceCode)}`,
 				t("admin.error.update"),
 				payload,
 			);
@@ -518,6 +529,57 @@ export function InquiryDashboard() {
 				showDetail(detail);
 				setRows(refreshed);
 				setNotice(t("admin.notice.saved"));
+			} catch {
+				showDetail(null);
+				setRows([]);
+				throw new Error(t("admin.notice.stale"));
+			}
+		});
+	}
+
+	function eraseInquiry() {
+		if (!selected || selected.inquiry.anonymized_at || !canErase) return;
+		const referenceCode = selected.inquiry.reference_code;
+		const ticket = erasureTicket.trim();
+		const reasonLabel =
+			erasureReason === "consent_withdrawn"
+				? t("admin.erasureReasonConsent")
+				: t("admin.erasureReasonRequest");
+		if (
+			!window.confirm(
+				t("admin.erasureConfirm", {
+					code: referenceCode,
+					reason: reasonLabel,
+					ticket,
+				}),
+			)
+		)
+			return;
+		void run(t("admin.notice.erasing"), async () => {
+			const response = await fetch(
+				`/api/internal/inquiries/${encodeURIComponent(referenceCode)}/erasure`,
+				{
+					method: "POST",
+					cache: "no-store",
+					credentials: "same-origin",
+					headers: authHeaders(true),
+					body: JSON.stringify({ reason: erasureReason, ticket }),
+				},
+			);
+			const body = (await response.json().catch(() => null)) as {
+				error?: string;
+			} | null;
+			if (!response.ok || !body) {
+				throw new Error(body?.error ?? t("admin.error.erasure"));
+			}
+			try {
+				const [detail, refreshed] = await Promise.all([
+					fetchDetail(referenceCode),
+					fetchRows(),
+				]);
+				showDetail(detail);
+				setRows(refreshed);
+				setNotice(t("admin.notice.erased"));
 			} catch {
 				showDetail(null);
 				setRows([]);
@@ -669,12 +731,18 @@ export function InquiryDashboard() {
 							nextStatus={nextStatus}
 							closeReason={closeReason}
 							note={note}
+							erasureReason={erasureReason}
+							erasureTicket={erasureTicket}
 							needsCloseReason={needsCloseReason}
 							canSave={canSave}
+							canErase={canErase}
 							onNextStatusChange={setNextStatus}
 							onCloseReasonChange={setCloseReason}
 							onNoteChange={setNote}
+							onErasureReasonChange={setErasureReason}
+							onErasureTicketChange={setErasureTicket}
 							onSave={update}
+							onErase={eraseInquiry}
 						/>
 					)}
 				</>

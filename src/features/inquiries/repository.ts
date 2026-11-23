@@ -2,22 +2,76 @@ import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import type postgres from "postgres";
 import { databasePool } from "../../db/pool";
 import { loadPublishedGeography } from "../geography/database-repository";
-import type { InquiryProvenance, InquirySubmission } from "./types";
-import {
-	MAX_INQUIRY_CSV_EXPORT_ROWS,
-	VIETNAM_REPORT_TIME_ZONE,
-	type InquiryReportFilters,
-	type InquiryReportRow,
-} from "./reporting";
-import {
-	nextInquiryStatus,
-	type InquiryCloseReason,
-	type InquiryStatus,
-} from "./validation";
 import {
 	enqueueInquiryNotifications,
 	type NotificationLocale,
 } from "./notifications";
+import {
+	type InquiryReportFilters,
+	type InquiryReportRow,
+	MAX_INQUIRY_CSV_EXPORT_ROWS,
+	VIETNAM_REPORT_TIME_ZONE,
+} from "./reporting";
+import type { InquiryProvenance, InquirySubmission } from "./types";
+import {
+	type InquiryCloseReason,
+	type InquiryErasureReason,
+	type InquiryStatus,
+	nextInquiryStatus,
+} from "./validation";
+
+export class InquiryError extends Error {
+	readonly status: 400 | 404 | 409;
+
+	constructor(message: string, status: 400 | 404 | 409) {
+		super(message);
+		this.name = "InquiryError";
+		this.status = status;
+	}
+}
+
+export type InquiryAccessAction =
+	| "viewed_detail"
+	| "exported_live_csv"
+	| "erased_by_request"
+	| "consent_withdrawn";
+
+export type InquiryAccessEvent = {
+	actor: string;
+	action: InquiryAccessAction;
+	inquiryId?: string | null;
+	rowCount?: number | null;
+	ticketRef?: string | null;
+};
+
+const erasureAccessAction: Record<InquiryErasureReason, InquiryAccessAction> = {
+	erasure_request: "erased_by_request",
+	consent_withdrawn: "consent_withdrawn",
+};
+
+export async function recordInquiryAccess(
+	event: InquiryAccessEvent,
+	tx?: postgres.TransactionSql,
+) {
+	const insert = async (sql: postgres.TransactionSql) => {
+		await sql`
+      insert into market_entry.inquiry_access_audit
+        (actor, action, inquiry_id, row_count, ticket_ref)
+      values (
+        ${event.actor},
+        ${event.action},
+        ${event.inquiryId ?? null},
+        ${event.rowCount ?? null},
+        ${event.ticketRef ?? null}
+      )
+    `;
+	};
+	if (tx) {
+		await insert(tx);
+		return;
+	}
+	await databasePool().begin(insert);
+}
 
 export function makeInquiryReference(now = new Date()) {
 	const year = now.getUTCFullYear();
@@ -38,8 +92,9 @@ async function resolveProvenance(
       and valid_from <= current_date and (valid_to is null or valid_to >= current_date)
   `;
 	if (units.length !== geographyIds.length)
-		throw new Error(
-			"One or more geography IDs are not available in the published release.",
+		throw new InquiryError(
+			"One or more selected places are no longer available.",
+			400,
 		);
 
 	const provenance: InquiryProvenance = {
@@ -116,16 +171,16 @@ export async function updateInquiry(
       select inquiry_id, status, anonymized_at from market_entry.investor_inquiries
       where reference_code = ${referenceCode} for update
     `;
-		if (!current) throw new Error("Inquiry not found.");
+		if (!current) throw new InquiryError("Inquiry not found.", 404);
 		if (update.note && current.anonymized_at)
-			throw new Error("Cannot add notes to an anonymized inquiry.");
+			throw new InquiryError("Cannot add notes to an anonymized inquiry.", 409);
 		if (update.status) {
 			const transition = nextInquiryStatus(
 				current.status,
 				update.status,
 				update.closeReason,
 			);
-			if (!transition.ok) throw new Error(transition.error);
+			if (!transition.ok) throw new InquiryError(transition.error, 409);
 			await tx`
         update market_entry.investor_inquiries
         set status = ${update.status}, close_reason = ${update.closeReason ?? null}
@@ -145,7 +200,10 @@ export async function updateInquiry(
 		if (update.status || update.note) {
 			await tx`update market_entry.investor_inquiries set updated_at = statement_timestamp(),
         retention_at = case when anonymized_at is null
-          then (statement_timestamp() at time zone 'UTC' + interval '1 year') at time zone 'UTC'
+          then least(
+            (statement_timestamp() at time zone 'UTC' + interval '1 year') at time zone 'UTC',
+            (created_at at time zone 'UTC' + interval '2 years') at time zone 'UTC'
+          )
           else retention_at end
         where inquiry_id = ${current.inquiry_id}`;
 		}
@@ -327,6 +385,73 @@ export async function getInquiry(referenceCode: string) {
 	return { inquiry, audit };
 }
 
+async function anonymizeInquiries(
+	tx: postgres.TransactionSql,
+	ids: string[],
+	actor: string,
+	now = new Date(),
+): Promise<string[]> {
+	if (!ids.length) return [];
+	const rows = await tx<{ inquiry_id: string }[]>`
+    update market_entry.investor_inquiries
+    set email = null, message = null, name = null, organization = null,
+        country = null, sector = null, anonymized_at = ${now}, updated_at = ${now}
+    where inquiry_id = any(${ids}::uuid[]) and anonymized_at is null
+    returning inquiry_id
+  `;
+	const anonymizedIds = rows.map(({ inquiry_id }) => inquiry_id);
+	if (anonymizedIds.length) {
+		await tx`
+      insert into market_entry.inquiry_audit (inquiry_id, actor, action, happened_at)
+      select inquiry_id, ${actor}, 'anonymized', ${now}
+      from unnest(${anonymizedIds}::uuid[]) as target(inquiry_id)
+    `;
+		await tx`
+      update market_entry.inquiry_notifications
+      set status = 'skipped', last_error = 'inquiry anonymized'
+      where inquiry_id = any(${anonymizedIds}::uuid[])
+        and status in ('pending', 'failed')
+    `;
+		await tx`
+      update market_entry.inquiry_audit
+      set note = null
+      where inquiry_id = any(${anonymizedIds}::uuid[]) and note is not null
+    `;
+	}
+	return anonymizedIds;
+}
+
+export async function eraseInquiryByRequest(
+	referenceCode: string,
+	input: { reason: InquiryErasureReason; ticket: string },
+	actor: string,
+	now = new Date(),
+) {
+	return databasePool().begin(async (tx) => {
+		const [current] = await tx<
+			{ inquiry_id: string; anonymized_at: Date | null }[]
+		>`
+      select inquiry_id, anonymized_at from market_entry.investor_inquiries
+      where reference_code = ${referenceCode} for update
+    `;
+		if (!current) throw new InquiryError("Inquiry not found.", 404);
+		const alreadyAnonymized = Boolean(current.anonymized_at);
+		if (!alreadyAnonymized) {
+			await anonymizeInquiries(tx, [current.inquiry_id], actor, now);
+		}
+		await recordInquiryAccess(
+			{
+				actor,
+				action: erasureAccessAction[input.reason],
+				inquiryId: current.inquiry_id,
+				ticketRef: input.ticket,
+			},
+			tx,
+		);
+		return { alreadyAnonymized };
+	});
+}
+
 export async function cleanupExpiredInquiries(apply = false, now = new Date()) {
 	if (!apply) {
 		const [row] = await databasePool()<[{ count: string }]>`
@@ -339,27 +464,17 @@ export async function cleanupExpiredInquiries(apply = false, now = new Date()) {
 		return { count: Number(row?.count ?? 0), applied: false };
 	}
 	return databasePool().begin(async (tx) => {
-		const rows = await tx<{ inquiry_id: string }[]>`
-      update market_entry.investor_inquiries
-      set email = null, message = null, name = null, organization = null,
-          country = null, sector = null, anonymized_at = ${now}, updated_at = ${now}
+		const expired = await tx<{ inquiry_id: string }[]>`
+      select inquiry_id from market_entry.investor_inquiries
       where retention_at <= ${now} and anonymized_at is null
-      returning inquiry_id
+      for update
     `;
-		if (rows.length) {
-			const anonymizedIds = rows.map(({ inquiry_id }) => inquiry_id);
-			await tx`
-        insert into market_entry.inquiry_audit (inquiry_id, actor, action, happened_at)
-        select inquiry_id, 'retention_job', 'anonymized', ${now}
-        from unnest(${anonymizedIds}::uuid[]) as target(inquiry_id)
-      `;
-			await tx`
-        update market_entry.inquiry_notifications
-        set status = 'skipped', last_error = 'inquiry anonymized'
-        where inquiry_id = any(${anonymizedIds}::uuid[])
-          and status in ('pending', 'failed')
-      `;
-		}
+		const anonymizedIds = await anonymizeInquiries(
+			tx,
+			expired.map(({ inquiry_id }) => inquiry_id),
+			"retention_job",
+			now,
+		);
 		const redacted = await tx<{ inquiry_id: string }[]>`
       update market_entry.inquiry_audit as event set note = null
       from market_entry.investor_inquiries as inquiry
@@ -367,8 +482,10 @@ export async function cleanupExpiredInquiries(apply = false, now = new Date()) {
       returning event.inquiry_id
     `;
 		return {
-			count: new Set([...rows, ...redacted].map(({ inquiry_id }) => inquiry_id))
-				.size,
+			count: new Set([
+				...anonymizedIds,
+				...redacted.map(({ inquiry_id }) => inquiry_id),
+			]).size,
 			applied: true,
 		};
 	});

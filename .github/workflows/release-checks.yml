@@ -12,10 +12,11 @@ jobs:
   required:
     name: Required release checks
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 35
     env:
       NEXT_TELEMETRY_DISABLED: "1"
       REQUIRE_RELEASE_APPROVAL: "0"
+      ECOM_ALLOW_DIRECT_INGRESS: "1"
       E2E_BASE_URL: http://127.0.0.1:3000
       INQUIRY_PRIVACY_CONTROLLER: ECOM test operator
       INQUIRY_PRIVACY_EMAIL: privacy@example.test
@@ -40,7 +41,8 @@ jobs:
           echo "::add-mask::$steward"
           echo "::add-mask::$reviewer"
           docker run -d --name ecom-release-db -p 127.0.0.1::5432 -e POSTGRES_PASSWORD \
-            -e POSTGRES_USER=market_entry -e POSTGRES_DB=ecom_inquiry_it_ci postgis/postgis:16-3.4
+            -e POSTGRES_USER=market_entry -e POSTGRES_DB=ecom_inquiry_it_ci \
+            postgis/postgis:16-3.4@sha256:44126d872ac91993766c341e369c539e8196614321765d36a6f1bab0419a5fa5
           timeout 90 bash -c 'until docker exec ecom-release-db pg_isready -h 127.0.0.1 -U market_entry -d ecom_inquiry_it_ci; do sleep 1; done'
           docker exec ecom-release-db createdb -U market_entry ecom_sprint4_workflow_ci
           port="$(docker port ecom-release-db 5432/tcp)"
@@ -84,6 +86,32 @@ jobs:
           timeout 60 bash -c 'until curl --silent --fail "$E2E_BASE_URL/api/health" | jq -e ".status == \"ok\" and .publicationStatus == \"published\"" >/dev/null; do sleep 1; done'
           bun run test:pilot "$E2E_BASE_URL" 5
           bun run test:release e2e
+      - name: Build production and maintenance container images
+        run: |
+          docker build --target production -t ecom-app:ci .
+          docker build --target maintenance -t ecom-maint:ci .
+      - name: Smoke-test production and maintenance containers
+        run: |
+          docker run -d --name ecom-app-ci --network host \
+            -e PORT=3100 -e HOSTNAME=127.0.0.1 \
+            -e DATABASE_URL -e ECOM_ALLOW_DIRECT_INGRESS=1 \
+            ecom-app:ci
+          timeout 60 bash -c 'until curl --silent --fail "http://127.0.0.1:3100/api/health" | jq -e ".status == \"ok\" and .publicationStatus == \"published\"" >/dev/null; do sleep 1; done'
+          test "$(docker exec ecom-app-ci id -u)" != "0"
+          set +e
+          monitor_out="$(docker run --rm --network host -e DATABASE_URL ecom-maint:ci bun run db:retention:monitor)"
+          monitor_status=$?
+          set -e
+          test "$monitor_status" -eq 0 -o "$monitor_status" -eq 1
+          printf '%s\n' "$monitor_out" | grep -q '"retention_health"'
+      - name: Stop smoke container
+        if: always()
+        run: docker rm -f ecom-app-ci || true
+      - name: Scan production container image with Trivy
+        run: |
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
+            aquasec/trivy:0.76.2@sha256:8f6bb947dbc528902e11f2f5be52f7b519f6a39d5d148f41166f2040499768fb \
+            image --severity CRITICAL --ignore-unfixed --exit-code 1 ecom-app:ci
       - name: Stop disposable PostgreSQL
         if: always()
         run: docker rm -f ecom-release-db || true

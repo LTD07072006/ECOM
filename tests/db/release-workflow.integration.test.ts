@@ -1,5 +1,5 @@
-import { randomBytes, randomUUID } from "node:crypto";
 import { expect, test } from "bun:test";
+import { randomBytes, randomUUID } from "node:crypto";
 import { GET, POST } from "../../src/app/api/internal/releases/route";
 import { databasePool } from "../../src/db/pool";
 import {
@@ -8,8 +8,9 @@ import {
 } from "../../src/features/geography/database-repository";
 import { loadMapLayers } from "../../src/features/map/layer-repository";
 import {
-	releaseOverview,
+	applyReleaseAction,
 	type ReleaseOverview,
+	releaseOverview,
 } from "../../src/features/releases/operations";
 
 const workflowTest =
@@ -23,12 +24,14 @@ workflowTest(
 		expect(database.hostname).toBe("127.0.0.1");
 		expect(database.pathname).toMatch(/^\/ecom_sprint4_workflow_[a-z0-9_]+$/);
 		const reviewer = randomBytes(32).toString("base64url");
+		const alice = randomBytes(32).toString("base64url");
 		const steward = randomBytes(32).toString("base64url");
 		process.env.RELEASE_REVIEWER_TOKEN = reviewer;
 		process.env.RELEASE_STEWARD_TOKEN = steward;
 		const previousOperators = process.env.ECOM_OPERATORS;
 		process.env.ECOM_OPERATORS = JSON.stringify([
 			{ id: "workflow-reviewer", role: "reviewer", token: reviewer },
+			{ id: "alice", role: "reviewer", token: alice },
 			{ id: "workflow-steward", role: "steward", token: steward },
 		]);
 		async function overview(token: string) {
@@ -123,7 +126,19 @@ workflowTest(
 			if (!wave) throw new Error("Expected staged wave2 batch");
 			expect(wave).toMatchObject({ staged: true, blockers: [] });
 			expect((await loadMapLayers()).infrastructure).toBeNull();
-			expect((await change(reviewer, wave.id, "approve")).status).toBe(200);
+			expect((await change(alice, wave.id, "approve")).status).toBe(200);
+			expect(
+				await applyReleaseAction(
+					wave.id,
+					"publish",
+					"steward",
+					"Verify four-eyes separation blocks same-actor publication.",
+					"alice",
+				),
+			).toEqual({
+				status: 403,
+				message: "The approving reviewer cannot publish the same batch.",
+			});
 			expect((await change(steward, wave.id, "publish")).status).toBe(200);
 			expect(
 				(await loadMapLayers()).infrastructure?.points.features,
