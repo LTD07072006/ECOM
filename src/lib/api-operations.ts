@@ -164,19 +164,10 @@ async function takeQuota(route: QuotaRoute, request: Request) {
 	};
 }
 
-function errorCode(cause: unknown): string {
-	if (typeof cause === "object" && cause !== null) {
-		if ("code" in cause && typeof cause.code === "string" && cause.code) {
-			return cause.code;
-		}
-		if (cause instanceof Error && cause.name) {
-			return cause.name;
-		}
-		if ("name" in cause && typeof cause.name === "string" && cause.name) {
-			return cause.name;
-		}
-	}
-	return "UnknownError";
+export function errorCode(cause: unknown): string {
+	const code = (cause as { code?: unknown } | null)?.code;
+	if (typeof code === "string" && code) return code;
+	return cause instanceof Error && cause.name ? cause.name : "UnknownError";
 }
 
 export async function observeApi(

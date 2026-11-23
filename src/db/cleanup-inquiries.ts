@@ -1,26 +1,12 @@
 import "dotenv/config";
 import { cleanupExpiredInquiries } from "../features/inquiries/repository";
 import { cleanupExpiredInquiryReportSnapshots } from "../features/inquiries/snapshots";
+import { errorCode } from "../lib/api-operations";
 import { databasePool } from "./pool";
 
 const apply = process.argv.includes("--apply");
 const monitor = process.argv.includes("--monitor");
 const sql = databasePool();
-
-function errorCode(cause: unknown): string {
-	if (typeof cause === "object" && cause !== null) {
-		if ("code" in cause && typeof cause.code === "string" && cause.code) {
-			return cause.code;
-		}
-		if (cause instanceof Error && cause.name) {
-			return cause.name;
-		}
-		if ("name" in cause && typeof cause.name === "string" && cause.name) {
-			return cause.name;
-		}
-	}
-	return "UnknownError";
-}
 
 try {
 	if (monitor) {

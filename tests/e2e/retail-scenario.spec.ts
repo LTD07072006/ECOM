@@ -13,9 +13,10 @@ test("retail scenario filters and compares provinces before explaining why scori
 	const sector = page.getByRole("combobox", { name: "Sector", exact: true });
 	await expect(async () => {
 		await sector.selectOption("retail");
-		await expect(sector).toHaveValue("retail");
-	}).toPass();
-	await expect(page.getByText("34 provinces match.")).toBeVisible();
+		await expect(page.getByText("34 provinces match.")).toBeVisible({
+			timeout: 1_000,
+		});
+	}).toPass({ timeout: 15_000 });
 	await page
 		.getByLabel("Minimum retail sales and consumer services (billion VND)")
 		.fill("999999999");
