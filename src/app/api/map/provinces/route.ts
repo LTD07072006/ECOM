@@ -35,7 +35,7 @@ async function provinces(request: Request) {
 	try {
 		const tag = await loadProvinceMapTag();
 		const etag = tag
-			? `W/"provinces-${tag.geographyVersionId}-${tag.datasetId}"`
+			? `W/"provinces-g6-${tag.geographyVersionId}-${tag.datasetId}"`
 			: null;
 		if (etag && matchesEtag(request.headers.get("if-none-match"), etag)) {
 			return new Response(null, {
@@ -53,7 +53,7 @@ async function provinces(request: Request) {
 			return json({ data: features, meta: { dataset } });
 		}
 
-		const responseEtag = etag ?? `W/"provinces-${dataset.id}"`;
+		const responseEtag = etag ?? `W/"provinces-g6-${dataset.id}"`;
 		return json(
 			{ data: features, meta: { dataset } },
 			{

@@ -1,16 +1,17 @@
 import { z } from "zod";
-import { releaseRole } from "../../../../features/releases/authorization";
+import {
+	inquiryRowsCsvStream,
+	MAX_INQUIRY_CSV_EXPORT_ROWS,
+} from "../../../../features/inquiries/reporting";
 import {
 	countInquiryReportRows,
-	inquiryReportRows,
 	inquiryAnalytics,
+	inquiryReportRows,
 	listInquiries,
+	recordInquiryAccess,
 } from "../../../../features/inquiries/repository";
-import {
-	MAX_INQUIRY_CSV_EXPORT_ROWS,
-	inquiryRowsCsvStream,
-} from "../../../../features/inquiries/reporting";
 import { inquiryStatuses } from "../../../../features/inquiries/validation";
+import { releaseIdentity } from "../../../../features/releases/authorization";
 import {
 	boundedQuery,
 	observeApi,
@@ -38,7 +39,8 @@ export function GET(request: Request) {
 		"internal",
 		request,
 		async () => {
-			if (releaseRole(request) !== "steward")
+			const identity = releaseIdentity(request);
+			if (!identity || identity.role !== "steward")
 				return error("A valid steward access token is required.", 401);
 			const params = boundedQuery(
 				request,
@@ -61,7 +63,11 @@ export function GET(request: Request) {
 				?.split(",")
 				.map((value) => value.trim())
 				.filter(Boolean);
-			if (geographyIds?.some((value) => !uuidPattern.test(value)))
+			if (
+				geographyIds &&
+				(geographyIds.length > 20 ||
+					geographyIds.some((value) => !uuidPattern.test(value)))
+			)
 				return error("Invalid geography filters.", 400);
 			const filters = {
 				status: parsed.data.status,
@@ -88,6 +94,11 @@ export function GET(request: Request) {
 						413,
 					);
 				}
+				await recordInquiryAccess({
+					actor: identity.actor,
+					action: "exported_live_csv",
+					rowCount: totalExportRows,
+				});
 				const reportRows = await inquiryReportRows(
 					exportFilters,
 					MAX_INQUIRY_CSV_EXPORT_ROWS,

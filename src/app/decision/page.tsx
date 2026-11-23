@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { loadPublicCatalog } from "../../features/geography/catalog";
 import { getProfile } from "../../features/geography/domain";
 import { RetailScenario } from "../../features/decision/RetailScenario";
@@ -28,7 +29,7 @@ export default async function DecisionPage() {
 		}));
 	return (
 		<main className="decision-page">
-			<a href="/">{t("common.backToMap")}</a>
+			<Link href="/">{t("common.backToMap")}</Link>
 			<h1>{t("decision.title")}</h1>
 			<p>{t("decision.lede")}</p>
 			{catalog.mode !== "database" ||

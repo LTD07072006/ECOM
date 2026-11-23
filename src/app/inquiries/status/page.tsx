@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { InquiryStatusLookup } from "../../../features/inquiries/InquiryStatusLookup";
 import { getI18n } from "../../../lib/i18n/server";
 
@@ -17,7 +18,7 @@ export default async function InquiryStatusPage({
 
 	return (
 		<main className="decision-page">
-			<a href="/">{t("common.backToMap")}</a>
+			<Link href="/">{t("common.backToMap")}</Link>
 			<h1>{t("status.title")}</h1>
 			<p>{t("status.intro")}</p>
 			<InquiryStatusLookup initialReference={initialReference} />

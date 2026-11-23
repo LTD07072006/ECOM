@@ -14,21 +14,19 @@ Schema triển khai mô hình dữ liệu B-Lite dựa trên [đặc tả Market
 
 ## Áp dụng và kiểm thử
 
-Các lệnh sau dùng PowerShell và PostgreSQL 18.6 đã cài ở `D:\postgreSQL`. Thay `market_entry_dev` bằng tên database đã tạo để thử nghiệm. `psql` sẽ hỏi mật khẩu nếu máy chủ yêu cầu xác thực.
+Chạy các lệnh sau từ thư mục gốc của repository bằng PowerShell với `psql` có sẵn trên `PATH` (PostgreSQL 16+). Thay `market_entry_dev` bằng tên database đã tạo để thử nghiệm. `psql` sẽ hỏi mật khẩu nếu máy chủ yêu cầu xác thực.
 
 ```powershell
-Set-Location 'D:\TMDT\database\market-entry'
-$psql = 'D:\postgreSQL\bin\psql.exe'
 $connection = @('-X', '-h', '127.0.0.1', '-p', '5432', '-U', 'postgres', '-d', 'market_entry_dev', '-v', 'ON_ERROR_STOP=1')
 
 # Database mới
-& $psql @connection -f schema.sql -f 002-market-workflows.sql -f 003-investor-workflows.sql
+psql @connection -f database/market-entry/schema.sql -f database/market-entry/002-market-workflows.sql -f database/market-entry/003-investor-workflows.sql
 
 # Database đã có schema 6 bảng thì chạy lệnh này thay cho lệnh trên
-# & $psql @connection -f 002-market-workflows.sql -f 003-investor-workflows.sql
+# psql @connection -f database/market-entry/002-market-workflows.sql -f database/market-entry/003-investor-workflows.sql
 
 # Chạy sau khi áp dụng migration thành công
-& $psql @connection -f test-schema.sql -f test-workflows.sql
+psql @connection -f database/market-entry/test-schema.sql -f database/market-entry/test-workflows.sql
 ```
 
 Mỗi migration chạy trong một giao dịch và được áp dụng một lần theo thứ tự. Khi nâng cấp từng phần, chạy tiếp từ tệp chưa được áp dụng.

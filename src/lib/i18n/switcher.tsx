@@ -1,8 +1,8 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useI18n } from "./provider";
 import { LOCALE_COOKIE, LOCALES, type Locale } from "./locale";
+import { useI18n } from "./provider";
 
 export function LocaleSwitcher() {
 	const { locale, t } = useI18n();
@@ -10,8 +10,9 @@ export function LocaleSwitcher() {
 
 	function select(next: Locale) {
 		if (next === locale) return;
+		const secure = window.location.protocol === "https:" ? "; Secure" : "";
 		// biome-ignore lint/suspicious/noDocumentCookie: non-sensitive UI locale cookie read by Next.js server rendering
-		document.cookie = `${LOCALE_COOKIE}=${next}; Path=/; Max-Age=31536000; SameSite=Lax`;
+		document.cookie = `${LOCALE_COOKIE}=${next}; Path=/; Max-Age=31536000; SameSite=Lax${secure}`;
 		router.refresh();
 	}
 

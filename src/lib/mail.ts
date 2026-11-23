@@ -28,7 +28,6 @@ export function mailTransport(): MailTransport {
 		configured === "disabled"
 	)
 		return configured;
-	if (process.env.RESEND_API_KEY?.trim()) return "resend";
 	return process.env.NODE_ENV === "production" ? "disabled" : "log";
 }
 

@@ -8,8 +8,7 @@
     "rules": {
       "recommended": true,
       "a11y": {
-        "useSemanticElements": "off",
-        "noNoninteractiveTabindex": "off"
+        "useSemanticElements": "off"
       }
     }
   }

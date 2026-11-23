@@ -106,7 +106,7 @@ function DatasetEvidence({
 }
 
 export function ReleaseDashboard() {
-	const { t } = useI18n();
+	const { t, formatDate } = useI18n();
 	const [token, setToken] = useState("");
 	const [result, setResult] = useState<{
 		role: ReleaseRole;
@@ -131,13 +131,30 @@ export function ReleaseDashboard() {
 		try {
 			if (body) {
 				const response = await fetch(url, { method: "POST", headers, body });
-				if (!response.ok) throw new Error((await response.json()).error);
+				if (!response.ok) {
+					const payload = (await response.json().catch(() => null)) as {
+						error?: string;
+					} | null;
+					throw new Error(payload?.error ?? t("release.serviceUnavailable"));
+				}
 				setAction(undefined);
 			}
 			const response = await fetch(url, { headers, cache: "no-store" });
 			if (response.status === 401) setResult(undefined);
-			if (!response.ok) throw new Error((await response.json()).error);
-			setResult(await response.json());
+			const payload = (await response.json().catch(() => null)) as {
+				role?: ReleaseRole;
+				actor?: string;
+				data?: ReleaseOverview;
+				error?: string;
+			} | null;
+			if (!response.ok || !payload?.data || !payload.role) {
+				throw new Error(payload?.error ?? t("release.serviceUnavailable"));
+			}
+			setResult({
+				role: payload.role,
+				actor: payload.actor,
+				data: payload.data,
+			});
 			setStatus(
 				body ? t("release.actionRecorded") : t("release.overviewLoaded"),
 			);
@@ -294,7 +311,7 @@ export function ReleaseDashboard() {
 											<li key={entry.action}>
 												{entry.action} · {entry.actor} ·{" "}
 												<time dateTime={entry.at}>
-													{new Date(entry.at).toLocaleString()}
+													{formatDate(entry.at, { includeTime: true })}
 												</time>
 												{entry.note && ` · ${entry.note}`}
 											</li>

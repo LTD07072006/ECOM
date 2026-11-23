@@ -255,6 +255,10 @@ export function MapWorkspace({ coverage }: Props) {
 				: [],
 		[layers, selectedProvince],
 	);
+	const regionIds = useMemo(
+		() => (regionMode ? regions.flat() : []),
+		[regionMode, regions],
+	);
 
 	return (
 		<section
@@ -264,7 +268,7 @@ export function MapWorkspace({ coverage }: Props) {
 			<div className="map-stage database-map-stage">
 				<ProvinceMap
 					selectedId={regionMode ? null : selectedProvince}
-					regionIds={regionMode ? regions.flat() : []}
+					regionIds={regionIds}
 					onSelect={regionMode ? toggleRegion : openProfile}
 					layer={activeLayer}
 					matchIds={matchIds}

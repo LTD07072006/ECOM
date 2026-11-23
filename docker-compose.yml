@@ -5,6 +5,8 @@ services:
       context: .
       target: production
     restart: unless-stopped
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: ["ALL"]
     ports:
       - "127.0.0.1:${ECOM_APP_PORT:-3000}:3000"
     environment:
@@ -13,6 +15,9 @@ services:
       ECOM_OPERATORS: ${ECOM_OPERATORS:-}
       ECOM_REQUIRE_NAMED_OPERATORS: ${ECOM_REQUIRE_NAMED_OPERATORS:-1}
       ECOM_TRUSTED_PROXY_TOKEN: ${ECOM_TRUSTED_PROXY_TOKEN:-}
+      ECOM_ALLOW_DIRECT_INGRESS: ${ECOM_ALLOW_DIRECT_INGRESS:-}
+      ECOM_DATABASE_ALLOW_INSECURE: ${ECOM_DATABASE_ALLOW_INSECURE:-1}
+      ECOM_SESSION_SECRET: ${ECOM_SESSION_SECRET:-}
       INQUIRY_PRIVACY_CONTROLLER: ${INQUIRY_PRIVACY_CONTROLLER:-}
       INQUIRY_PRIVACY_EMAIL: ${INQUIRY_PRIVACY_EMAIL:-}
     depends_on:
@@ -47,9 +52,12 @@ services:
       context: .
       target: maintenance
     restart: unless-stopped
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: ["ALL"]
+    stop_grace_period: 60s
     command: ["bun", "run", "db:retention:scheduler"]
     environment:
-      ECOM_RETENTION_DB_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in the ignored .env file}
+      DATABASE_URL: postgres://market_entry:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in the ignored .env file}@db:5432/market_entry
     depends_on:
       db:
         condition: service_healthy
@@ -65,6 +73,9 @@ services:
       context: .
       target: maintenance
     restart: unless-stopped
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: ["ALL"]
+    stop_grace_period: 60s
     command: ["bun", "run", "mail:scheduler"]
     environment:
       DATABASE_URL: postgres://market_entry:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in the ignored .env file}@db:5432/market_entry
@@ -82,7 +93,7 @@ services:
       start_period: 1m
       retries: 2
   db:
-    image: postgis/postgis:16-3.4
+    image: postgis/postgis:16-3.4@sha256:44126d872ac91993766c341e369c539e8196614321765d36a6f1bab0419a5fa5
     container_name: ${ECOM_DB_CONTAINER:-vietnam-investor-platform-db}
     restart: unless-stopped
     environment:

@@ -140,7 +140,7 @@ export async function loadMapLayers(): Promise<MapLayers> {
           order by poi.kind, dataset.data_as_of desc, dataset.published_at desc, dataset.dataset_version_id
         )
         select poi.source_key, poi.name, poi.code, poi.kind, poi.geo_id, geo.display_name as province,
-          poi.reference_url, ST_AsGeoJSON(poi.geom, 12)::json as geometry, ${publishedDatasetColumns(sql)}
+          poi.reference_url, ST_AsGeoJSON(poi.geom, 6)::json as geometry, ${publishedDatasetColumns(sql)}
         from release_per_kind
         join market_entry.infrastructure_pois poi
           on poi.dataset_version_id = release_per_kind.dataset_version_id and poi.kind = release_per_kind.kind
@@ -246,6 +246,7 @@ export async function loadMapLayersTag(): Promise<string | null> {
 				.update(geography.geography_version_id)
 				.update(":")
 				.update(datasetRows.map((row) => row.dataset_version_id).join(","))
+				.update(":g6")
 				.digest("hex")
 				.slice(0, 16);
 			return `W/"layers-${digest}"`;

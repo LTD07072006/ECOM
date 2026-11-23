@@ -5,37 +5,35 @@ import {
 	inquiryAnalytics,
 } from "../../../../../features/inquiries/repository";
 import {
-	createInquiryReportSnapshot,
-	getInquiryReportSnapshot,
-	listInquiryReportSnapshots,
-	visibleSnapshot,
-} from "../../../../../features/inquiries/snapshots";
-import {
-	canonicalSnapshotInput,
-	validateSnapshotMetrics,
-} from "../../../../../features/inquiries/snapshots";
-import {
 	snapshotMethodNotAllowed,
 	withStewardSnapshot,
 } from "../../../../../features/inquiries/snapshot-http";
+import {
+	canonicalSnapshotInput,
+	createInquiryReportSnapshot,
+	getInquiryReportSnapshot,
+	listInquiryReportSnapshots,
+	validateSnapshotMetrics,
+	visibleSnapshot,
+} from "../../../../../features/inquiries/snapshots";
 import { error, json, readBoundedJson } from "../../../../../lib/http";
 
 export const dynamic = "force-dynamic";
 
-const snapshotSchema = z.object({
+const snapshotSchema = z.strictObject({
 	periodStart: z.coerce.date(),
 	periodEnd: z.coerce.date(),
 	timeZone: z.string().min(1).max(64).default(VIETNAM_REPORT_TIME_ZONE),
 	correctsSnapshotId: z.string().uuid().optional(),
 	preview: z.boolean().default(false),
-	filters: z.object({
+	filters: z.strictObject({
 		status: z.enum(["new", "contacted", "qualified", "closed"]).optional(),
 		country: z.string().max(100).optional(),
 		sector: z.string().max(160).optional(),
 		referenceCode: z.string().max(32).optional(),
 		from: z.coerce.date().optional(),
 		to: z.coerce.date().optional(),
-		geographyIds: z.array(z.string().uuid()).optional(),
+		geographyIds: z.array(z.string().uuid()).max(20).optional(),
 	}),
 });
 

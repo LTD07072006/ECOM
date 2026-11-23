@@ -1,9 +1,9 @@
 import "dotenv/config";
-import { databasePool } from "./pool";
 import {
 	loadDatabaseCatalog,
 	loadProvinceMap,
 } from "../features/geography/database-repository";
+import { databasePool } from "./pool";
 
 const sql = databasePool();
 
@@ -44,8 +44,9 @@ try {
 	);
 } catch (error) {
 	console.error(
-		"Database check failed. Start Docker Compose and run migrations first.",
-		error,
+		error instanceof Error && error.name !== "PostgresError"
+			? error.message
+			: "Database check failed. Start Docker Compose and run migrations first.",
 	);
 	process.exitCode = 1;
 } finally {
