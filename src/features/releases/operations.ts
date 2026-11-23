@@ -113,7 +113,7 @@ async function readDatasets(
     left join lateral (
       select count(*)::int as total, count(*) filter (where value_numeric is null)::int as missing,
         count(*) filter (where period_end > v.data_as_of or period_start > period_end or
-          (value_numeric is null) <> (quality_status = 'unavailable') or indicator.score_eligible or
+          (o.value_numeric is null) <> (o.quality_status = 'unavailable' or o.value_type in ('text', 'category')) or
           nullif(btrim(method_note), '') is null or nullif(btrim(o.limitations), '') is null)::int as invalid,
         array_agg(distinct period_label || ' (' || period_start || ' to ' || period_end || ')') as periods,
         array_agg(distinct method_note) filter (where method_note is not null) as methods,

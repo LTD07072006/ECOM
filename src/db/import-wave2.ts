@@ -148,6 +148,7 @@ async function importWave2(
 				await auditLocalPublish(tx, batchId);
 			}
 		});
+		await client`analyze market_entry.geo_units, market_entry.geo_boundaries, market_entry.observations, market_entry.dataset_versions, market_entry.source_registry, market_entry.infrastructure_pois`;
 	} finally {
 		await client.end();
 	}

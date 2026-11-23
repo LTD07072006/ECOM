@@ -36,8 +36,8 @@ async function batchProfiles(request: Request) {
 			(profile): profile is NonNullable<typeof profile> => profile !== null,
 		);
 
-	if (profiles.length !== ids.length)
-		return error("One or more geography units were not found.", 404);
+	if (profiles.length === 0)
+		return error("None of the requested geography units were found.", 404);
 
 	return json({
 		data: profiles,

@@ -1,6 +1,7 @@
 import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import type postgres from "postgres";
 import { databasePool } from "../../db/pool";
+import { loadPublishedGeography } from "../geography/database-repository";
 import type { InquiryProvenance, InquirySubmission } from "./types";
 import {
 	MAX_INQUIRY_CSV_EXPORT_ROWS,
@@ -27,34 +28,12 @@ async function resolveProvenance(
 	tx: postgres.TransactionSql,
 	geographyIds: string[],
 ) {
-	const release = await tx<
-		{
-			geography_version_id: string;
-			geography_code: string;
-			dataset_version_id: string;
-			dataset_code: string;
-			version_label: string;
-			source_id: string;
-		}[]
-	>`
-    select geography.geography_version_id, geography.code as geography_code,
-      dataset.dataset_version_id, dataset.dataset_code, dataset.version_label, dataset.source_id
-    from market_entry.geography_versions as geography
-    join market_entry.dataset_versions as dataset on dataset.dataset_version_id = geography.dataset_version_id
-    join market_entry.source_registry as source on source.source_id = dataset.source_id
-    where geography.status = 'active' and geography.effective_from <= current_date
-      and (geography.effective_to is null or geography.effective_to >= current_date)
-      and dataset.publication_status = 'published'
-      and source.access_right = 'public' and source.status = 'active'
-    order by geography.effective_from desc, dataset.published_at desc
-    limit 1
-  `;
-	if (!release[0])
-		throw new Error("No published geography release is available.");
+	const release = await loadPublishedGeography(tx);
+	if (!release) throw new Error("No published geography release is available.");
 
 	const units = await tx<{ geo_id: string }[]>`
     select geo_id from market_entry.geo_units
-    where geography_version_id = ${release[0].geography_version_id}
+    where geography_version_id = ${release.geography_version_id}
       and geo_id = any(${geographyIds}::uuid[])
       and valid_from <= current_date and (valid_to is null or valid_to >= current_date)
   `;
@@ -65,15 +44,15 @@ async function resolveProvenance(
 
 	const provenance: InquiryProvenance = {
 		capturedAt: new Date().toISOString(),
-		geographyVersionId: release[0].geography_version_id,
-		geographyVersionCode: release[0].geography_code,
+		geographyVersionId: release.geography_version_id,
+		geographyVersionCode: release.geography_code,
 		geographyIds,
 		datasets: [
 			{
-				id: release[0].dataset_version_id,
-				code: release[0].dataset_code,
-				version: release[0].version_label,
-				sourceId: release[0].source_id,
+				id: release.dataset_id,
+				code: release.dataset_code,
+				version: release.version_label,
+				sourceId: release.source_id,
 			},
 		],
 	};

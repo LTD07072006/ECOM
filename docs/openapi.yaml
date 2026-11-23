@@ -238,7 +238,7 @@ paths:
         - {name: ids, in: query, required: true, schema: {type: string}, description: Comma-separated unique UUIDs (1 to 20).}
       responses:
         '200':
-          description: Resolved place profiles with observations and provenance.
+          description: Resolved place profiles with observations and provenance. Returns partial results when at least one requested ID exists (see meta.requested and meta.found).
           content:
             application/json:
               schema:
@@ -248,7 +248,11 @@ paths:
                   data: {type: array, items: {$ref: '#/components/schemas/Profile'}}
                   meta: {type: object}
         '400': {$ref: '#/components/responses/BadRequest'}
-        '404': {$ref: '#/components/responses/NotFound'}
+        '404':
+          description: None of the requested geography IDs were found in the published release.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ErrorResponse'}
         '503': {$ref: '#/components/responses/Unavailable'}
   /api/geographies/{geoId}:
     get:
