@@ -110,6 +110,50 @@ components:
             reason: {type: [string, 'null']}
             studies: {type: array, items: {type: object}}
         meta: {type: object}
+    RouteAssessment:
+      type: object
+      required: [origin, destinationCode, destinationName, destinationCoordinates, distanceMeters, durationSeconds, geometry, mode, fallback, provider, calculatedOn, disclaimer]
+      properties:
+        origin: {type: array, minItems: 2, maxItems: 2, items: {type: number}}
+        destinationCode: {type: string}
+        destinationName: {type: string}
+        destinationCoordinates: {type: array, minItems: 2, maxItems: 2, items: {type: number}}
+        distanceMeters: {type: number, minimum: 0}
+        durationSeconds: {type: number, minimum: 0}
+        geometry:
+          type: object
+          required: [type, coordinates]
+          properties:
+            type: {type: string, enum: [LineString]}
+            coordinates: {type: array, minItems: 2, items: {type: array, minItems: 2, maxItems: 2, items: {type: number}}}
+        mode: {type: string, enum: [live, baseline, unavailable]}
+        fallback: {type: boolean}
+        provider: {type: string}
+        calculatedOn: {type: string, format: date-time}
+        observedOn: {type: [string, 'null'], format: date}
+        sourceUrl: {type: [string, 'null'], format: uri, pattern: '^https://'}
+        disclaimer: {type: string}
+    SiteVerificationEvidence:
+      type: object
+      required: [evidenceId, parkId, field, value, sourceUrl, verifiedOn, status, createdBy]
+      properties:
+        evidenceId: {type: string, format: uuid}
+        parkId: {type: string}
+        field: {type: string, enum: [area, region, power, wastewater, sector, infrastructure]}
+        value: {}
+        sourceUrl: {type: string, format: uri, pattern: '^https://'}
+        verifiedOn: {type: string, format: date}
+        expiresOn: {type: [string, 'null'], format: date}
+        status: {type: string, enum: [unverified, pending_review, verified, expired]}
+        reviewer: {type: [string, 'null']}
+        reviewNote: {type: [string, 'null']}
+        createdBy: {type: string}
+    LegalReviewRecords:
+      type: object
+      required: [references, requirements]
+      properties:
+        references: {type: array, items: {type: object}}
+        requirements: {type: array, items: {type: object}}
     InquiryCreatedResponse:
       type: object
       required: [data]
@@ -367,6 +411,71 @@ paths:
             application/json:
               schema: {type: object}
         '400': {$ref: '#/components/responses/BadRequest'}
+  /api/site-visit/context:
+    get:
+      summary: Published infrastructure context for a site-visit map center
+      parameters:
+        - {name: lng, in: query, required: true, schema: {type: number, minimum: -180, maximum: 180}}
+        - {name: lat, in: query, required: true, schema: {type: number, minimum: -90, maximum: 90}}
+      responses:
+        '200':
+          description: Published infrastructure points available around the requested map center.
+          content:
+            application/json:
+              schema: {type: object}
+         '400': {$ref: '#/components/responses/BadRequest'}
+  /api/site-visit/route:
+    get:
+      summary: Advisory route estimate from a candidate site to a published destination
+      parameters:
+        - {name: lng, in: query, required: true, schema: {type: number, minimum: -180, maximum: 180}}
+        - {name: lat, in: query, required: true, schema: {type: number, minimum: -90, maximum: 90}}
+        - {name: destination, in: query, required: true, schema: {type: string}, description: Published infrastructure POI code; arbitrary provider URLs are rejected.}
+      responses:
+        '200':
+          description: Live route, dated baseline fallback, or explicit unavailable assessment. This is advisory and not a traffic or access guarantee.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: {$ref: '#/components/schemas/RouteAssessment'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '429': {$ref: '#/components/responses/TooManyRequests'}
+        '503': {$ref: '#/components/responses/Unavailable'}
+    post:
+      summary: Advisory route estimate for one leg of a shared site-visit itinerary
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [origin, destination]
+              properties:
+                origin: {type: array, minItems: 2, maxItems: 2, items: {type: number}}
+                destination: {type: array, minItems: 2, maxItems: 2, items: {type: number}}
+                destinationId: {type: string, maxLength: 160}
+                destinationName: {type: string, maxLength: 240}
+      responses:
+        '200':
+          description: Route assessment for the itinerary leg.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: {$ref: '#/components/schemas/RouteAssessment'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '415':
+          description: JSON request body required.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ErrorResponse'}
+        '429': {$ref: '#/components/responses/TooManyRequests'}
+        '503': {$ref: '#/components/responses/Unavailable'}
   /api/internal/surveys:
     get:
       summary: List all customer needs survey studies across draft, published, and retired states
@@ -416,6 +525,116 @@ paths:
         '400': {$ref: '#/components/responses/BadRequest'}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '404': {$ref: '#/components/responses/NotFound'}
+  /api/internal/site-verification:
+    get:
+      summary: List industrial-park evidence records for review
+      security: [{operatorToken: []}, {cookieAuth: []}]
+      responses:
+        '200':
+          description: Current evidence records and reviewer identity.
+          content:
+            application/json:
+              schema: {type: object, required: [data, actor, role], properties: {data: {type: array, items: {$ref: '#/components/schemas/SiteVerificationEvidence'}}, actor: {type: string}, role: {type: string}}}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+    post:
+      summary: Submit or replace one industrial-park evidence field for review
+      security: [{operatorToken: []}, {cookieAuth: []}]
+      requestBody:
+        required: true
+        content: {application/json: {schema: {type: object}}}
+      responses:
+        '201': {description: Evidence queued for review., content: {application/json: {schema: {type: object}}}}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+    patch:
+      summary: Approve, reject, or revalidate industrial-park evidence
+      security: [{operatorToken: []}, {cookieAuth: []}]
+      requestBody:
+        required: true
+        content: {application/json: {schema: {type: object}}}
+      responses:
+        '200': {description: Evidence review recorded., content: {application/json: {schema: {type: object}}}}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '409': {description: Invalid state transition., content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}}
+  /api/internal/legal-readiness:
+    get:
+      summary: List legal references and entry requirements for advisory review
+      security: [{operatorToken: []}, {cookieAuth: []}]
+      responses:
+        '200': {description: Legal review records., content: {application/json: {schema: {type: object, required: [data], properties: {data: {$ref: '#/components/schemas/LegalReviewRecords'}}}}}}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+    patch:
+      summary: Record reviewer status and revalidation metadata for a legal record
+      security: [{operatorToken: []}, {cookieAuth: []}]
+      requestBody:
+        required: true
+        content: {application/json: {schema: {type: object}}}
+      responses:
+        '200': {description: Legal review recorded., content: {application/json: {schema: {type: object}}}}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '404': {$ref: '#/components/responses/NotFound'}
+  /api/internal/observability:
+    get:
+      summary: Read authenticated API telemetry for operational review
+      security: [{operatorToken: []}, {cookieAuth: []}]
+      parameters:
+        - name: hours
+          in: query
+          required: false
+          schema: {type: integer, minimum: 1, maximum: 24, default: 24}
+        - name: route
+          in: query
+          required: false
+          schema: {type: string, enum: [site_visit_routes, road_routes, search, profile, compare, export, boundaries, layers, health]}
+      responses:
+        '200':
+          description: Aggregated telemetry summary and event count.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    required: [identity, windowHours, summary, events]
+                    properties:
+                      identity: {type: string}
+                      windowHours: {type: integer}
+                      summary: {type: object}
+                      events: {type: integer, minimum: 0}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+  /api/map/road-route:
+    get:
+      summary: Estimate car travel between supported public map reference points
+      parameters:
+        - {name: site, in: query, required: true, schema: {type: string}, example: HP-IZ-DEEPC}
+        - {name: facility, in: query, required: true, schema: {type: string}, example: HPH}
+      responses:
+        '200':
+          description: On-demand provider estimate, dated static baseline, or null if the pair is unsupported. No real-time traffic or truck restrictions.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    oneOf:
+                      - type: 'null'
+                      - type: object
+                        required: [mode, distanceMeters, durationSeconds, sourceUrl, observedOn]
+                        properties:
+                          mode: {type: string, enum: [baseline, live]}
+                          distanceMeters: {type: number, exclusiveMinimum: 0}
+                          durationSeconds: {type: number, exclusiveMinimum: 0}
+                          sourceUrl: {type: string, format: uri}
+                          observedOn: {type: string, format: date}
+        '400': {description: Missing, repeated or unsupported query parameter}
+        '429': {description: Rate limit reached}
+        '503': {description: Service temporarily unavailable}
   /api/map/proximity:
     get:
       summary: Filter provinces within a PostGIS ST_DWithin radius (km) of an infrastructure type

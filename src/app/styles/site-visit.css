@@ -1,0 +1,252 @@
+.site-visit-page {
+	min-height: calc(100vh - 64px);
+	padding: clamp(1.5rem, 3vw, 3.5rem) clamp(1rem, 4vw, 4rem) 4rem;
+	background: var(--bg-page);
+}
+
+.site-visit-hero {
+	display: flex;
+	align-items: flex-end;
+	justify-content: space-between;
+	gap: 2rem;
+	max-width: 92rem;
+	margin: 0 auto 1.5rem;
+	padding-bottom: 1.5rem;
+	border-bottom: var(--border-frame);
+}
+
+.site-visit-hero h1 {
+	max-width: 32rem;
+	margin: 0.25rem 0 0.5rem;
+	font-size: clamp(2rem, 4vw, 4rem);
+	letter-spacing: -0.05em;
+	line-height: 0.98;
+}
+.site-visit-hero p {
+	max-width: 42rem;
+	margin: 0;
+	color: var(--text-secondary);
+}
+.site-visit-hero .site-visit-kicker {
+	color: var(--accent-cinnabar);
+	font-size: 0.75rem;
+	font-weight: 800;
+	letter-spacing: 0.12em;
+	text-transform: uppercase;
+}
+.site-visit-status {
+	display: grid;
+	min-width: 13rem;
+	padding: 1rem;
+	border-left: 4px solid var(--accent-highlight);
+	background: var(--bg-card);
+}
+.site-visit-status span {
+	color: var(--text-secondary);
+	font-size: 0.8rem;
+}
+.site-visit-layout {
+	display: grid;
+	grid-template-columns: minmax(18rem, 24rem) minmax(0, 1fr);
+	gap: 1rem;
+	max-width: 92rem;
+	min-height: 37rem;
+	margin: 0 auto;
+}
+.site-visit-panel {
+	display: flex;
+	flex-direction: column;
+	gap: 1rem;
+	padding: 1.25rem;
+	background: var(--bg-card);
+	border: var(--border-frame);
+}
+.site-visit-search,
+.site-visit-field {
+	display: grid;
+	gap: 0.45rem;
+}
+.site-visit-search label,
+.site-visit-field label {
+	font-size: 0.78rem;
+	font-weight: 800;
+}
+.site-visit-search input,
+.site-visit-field select {
+	width: 100%;
+	min-height: 2.75rem;
+	padding: 0.65rem 0.7rem;
+	border: 2px solid var(--border-strong);
+	background: var(--bg-page);
+	color: var(--text-primary);
+	font: inherit;
+}
+.site-visit-search-results {
+	display: grid;
+	gap: 0.25rem;
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+.site-visit-search-results button {
+	width: 100%;
+	padding: 0.65rem;
+	border: 1px solid var(--border-frame);
+	background: transparent;
+	text-align: left;
+	cursor: pointer;
+}
+.site-visit-search-results button:hover {
+	background: var(--bg-page);
+}
+.site-visit-route-result,
+.site-visit-context-detail {
+	display: grid;
+	gap: 0.3rem;
+	padding: 1rem 0;
+	border-top: var(--border-frame);
+}
+.site-visit-actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.5rem;
+}
+.site-visit-error {
+	padding: 0.75rem;
+	border-left: 3px solid var(--accent-cinnabar);
+	background: #fff1ed;
+	color: var(--text-primary);
+}
+.site-visit-secondary {
+	max-width: 92rem;
+	margin: 1rem auto 0;
+	padding: 1.25rem;
+	border: var(--border-frame);
+	background: var(--bg-card);
+}
+.site-visit-secondary h2 {
+	margin: 0 0 0.4rem;
+	font-size: 1.25rem;
+}
+.site-visit-secondary p {
+	margin: 0 0 1rem;
+	color: var(--text-secondary);
+}
+.site-visit-candidate-list,
+.site-visit-compare-table {
+	display: grid;
+	gap: 0.5rem;
+}
+.site-visit-candidate-list span,
+.site-visit-compare-table div {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 1rem;
+	padding: 0.65rem;
+	border: 1px solid var(--border-frame);
+}
+.site-visit-candidate-list button {
+	border: 0;
+	background: transparent;
+	cursor: pointer;
+	font-size: 1.1rem;
+}
+.site-visit-stops {
+	display: grid;
+	gap: 0.5rem;
+	padding-left: 1.5rem;
+}
+.site-visit-stops li {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	padding: 0.55rem 0.7rem;
+	border: 1px solid var(--border-frame);
+}
+.site-visit-stops li span {
+	flex: 1;
+}
+.site-visit-stops button {
+	min-width: 2rem;
+	min-height: 2rem;
+	border: 1px solid var(--border-strong);
+	background: var(--bg-page);
+	cursor: pointer;
+}
+.site-visit-itinerary-summary {
+	margin: 1rem 0;
+	font-weight: 700;
+	color: var(--accent-navy);
+}
+.site-visit-attribution {
+	max-width: 92rem;
+	margin: 1rem auto 0;
+	color: var(--text-secondary);
+	font-size: 0.75rem;
+}
+.site-visit-attribution a {
+	color: var(--accent-navy);
+	font-weight: 700;
+}
+.site-visit-route-result strong {
+	font-size: 1.8rem;
+	color: var(--accent-navy);
+}
+.site-visit-route-result small {
+	color: var(--text-secondary);
+	line-height: 1.45;
+}
+.site-visit-context-detail a {
+	color: var(--accent-navy);
+	font-size: 0.85rem;
+	font-weight: 700;
+}
+.site-visit-map-wrap {
+	position: relative;
+	min-height: 37rem;
+	overflow: hidden;
+	border: var(--border-frame);
+	background: #dfe5df;
+}
+.site-visit-map {
+	position: absolute;
+	inset: 0;
+}
+.site-visit-legend {
+	position: absolute;
+	right: 1rem;
+	bottom: 1rem;
+	display: grid;
+	gap: 0.4rem;
+	padding: 0.7rem 0.8rem;
+	background: rgba(250, 250, 247, 0.94);
+	border: 1px solid var(--border-strong);
+	font-size: 0.78rem;
+}
+.site-visit-legend span {
+	display: flex;
+	align-items: center;
+	gap: 0.45rem;
+}
+.site-visit-legend-dot {
+	display: inline-block;
+	width: 0.65rem;
+	height: 0.65rem;
+	border-radius: 50%;
+	background: #3e7c67;
+}
+.site-visit-legend-dot--candidate {
+	background: #b5432f;
+}
+@media (max-width: 56rem) {
+	.site-visit-hero {
+		display: grid;
+	}
+	.site-visit-layout {
+		grid-template-columns: 1fr;
+	}
+	.site-visit-map-wrap {
+		min-height: 30rem;
+	}
+}

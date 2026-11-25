@@ -5,7 +5,10 @@
     "name": "Buon Ma Thuot Airport",
     "longitude": 108.120002747,
     "latitude": 12.668299675,
-    "url": "https://ourairports.com/airports/VVBM/"
+    "url": "https://ourairports.com/airports/VVBM/",
+    "airportClassification": "domestic",
+    "airportOperationalStatus": "operational",
+    "classificationSourceUrl": "https://acv.vn/vi/ve-acv"
   },
   {
     "id": "VVCA",
@@ -13,7 +16,10 @@
     "name": "Chu Lai Airport",
     "longitude": 108.706001,
     "latitude": 15.4033,
-    "url": "https://ourairports.com/airports/VVCA/"
+    "url": "https://ourairports.com/airports/VVCA/",
+    "airportClassification": "domestic",
+    "airportOperationalStatus": "operational",
+    "classificationSourceUrl": "https://acv.vn/vi/ve-acv"
   },
   {
     "id": "VVCI",
@@ -21,7 +27,10 @@
     "name": "Cat Bi International Airport",
     "longitude": 106.724315,
     "latitude": 20.817428,
-    "url": "https://ourairports.com/airports/VVCI/"
+    "url": "https://ourairports.com/airports/VVCI/",
+    "airportClassification": "international",
+    "airportOperationalStatus": "operational",
+    "classificationSourceUrl": "https://acv.vn/vi/ve-acv"
   },
   {
     "id": "VVCM",
@@ -29,7 +38,10 @@
     "name": "Cà Mau Airport",
     "longitude": 105.177778,
     "latitude": 9.177667,
-    "url": "https://ourairports.com/airports/VVCM/"
+    "url": "https://ourairports.com/airports/VVCM/",
+    "airportClassification": "domestic",
+    "airportOperationalStatus": "operational",
+    "classificationSourceUrl": "https://acv.vn/vi/ve-acv"
   },
   {
     "id": "VVCR",
@@ -37,7 +49,10 @@
     "name": "Cam Ranh International Airport",
     "longitude": 109.219002,
     "latitude": 11.9982,
-    "url": "https://ourairports.com/airports/VVCR/"
+    "url": "https://ourairports.com/airports/VVCR/",
+    "airportClassification": "international",
+    "airportOperationalStatus": "operational",
+    "classificationSourceUrl": "https://acv.vn/vi/ve-acv"
   },
   {
     "id": "VVCS",
@@ -45,7 +60,10 @@
     "name": "Con Dao Airport",
     "longitude": 106.633003,
     "latitude": 8.73183,
-    "url": "https://ourairports.com/airports/VVCS/"
+    "url": "https://ourairports.com/airports/VVCS/",
+    "airportClassification": "domestic",
+    "airportOperationalStatus": "operational",
+    "classificationSourceUrl": "https://acv.vn/vi/ve-acv"
   },
   {
     "id": "VVCT",
@@ -53,7 +71,10 @@
     "name": "Can Tho International Airport",
     "longitude": 105.709371,
     "latitude": 10.083397,
-    "url": "https://ourairports.com/airports/VVCT/"
+    "url": "https://ourairports.com/airports/VVCT/",
+    "airportClassification": "international",
+    "airportOperationalStatus": "operational",
+    "classificationSourceUrl": "https://acv.vn/vi/ve-acv"
   },
   {
     "id": "VVDB",
@@ -61,7 +82,10 @@
     "name": "Dien Bien Phu Airport",
     "longitude": 103.008003235,
     "latitude": 21.3974990845,
-    "url": "https://ourairports.com/airports/VVDB/"
+    "url": "https://ourairports.com/airports/VVDB/",
+    "airportClassification": "domestic",
+    "airportOperationalStatus": "operational",
+    "classificationSourceUrl": "https://acv.vn/vi/ve-acv"
   },
   {
     "id": "VVDH",
@@ -69,7 +93,10 @@
     "name": "Dong Hoi Airport",
     "longitude": 106.590556,
     "latitude": 17.515,
-    "url": "https://ourairports.com/airports/VVDH/"
+    "url": "https://ourairports.com/airports/VVDH/",
+    "airportClassification": "domestic",
+    "airportOperationalStatus": "operational",
+    "classificationSourceUrl": "https://acv.vn/vi/ve-acv"
   },
   {
     "id": "VVDL",
@@ -77,7 +104,10 @@
     "name": "Lien Khuong Airport",
     "longitude": 108.366997,
     "latitude": 11.750556,
-    "url": "https://ourairports.com/airports/VVDL/"
+    "url": "https://ourairports.com/airports/VVDL/",
+    "airportClassification": "international",
+    "airportOperationalStatus": "operational",
+    "classificationSourceUrl": "https://acv.vn/vi/ve-acv"
   },
   {
     "id": "VVDN",
@@ -85,7 +115,10 @@
     "name": "Da Nang International Airport",
     "longitude": 108.198997,
     "latitude": 16.0439,
-    "url": "https://ourairports.com/airports/VVDN/"
+    "url": "https://ourairports.com/airports/VVDN/",
+    "airportClassification": "international",
+    "airportOperationalStatus": "operational",
+    "classificationSourceUrl": "https://acv.vn/vi/ve-acv"
   },
   {
     "id": "VVNB",
@@ -93,7 +126,10 @@
     "name": "Noi Bai International Airport",
     "longitude": 105.806999,
     "latitude": 21.221201,
-    "url": "https://ourairports.com/airports/VVNB/"
+    "url": "https://ourairports.com/airports/VVNB/",
+    "airportClassification": "international",
+    "airportOperationalStatus": "operational",
+    "classificationSourceUrl": "https://acv.vn/vi/ve-acv"
   },
   {
     "id": "VVPB",
@@ -101,7 +137,10 @@
     "name": "Phu Bai International Airport",
     "longitude": 107.704094,
     "latitude": 16.400581,
-    "url": "https://ourairports.com/airports/VVPB/"
+    "url": "https://ourairports.com/airports/VVPB/",
+    "airportClassification": "international",
+    "airportOperationalStatus": "operational",
+    "classificationSourceUrl": "https://acv.vn/vi/ve-acv"
   },
   {
     "id": "VVPC",
@@ -109,7 +148,10 @@
     "name": "Phu Cat Airport",
     "longitude": 109.042,
     "latitude": 13.955,
-    "url": "https://ourairports.com/airports/VVPC/"
+    "url": "https://ourairports.com/airports/VVPC/",
+    "airportClassification": "domestic",
+    "airportOperationalStatus": "operational",
+    "classificationSourceUrl": "https://acv.vn/vi/ve-acv"
   },
   {
     "id": "VVPK",
@@ -117,7 +159,10 @@
     "name": "Pleiku Airport",
     "longitude": 108.01699829101562,
     "latitude": 14.004500389099121,
-    "url": "https://ourairports.com/airports/VVPK/"
+    "url": "https://ourairports.com/airports/VVPK/",
+    "airportClassification": "domestic",
+    "airportOperationalStatus": "operational",
+    "classificationSourceUrl": "https://acv.vn/vi/ve-acv"
   },
   {
     "id": "VVPQ",
@@ -125,7 +170,10 @@
     "name": "Phú Quốc International Airport",
     "longitude": 103.99353,
     "latitude": 10.169783,
-    "url": "https://ourairports.com/airports/VVPQ/"
+    "url": "https://ourairports.com/airports/VVPQ/",
+    "airportClassification": "international",
+    "airportOperationalStatus": "operational",
+    "classificationSourceUrl": "https://acv.vn/vi/ve-acv"
   },
   {
     "id": "VVRG",
@@ -133,7 +181,10 @@
     "name": "Rach Gia Airport",
     "longitude": 105.132379532,
     "latitude": 9.95802997234,
-    "url": "https://ourairports.com/airports/VVRG/"
+    "url": "https://ourairports.com/airports/VVRG/",
+    "airportClassification": "domestic",
+    "airportOperationalStatus": "operational",
+    "classificationSourceUrl": "https://acv.vn/vi/ve-acv"
   },
   {
     "id": "VVTH",
@@ -141,7 +192,10 @@
     "name": "Dong Tac Airport",
     "longitude": 109.334,
     "latitude": 13.0496,
-    "url": "https://ourairports.com/airports/VVTH/"
+    "url": "https://ourairports.com/airports/VVTH/",
+    "airportClassification": "domestic",
+    "airportOperationalStatus": "operational",
+    "classificationSourceUrl": "https://acv.vn/vi/ve-acv"
   },
   {
     "id": "VVTS",
@@ -149,7 +203,10 @@
     "name": "Tan Son Nhat International Airport",
     "longitude": 106.652,
     "latitude": 10.8188,
-    "url": "https://ourairports.com/airports/VVTS/"
+    "url": "https://ourairports.com/airports/VVTS/",
+    "airportClassification": "international",
+    "airportOperationalStatus": "operational",
+    "classificationSourceUrl": "https://acv.vn/vi/ve-acv"
   },
   {
     "id": "VVTX",
@@ -157,7 +214,10 @@
     "name": "Tho Xuan Airport",
     "longitude": 105.467778,
     "latitude": 19.901667,
-    "url": "https://ourairports.com/airports/VVTX/"
+    "url": "https://ourairports.com/airports/VVTX/",
+    "airportClassification": "domestic",
+    "airportOperationalStatus": "operational",
+    "classificationSourceUrl": "https://acv.vn/vi/ve-acv"
   },
   {
     "id": "VVVD",
@@ -165,7 +225,10 @@
     "name": "Van Don International Airport",
     "longitude": 107.41539,
     "latitude": 21.120693,
-    "url": "https://ourairports.com/airports/VVVD/"
+    "url": "https://ourairports.com/airports/VVVD/",
+    "airportClassification": "international",
+    "airportOperationalStatus": "operational",
+    "classificationSourceUrl": "https://acv.vn/vi/ve-acv"
   },
   {
     "id": "VVVH",
@@ -173,6 +236,31 @@
     "name": "Vinh Airport",
     "longitude": 105.67099762,
     "latitude": 18.7376003265,
-    "url": "https://ourairports.com/airports/VVVH/"
+    "url": "https://ourairports.com/airports/VVVH/",
+    "airportClassification": "international",
+    "airportOperationalStatus": "operational",
+    "classificationSourceUrl": "https://acv.vn/vi/ve-acv"
+  },
+  {
+    "id": "VVLT",
+    "code": null,
+    "name": "Long Thanh International Airport",
+    "longitude": 107.1003,
+    "latitude": 10.3279,
+    "airportClassification": "international",
+    "airportOperationalStatus": "operational",
+    "classificationSourceUrl": "https://acv.vn/vi/ve-acv",
+    "url": "https://acv.vn/vi/du-an/cang-hang-khong-quoc-te-long-thanh"
+  },
+  {
+    "id": "VVNS",
+    "code": null,
+    "name": "Na San Airport",
+    "longitude": null,
+    "latitude": null,
+    "airportClassification": "domestic",
+    "airportOperationalStatus": "not_operational",
+    "classificationSourceUrl": "https://acv.vn/vi/ve-acv",
+    "url": "https://acv.vn/vi/ve-acv"
   }
 ]

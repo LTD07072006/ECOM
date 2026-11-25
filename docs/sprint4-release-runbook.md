@@ -25,7 +25,7 @@ Migration `0003_sprint4_release_operations` adds four operations tables. The pub
 - [x] Snapshot compare/export reads stored metrics; create/export/compare actions are steward-only and audited.
 - [x] Snapshot consistency requires status counts to reconcile to total; corrections create new snapshots and retain the original for traceability.
 - [x] Snapshot cleanup is dry-run by default and can be applied with `bun run db:cleanup:reports -- --apply`; expired snapshot audit rows are removed with their snapshot rows.
-- [x] Release verification: `bun run typecheck`, `bun run lint`, `bun run format:check`, `bun run test:release db|workflow|e2e`, `bun run test:pilot`, and `bun run build` run fail-closed in `.github/workflows/release-checks.yml` with zero skipped required tests.
+- [x] Release verification is wired fail-closed in `.github/workflows/release-checks.yml`: typecheck, lint, format, disposable PostGIS DB/workflow tests, build, production browser/pilot tests, container build/smoke and Trivy scan. Local verification in this session passed the application suite (`217 pass, 32 skip`) and focused release/API/P0 gates; the opt-in DB/workflow/E2E release suites still require their disposable runtime/preview.
 - [ ] Run the inquiry E2E suite against the pilot build with a disposable or approved test record.
 
 ### 2. Data release
@@ -96,11 +96,17 @@ On an application regression, switch traffic to the prior known-good build after
 4. Check structured `api_request` and `data_unavailable` events. Plot p95 latency and 5xx/429 counts by route, and monitor database/catalog failures, export failures and boundary failures. Poll `/api/health` for `status=ok` and `publicationStatus=published`. Inspect freshness, restricted/revoked sources and invalid geometry in the internal view.
 5. During pilot, review error logs, feedback and public release status daily. Check new source coverage, due dates, boundary consistency and restore readiness each week. Assign an owner and deadline to every blocker.
 
+## Phase 9 — Production observability and release evidence
+
+The internal `/internal/observability` page exposes aggregate-only API telemetry for authenticated operators. Review requests, p50/p95 latency, 5xx/429 counts, route fallbacks, provider outcomes and quota pressure. The dashboard must never be used to inspect raw URLs, search strings, coordinates, tokens or request bodies.
+
+Before production release, complete `docs/phase-9-release-checklist.md` and keep the incident procedure in `docs/phase-9-production-observability-runbook.md` with the deployment evidence. Observability buckets are retained for 30 days; migration `0018_api_observability.sql` must be applied before enabling production telemetry persistence.
+
 The smoke check (`bun run test:pilot`) exits nonzero when p95 exceeds 2.5 seconds for search (province or commune), profile, compare or layers, 2 seconds for health, 5 seconds for export, boundaries or initial page load, or when response payload bytes exceed configured budgets (64 KB search/profile, 96 KB compare, 256 KB layers, 512 KB export, 3 MB boundaries). For high-volume inquiry benchmarking on a disposable local database (`ecom_bench_*`), run `bun run bench:inquiries`. Configure a log collector and alerts for the deployment to aggregate the existing structured events. Check retention through `bun run db:retention:monitor`.
 
 ## Local verification
 
-The production build passed type checking. Forty-nine tests passed against the restored local PostGIS database, the release workflow test passed on a separate fresh database, and all 11 Chromium tests passed. The browser checks included ten consecutive map reloads and a response with three times the usual boundary vertices. The production-mode export quota returned 429 with `Retry-After`. The local catalog retained matching dataset checksums and record counts after migration and after restore.
+The current working tree passed `bun --no-env-file test tests/api tests/db tests/features tests/smoke` with **217 pass, 32 skip, 0 fail**, plus typecheck, lint, format check, Drizzle schema check, production build and `git diff --check`. Focused hardening/release/data gates also passed, including **22 P0/data tests** and **17 P1/API tests with 3 opt-in skips**. Wave 2 validation reports **8 series, 242 observations, 24 airports and 8 ports**. The 32 skipped tests require disposable PostGIS, release workflow credentials or a production preview; they are not represented as local PASS evidence. Docker cold-start/non-root/Trivy verification was not possible because the local Docker daemon was unavailable.
 
 In 12 mixed-request rounds against the local production build, the initial HTML request took 181 ms and the measured p95 was 836 ms for search, 675 ms for profile, 935 ms for a three-place comparison, 829 ms for a 20-place JSON export and 762 ms for the boundary response. Use these as local measurements when comparing results from the pilot environment.
 

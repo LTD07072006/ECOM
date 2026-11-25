@@ -11,8 +11,8 @@ export type CohortSortCandidate = {
 /**
  * Canonical cohort selection order shared across map layers, profile catalog,
  * and search filters:
- * 1. periodEnd DESC
- * 2. coverage DESC
+ * 1. coverage DESC
+ * 2. periodEnd DESC
  * 3. publishedAt DESC
  * 4. datasetId ASC
  * 5. periodStart DESC
@@ -24,8 +24,8 @@ export function compareCohortPriority(
 	right: CohortSortCandidate,
 ): number {
 	return (
-		right.periodEnd.localeCompare(left.periodEnd) ||
 		right.coverage - left.coverage ||
+		right.periodEnd.localeCompare(left.periodEnd) ||
 		(right.publishedAt ?? "").localeCompare(left.publishedAt ?? "") ||
 		left.datasetId.localeCompare(right.datasetId) ||
 		right.periodStart.localeCompare(left.periodStart) ||

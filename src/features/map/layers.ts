@@ -116,6 +116,15 @@ export type InfrastructurePointProperties = {
 	geoId: string;
 	province: string;
 	url: string;
+	airportClassification?: "international" | "domestic" | null;
+	airportOperationalStatus?:
+		| "operational"
+		| "planned"
+		| "not_operational"
+		| null;
+	portType?: "deep_sea" | "coastal" | "river" | "container_terminal" | null;
+	portOperationalStatus?: "operational" | "planned" | "not_operational" | null;
+	classificationSourceUrl?: string | null;
 };
 
 export type ProvinceInfrastructureItem = InfrastructurePointProperties & {

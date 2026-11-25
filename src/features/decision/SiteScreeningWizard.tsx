@@ -3,15 +3,17 @@
 import { useState } from "react";
 import { useI18n } from "../../lib/i18n/provider";
 import type { Profile } from "../geography/types";
-import { curatedProvinceMicroLocations } from "../map/province-detail-locations";
+import { InquiryForm } from "../inquiries/InquiryForm";
 import { getProvinceDistricts } from "../map/province-districts";
 import { catchmentFacilities } from "../map/proximity";
 import { sectorScenarios, type SectorId } from "./model";
 import {
 	screenLocations,
+	infrastructurePrioritiesFromFacilities,
 	type InfrastructurePriority,
 	type ScreeningInput,
 } from "./site-screening";
+import { pilotParksForDistrict, verificationFields } from "./site-verification";
 
 export function SiteScreeningWizard({
 	provinces,
@@ -20,7 +22,7 @@ export function SiteScreeningWizard({
 	provinces: Profile[];
 	onCompare: (sector: SectorId, ids: string[]) => void;
 }) {
-	const { t, locale } = useI18n();
+	const { t, locale, formatNumber } = useI18n();
 	const [input, setInput] = useState<ScreeningInput>({
 		sector: "manufacturing",
 		areaM2: null,
@@ -35,41 +37,47 @@ export function SiteScreeningWizard({
 		screenLocations(
 			submitted,
 			provinces.flatMap((province) =>
-				getProvinceDistricts(province, []).map((district) => {
-					const facilities =
-						district.longitude === null || district.latitude === null
-							? []
-							: catchmentFacilities([district.longitude, district.latitude]);
-					const infrastructure = facilities.flatMap(
-						({ code, kind }): InfrastructurePriority[] =>
-							kind === "airport"
-								? ["international_airport"]
-								: kind === "expressway_node"
-									? ["expressway"]
-									: kind === "seaport" && code !== "VNVCA-CP"
-										? ["deep_port"]
-										: [],
+				getProvinceDistricts(province, []).flatMap((district) => {
+					const parks = pilotParksForDistrict(
+						province.code,
+						district.linkedMicroLocationIds,
 					);
-					const areas = curatedProvinceMicroLocations
-						.filter((site) => district.linkedMicroLocationIds.includes(site.id))
-						.flatMap((site) =>
-							site.utilitySpecs?.availableLandHa == null
+					return (parks.length ? parks : [undefined]).map((park) => {
+						const longitude = park?.longitude ?? district.longitude;
+						const latitude = park?.latitude ?? district.latitude;
+						const facilities =
+							longitude === null || latitude === null
 								? []
-								: [site.utilitySpecs.availableLandHa * 10000],
+								: catchmentFacilities([longitude, latitude]);
+						const infrastructure = infrastructurePrioritiesFromFacilities(
+							facilities.map((facility) => ({
+								kind: facility.kind,
+								airportClassification: facility.airportClassification,
+								airportOperationalStatus: facility.airportOperationalStatus,
+								portType: facility.portType,
+								portOperationalStatus: facility.portOperationalStatus,
+							})),
 						);
-					return {
-						id: district.id,
-						provinceId: province.id,
-						name: `${district.name[locale]} · ${province.displayName}`,
-						sectors: district.recommendedSectors.map(({ sector }) => sector),
-						availableAreaM2: areas.length ? Math.max(...areas) : null,
-						wageRegion: null,
-						infrastructure: infrastructure.includes(
-							submitted.infrastructure as InfrastructurePriority,
-						)
-							? infrastructure
-							: null,
-					};
+						const area = park?.fields.area;
+						return {
+							id: park ? `${district.id}:${park.id}` : district.id,
+							park,
+							provinceId: province.id,
+							provinceName: province.displayName,
+							name: `${district.name[locale]} · ${province.displayName}`,
+							sectors: district.recommendedSectors.map(({ sector }) => sector),
+							availableAreaM2: area ? area.value * 10000 : null,
+							wageRegion: park?.fields.region?.value ?? null,
+							infrastructure:
+								infrastructure === null
+									? null
+									: infrastructure.includes(
+												submitted.infrastructure as InfrastructurePriority,
+											)
+										? infrastructure
+										: [],
+						};
+					});
 				}),
 			),
 		);
@@ -185,7 +193,11 @@ export function SiteScreeningWizard({
 								<ol>
 									{items.map((item) => (
 										<li key={item.id}>
-											<strong>{item.name}</strong>
+											<strong>
+												{item.park
+													? `${item.park.name[locale]} · ${item.provinceName}`
+													: item.name}
+											</strong>
 											<p>
 												{item.reasons
 													.map((reason) => t(`screen.${reason}`))
@@ -193,6 +205,63 @@ export function SiteScreeningWizard({
 												{item.missing.length > 0 &&
 													` — ${t("district.missing")}: ${item.missing.map((reason) => t(`screen.${reason}`)).join(" · ")}`}
 											</p>
+											{item.park && (
+												<>
+													<dl>
+														{(
+															[
+																["area", "site.availableLandHa"],
+																["region", "screen.region"],
+																["power", "site.powerCapacityMva"],
+																["wastewater", "site.wastewaterCapacityM3Day"],
+															] as const
+														).map(([field, label]) => {
+															const record = item.park?.fields[field];
+															return (
+																<div key={field}>
+																	<dt>{t(label)}</dt>
+																	<dd>
+																		{record ? (
+																			<>
+																				<a href={record.sourceUrl}>
+																					{typeof record.value === "number"
+																						? formatNumber(record.value)
+																						: record.value}
+																				</a>{" "}
+																				· {record.verifiedOn} · {record.scope}
+																			</>
+																		) : (
+																			t("district.missing")
+																		)}
+																	</dd>
+																</div>
+															);
+														})}
+													</dl>
+													<a href={item.park.contactUrl}>
+														{t("screen.verificationContact")}
+													</a>
+												</>
+											)}
+											{item.missing.length > 0 && (
+												<details>
+													<summary>{t("screen.verificationDraft")}</summary>
+													<InquiryForm
+														key={JSON.stringify(submitted)}
+														geographyIds={[item.provinceId]}
+														geographyLabels={[item.provinceName]}
+														defaultMessage={[
+															`${t("screen.verificationIntro")} ${item.park?.name[locale] ?? item.name}`,
+															...verificationFields(
+																item.missing,
+																item.park,
+															).map(
+																(field) => `- ${t(`screen.question.${field}`)}`,
+															),
+														].join("\n")}
+													/>
+												</details>
+											)}
 										</li>
 									))}
 								</ol>

@@ -269,7 +269,7 @@
   ],
   "airports": {
     "file": "airports.json",
-    "sha256": "6f67ee51137dccf876a65aed126a9a52350cc324b6defab3f4e094d337b3b784",
+    "sha256": "97947c6b40c592de8225eab2f774d2808fec70ca433946fd0188725cc1a87916",
     "datasetCode": "VN_OURAIRPORTS_SCHEDULED",
     "version": "2026-11-20",
     "sourceSha256": "85b63e21319fcd648d4741872205bbb1c89000d39bb1ded2cf41d8d11c7fe518",
@@ -285,6 +285,26 @@
       "url": "https://ourairports.com/data/",
       "license": "Public Domain",
       "citation": "OurAirports, Vietnam civil airport locations with scheduled service in the source snapshot"
+    }
+  },
+  "ports": {
+    "file": "ports.json",
+    "sha256": "6d0f794e2002161abfdb1cc143a2388788c38c82f9c9999f2e46c319a8b853bd",
+    "sourceSha256": null,
+    "datasetCode": "VN_VINAMARINE_PORTS",
+    "version": "2026-11-20",
+    "owner": "Market Intelligence Data Steward",
+    "dataAsOf": "2026-11-20",
+    "reviewedOn": "2026-11-20",
+    "reviewIntervalDays": 90,
+    "source": {
+      "id": "a1e734f1-3b88-58d4-a135-e3c8e3c6f4d1",
+      "type": "official",
+      "publisher": "Vietnam Maritime Administration",
+      "title": "Vietnam seaport classification and operating status",
+      "url": "https://vinamarine.gov.vn/",
+      "license": "Public administrative information",
+      "citation": "Vietnam Maritime Administration seaport information"
     }
   }
 }

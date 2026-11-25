@@ -124,6 +124,19 @@ export async function loadMapLayers(): Promise<MapLayers> {
 						| "expressway_node";
 					geo_id: string;
 					province: string;
+					airport_classification: "international" | "domestic" | null;
+					operational_status:
+						| "operational"
+						| "planned"
+						| "not_operational"
+						| null;
+					port_type:
+						| "deep_sea"
+						| "coastal"
+						| "river"
+						| "container_terminal"
+						| null;
+					classification_source_url: string | null;
 					reference_url: string;
 					geometry: Point;
 				})[]
@@ -139,8 +152,9 @@ export async function loadMapLayers(): Promise<MapLayers> {
             and geo.level = 'province'
           order by poi.kind, dataset.data_as_of desc, dataset.published_at desc, dataset.dataset_version_id
         )
-        select poi.source_key, poi.name, poi.code, poi.kind, poi.geo_id, geo.display_name as province,
-          poi.reference_url, ST_AsGeoJSON(poi.geom, 6)::json as geometry, ${publishedDatasetColumns(sql)}
+			select poi.source_key, poi.name, poi.code, poi.kind, poi.geo_id, geo.display_name as province,
+			  poi.airport_classification, poi.operational_status, poi.port_type, poi.classification_source_url,
+			  poi.reference_url, ST_AsGeoJSON(poi.geom, 6)::json as geometry, ${publishedDatasetColumns(sql)}
         from release_per_kind
         join market_entry.infrastructure_pois poi
           on poi.dataset_version_id = release_per_kind.dataset_version_id and poi.kind = release_per_kind.kind
@@ -202,6 +216,14 @@ export async function loadMapLayers(): Promise<MapLayers> {
 										geoId: poi.geo_id,
 										province: poi.province,
 										url: safeSourceUrl(poi.reference_url) ?? "",
+										airportClassification: poi.airport_classification,
+										airportOperationalStatus:
+											poi.kind === "airport" ? poi.operational_status : null,
+										portType: poi.port_type,
+										portOperationalStatus:
+											poi.kind === "seaport" ? poi.operational_status : null,
+										classificationSourceUrl:
+											safeSourceUrl(poi.classification_source_url) ?? null,
 									},
 								})),
 							},

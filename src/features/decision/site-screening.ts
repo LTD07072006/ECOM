@@ -6,6 +6,65 @@ export type InfrastructurePriority =
 	| "deep_port"
 	| "international_airport"
 	| "expressway";
+
+type InfrastructureEvidence = {
+	kind:
+		| "airport"
+		| "seaport"
+		| "expressway_node"
+		| "border_gate"
+		| "industrial_park"
+		| "icd";
+	airportClassification?: "international" | "domestic" | null;
+	airportStatus?: "operational" | "planned" | "not_operational" | null;
+	airportOperationalStatus?:
+		| "operational"
+		| "planned"
+		| "not_operational"
+		| null;
+	portType?: "deep_sea" | "coastal" | "river" | "container_terminal" | null;
+	portStatus?: "operational" | "planned" | "not_operational" | null;
+	portOperationalStatus?: "operational" | "planned" | "not_operational" | null;
+	operationalStatus?: "operational" | "planned" | "not_operational" | null;
+};
+
+export function infrastructurePrioritiesFromFacilities(
+	facilities: readonly InfrastructureEvidence[],
+): InfrastructurePriority[] | null {
+	let hasUnknownClassification = false;
+	const priorities = new Set<InfrastructurePriority>();
+	for (const facility of facilities) {
+		if (facility.kind === "airport") {
+			const status =
+				facility.airportOperationalStatus ?? facility.airportStatus;
+			if (
+				facility.airportClassification === null ||
+				status === null ||
+				status === undefined
+			)
+				hasUnknownClassification = true;
+			else if (
+				facility.airportClassification === "international" &&
+				status === "operational"
+			)
+				priorities.add("international_airport");
+		}
+		if (facility.kind === "seaport") {
+			const status =
+				facility.portOperationalStatus ??
+				facility.portStatus ??
+				facility.operationalStatus;
+			if (facility.portType === null || status === null || status === undefined)
+				hasUnknownClassification = true;
+			else if (facility.portType === "deep_sea" && status === "operational")
+				priorities.add("deep_port");
+		}
+		if (facility.kind === "expressway_node") priorities.add("expressway");
+	}
+	return hasUnknownClassification && priorities.size === 0
+		? null
+		: [...priorities];
+}
 export type ScreeningInput = {
 	sector: ScreeningSector;
 	areaM2: number | null;
@@ -31,25 +90,25 @@ export function screenLocations<T extends ScreeningCandidate>(
 			const checks: [Criterion, boolean | null][] = [
 				["sector", candidate.sectors?.includes(input.sector) ?? null],
 			];
-			if (input.areaM2 !== null)
-				checks.push([
-					"area",
-					candidate.availableAreaM2 === null
-						? null
-						: candidate.availableAreaM2 >= input.areaM2,
-				]);
-			if (input.infrastructure !== "any")
-				checks.push([
-					"infrastructure",
-					candidate.infrastructure?.includes(input.infrastructure) ?? null,
-				]);
-			if (input.region !== "any")
-				checks.push([
-					"region",
-					candidate.wageRegion === null
-						? null
-						: candidate.wageRegion === input.region,
-				]);
+			checks.push([
+				"area",
+				candidate.availableAreaM2 === null
+					? null
+					: input.areaM2 === null || candidate.availableAreaM2 >= input.areaM2,
+			]);
+			checks.push([
+				"infrastructure",
+				candidate.infrastructure === null
+					? null
+					: input.infrastructure === "any" ||
+						candidate.infrastructure.includes(input.infrastructure),
+			]);
+			checks.push([
+				"region",
+				candidate.wageRegion === null
+					? null
+					: input.region === "any" || candidate.wageRegion === input.region,
+			]);
 			if (checks.some(([, value]) => value === false)) return [];
 			const reasons = checks
 				.filter(([, value]) => value === true)

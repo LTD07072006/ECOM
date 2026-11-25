@@ -50,8 +50,14 @@ async function importWave2(
 				release.manifest.airports,
 			);
 			const airportVersion = airportDataset.id;
+			const portDataset = await registerDataset(tx, release.manifest.ports);
+			const portVersion = portDataset.id;
 			const importedIds = [
-				...new Set([...registeredSeries.map(({ id }) => id), airportVersion]),
+				...new Set([
+					...registeredSeries.map(({ id }) => id),
+					airportVersion,
+					portVersion,
+				]),
 			];
 			const batchId = await recordImport(
 				tx,
@@ -62,6 +68,7 @@ async function importWave2(
 			);
 			if (
 				airportDataset.published &&
+				portDataset.published &&
 				registeredSeries.every(({ published }) => published)
 			)
 				return;
@@ -115,6 +122,14 @@ async function importWave2(
 					throw new Error(
 						"Airport record must use a valid HTTPS source URL without credentials.",
 					);
+				if (
+					airport.classificationSourceUrl !== null &&
+					!safeSourceUrl(airport.classificationSourceUrl)
+				)
+					throw new Error(
+						"Airport classification source must use a valid HTTPS source URL without credentials.",
+					);
+				if (airport.longitude === null || airport.latitude === null) continue;
 				const matches = await tx<{ geo_id: string }[]>`
           select geo.geo_id
           from market_entry.geo_boundaries shape
@@ -133,9 +148,42 @@ async function importWave2(
 					);
 				await tx`
           insert into market_entry.infrastructure_pois
-            (dataset_version_id, geo_id, source_key, name, code, kind, reference_url, geom)
-          values (${airportVersion}, ${matches[0].geo_id}, ${airport.id}, ${airport.name}, ${airport.code}, ${airport.kind}, ${airport.url},
+            (dataset_version_id, geo_id, source_key, name, code, kind, airport_classification, operational_status, classification_source_url, reference_url, geom)
+          values (${airportVersion}, ${matches[0].geo_id}, ${airport.id}, ${airport.name}, ${airport.code}, ${airport.kind}, ${airport.airportClassification}, ${airport.airportOperationalStatus}, ${airport.classificationSourceUrl}, ${airport.url},
             ST_SetSRID(ST_MakePoint(${airport.longitude}, ${airport.latitude}), 4326))
+          on conflict (dataset_version_id, source_key) do nothing
+        `;
+			}
+
+			for (const port of release.ports) {
+				if (
+					!safeSourceUrl(port.url) ||
+					!safeSourceUrl(port.classificationSourceUrl)
+				)
+					throw new Error(
+						"Port sources must use valid HTTPS source URLs without credentials.",
+					);
+				const matches = await tx<{ geo_id: string }[]>`
+          select geo.geo_id
+          from market_entry.geo_boundaries shape
+          join market_entry.geo_units geo on geo.geo_id = shape.geo_id and geo.level = 'province'
+          join market_entry.geography_versions version on version.geography_version_id = geo.geography_version_id
+          join market_entry.dataset_versions dataset on dataset.dataset_version_id = shape.dataset_version_id
+          join market_entry.source_registry source on source.source_id = dataset.source_id
+          where version.code = ${geographyVersion} and dataset.source_id = ${boundary.source.id}
+            and dataset.dataset_code = ${boundary.datasetCode} and dataset.version_label = ${boundary.version}
+            and dataset.publication_status = 'published' and source.access_right = 'public' and source.status = 'active'
+            and ST_Covers(shape.geom, ST_SetSRID(ST_MakePoint(${port.longitude}, ${port.latitude}), 4326))
+        `;
+				if (matches.length !== 1)
+					throw new Error(
+						`Port ${port.id} has ${matches.length} matching provinces in ${geographyVersion}`,
+					);
+				await tx`
+          insert into market_entry.infrastructure_pois
+            (dataset_version_id, geo_id, source_key, name, code, kind, operational_status, port_type, classification_source_url, reference_url, geom)
+          values (${portVersion}, ${matches[0].geo_id}, ${port.id}, ${port.name}, ${port.code}, ${port.kind}, ${port.operationalStatus}, ${port.portType}, ${port.classificationSourceUrl}, ${port.url},
+            ST_SetSRID(ST_MakePoint(${port.longitude}, ${port.latitude}), 4326))
           on conflict (dataset_version_id, source_key) do nothing
         `;
 			}
@@ -179,6 +227,7 @@ try {
 				0,
 			),
 			airports: release.points.length,
+			ports: release.ports.length,
 		}),
 	);
 } catch (error) {

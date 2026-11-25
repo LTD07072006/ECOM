@@ -6,6 +6,7 @@ import "./styles/map.css";
 import "./styles/decision.css";
 import "./styles/read.css";
 import "./styles/internal.css";
+import "./styles/site-visit.css";
 import { SiteHeader } from "../components/SiteHeader";
 import { LocaleProvider } from "../lib/i18n/provider";
 import { getI18n } from "../lib/i18n/server";

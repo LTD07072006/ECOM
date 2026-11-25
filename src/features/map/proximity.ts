@@ -1,5 +1,6 @@
 import { haversineKm, type InfrastructureKind } from "./layers";
 import type { FeatureCollection, Polygon } from "geojson";
+import { nationalAirportRegistry } from "./airport-registry";
 
 export type CatchmentCenter = [longitude: number, latitude: number];
 export const catchmentRadii = [15, 30, 60] as const;
@@ -87,6 +88,15 @@ export type ReferenceInfrastructurePoi = {
 	latitude: number;
 	longitude: number;
 	referenceUrl: string;
+	airportClassification?: "international" | "domestic" | null;
+	airportOperationalStatus?:
+		| "operational"
+		| "planned"
+		| "not_operational"
+		| null;
+	portType?: "deep_sea" | "coastal" | "river" | "container_terminal" | null;
+	portOperationalStatus?: "operational" | "planned" | "not_operational" | null;
+	classificationSourceUrl?: string | null;
 };
 
 export type ProvinceProximityMatch = {
@@ -113,67 +123,28 @@ export type ProximitySearchResult = {
 
 export const canonicalInfrastructurePois: readonly ReferenceInfrastructurePoi[] =
 	[
-		// Major international & regional airports
-		{
-			code: "HAN",
-			name: "Cảng hàng không quốc tế Nội Bài",
-			kind: "airport",
-			provinceCode: "01",
-			provinceName: "Hà Nội",
-			latitude: 21.2212,
-			longitude: 105.8072,
-			referenceUrl: "https://vietnamairport.vn/noibaiairport/",
-		},
-		{
-			code: "HPH",
-			name: "Cảng hàng không quốc tế Cát Bi",
-			kind: "airport",
-			provinceCode: "31",
-			provinceName: "Hải Phòng",
-			latitude: 20.8194,
-			longitude: 106.725,
-			referenceUrl: "https://vietnamairport.vn/catbiairport/",
-		},
-		{
-			code: "DAD",
-			name: "Cảng hàng không quốc tế Đà Nẵng",
-			kind: "airport",
-			provinceCode: "48",
-			provinceName: "Đà Nẵng",
-			latitude: 16.0439,
-			longitude: 108.1994,
-			referenceUrl: "https://vietnamairport.vn/danangairport/",
-		},
-		{
-			code: "CXR",
-			name: "Cảng hàng không quốc tế Cam Ranh",
-			kind: "airport",
-			provinceCode: "56",
-			provinceName: "Khánh Hòa",
-			latitude: 11.9982,
-			longitude: 109.2194,
-			referenceUrl: "https://vietnamairport.vn/camranhairport/",
-		},
-		{
-			code: "SGN",
-			name: "Cảng hàng không quốc tế Tân Sơn Nhất",
-			kind: "airport",
-			provinceCode: "79",
-			provinceName: "TP. Hồ Chí Minh",
-			latitude: 10.8188,
-			longitude: 106.6519,
-			referenceUrl: "https://vietnamairport.vn/tansonnhat/",
-		},
-		{
-			code: "VCA",
-			name: "Cảng hàng không quốc tế Cần Thơ",
-			kind: "airport",
-			provinceCode: "92",
-			provinceName: "Cần Thơ",
-			latitude: 10.0851,
-			longitude: 105.7119,
-			referenceUrl: "https://vietnamairport.vn/canthoairport/",
-		},
+		...nationalAirportRegistry
+			.filter(
+				(
+					airport,
+				): airport is typeof airport & {
+					latitude: number;
+					longitude: number;
+				} => airport.latitude !== null && airport.longitude !== null,
+			)
+			.map((airport) => ({
+				code: airport.code ?? airport.id,
+				name: airport.name,
+				kind: "airport" as const,
+				provinceCode: airport.provinceCode,
+				provinceName: airport.provinceName,
+				latitude: airport.latitude,
+				longitude: airport.longitude,
+				referenceUrl: airport.referenceUrl,
+				airportClassification: airport.classification,
+				airportOperationalStatus: airport.operationalStatus,
+				classificationSourceUrl: airport.classificationSourceUrl,
+			})),
 
 		// Major deep-water & container seaports
 		{
@@ -185,6 +156,9 @@ export const canonicalInfrastructurePois: readonly ReferenceInfrastructurePoi[] 
 			latitude: 20.8086,
 			longitude: 106.8897,
 			referenceUrl: "https://vinamarine.gov.vn/",
+			portType: "deep_sea",
+			portOperationalStatus: "operational",
+			classificationSourceUrl: "https://vinamarine.gov.vn/",
 		},
 		{
 			code: "VNQNH-CL",
@@ -195,6 +169,9 @@ export const canonicalInfrastructurePois: readonly ReferenceInfrastructurePoi[] 
 			latitude: 20.9764,
 			longitude: 107.0431,
 			referenceUrl: "https://vinamarine.gov.vn/",
+			portType: "deep_sea",
+			portOperationalStatus: "operational",
+			classificationSourceUrl: "https://vinamarine.gov.vn/",
 		},
 		{
 			code: "VNTHA-NS",
@@ -205,6 +182,9 @@ export const canonicalInfrastructurePois: readonly ReferenceInfrastructurePoi[] 
 			latitude: 19.3272,
 			longitude: 105.8058,
 			referenceUrl: "https://vinamarine.gov.vn/",
+			portType: "deep_sea",
+			portOperationalStatus: "operational",
+			classificationSourceUrl: "https://vinamarine.gov.vn/",
 		},
 		{
 			code: "VNHTI-VA",
@@ -215,6 +195,9 @@ export const canonicalInfrastructurePois: readonly ReferenceInfrastructurePoi[] 
 			latitude: 18.0975,
 			longitude: 106.4122,
 			referenceUrl: "https://vinamarine.gov.vn/",
+			portType: "deep_sea",
+			portOperationalStatus: "operational",
+			classificationSourceUrl: "https://vinamarine.gov.vn/",
 		},
 		{
 			code: "VNDAD-TS",
@@ -225,6 +208,9 @@ export const canonicalInfrastructurePois: readonly ReferenceInfrastructurePoi[] 
 			latitude: 16.1211,
 			longitude: 108.2156,
 			referenceUrl: "https://vinamarine.gov.vn/",
+			portType: "container_terminal",
+			portOperationalStatus: "operational",
+			classificationSourceUrl: "https://vinamarine.gov.vn/",
 		},
 		{
 			code: "VNQNG-DQ",
@@ -235,6 +221,9 @@ export const canonicalInfrastructurePois: readonly ReferenceInfrastructurePoi[] 
 			latitude: 15.4086,
 			longitude: 108.7864,
 			referenceUrl: "https://vinamarine.gov.vn/",
+			portType: "deep_sea",
+			portOperationalStatus: "operational",
+			classificationSourceUrl: "https://vinamarine.gov.vn/",
 		},
 		{
 			code: "VNSGN-CM",
@@ -245,6 +234,9 @@ export const canonicalInfrastructurePois: readonly ReferenceInfrastructurePoi[] 
 			latitude: 10.5256,
 			longitude: 107.0189,
 			referenceUrl: "https://vinamarine.gov.vn/",
+			portType: "deep_sea",
+			portOperationalStatus: "operational",
+			classificationSourceUrl: "https://vinamarine.gov.vn/",
 		},
 		{
 			code: "VNVCA-CP",
@@ -255,6 +247,9 @@ export const canonicalInfrastructurePois: readonly ReferenceInfrastructurePoi[] 
 			latitude: 9.9922,
 			longitude: 105.8186,
 			referenceUrl: "https://vinamarine.gov.vn/",
+			portType: "river",
+			portOperationalStatus: "operational",
+			classificationSourceUrl: "https://vinamarine.gov.vn/",
 		},
 
 		// Key verified industrial parks & economic zones

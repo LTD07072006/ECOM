@@ -744,6 +744,35 @@ export function ProvinceMap({
 						const province = document.createElement("p");
 						province.textContent = item.province;
 						content.append(title, province);
+						const evidence = document.createElement("p");
+						if (item.airportClassification) {
+							evidence.textContent = `${
+								item.airportClassification === "international"
+									? tRef.current("infra.international")
+									: tRef.current("infra.domestic")
+							} · ${
+								item.airportOperationalStatus === "operational"
+									? tRef.current("infra.operational")
+									: item.airportOperationalStatus === "planned"
+										? tRef.current("infra.planned")
+										: tRef.current("infra.notOperational")
+							}`;
+							content.append(evidence);
+						} else if (item.portType) {
+							evidence.textContent = `${tRef.current(
+								`infra.port.${item.portType}` as never,
+							)} · ${
+								item.portOperationalStatus === "operational"
+									? tRef.current("infra.operational")
+									: item.portOperationalStatus === "planned"
+										? tRef.current("infra.planned")
+										: tRef.current("infra.notOperational")
+							}`;
+							content.append(evidence);
+						} else {
+							evidence.textContent = tRef.current("infra.unverified");
+							content.append(evidence);
+						}
 						const url =
 							typeof item.url === "string" ? safeSourceUrl(item.url) : null;
 						if (url) {
