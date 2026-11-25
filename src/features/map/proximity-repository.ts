@@ -58,6 +58,19 @@ export async function findProvincesWithinInfrastructureRadius(
 						province_name: string;
 						latitude: number;
 						longitude: number;
+						airport_classification: "international" | "domestic" | null;
+						operational_status:
+							| "operational"
+							| "planned"
+							| "not_operational"
+							| null;
+						port_type:
+							| "deep_sea"
+							| "coastal"
+							| "river"
+							| "container_terminal"
+							| null;
+						classification_source_url: string | null;
 						reference_url: string;
 					}[]
 				>`
@@ -77,10 +90,14 @@ export async function findProvincesWithinInfrastructureRadius(
             poi.code,
             poi.name,
             geo.admin_code as province_code,
-            geo.display_name as province_name,
-            ST_Y(poi.geom)::float as latitude,
-            ST_X(poi.geom)::float as longitude,
-            poi.reference_url
+			geo.display_name as province_name,
+			ST_Y(poi.geom)::float as latitude,
+			ST_X(poi.geom)::float as longitude,
+			poi.airport_classification,
+			poi.operational_status,
+			poi.port_type,
+			poi.classification_source_url,
+			poi.reference_url
           from latest_release
           join market_entry.infrastructure_pois poi
             on poi.dataset_version_id = latest_release.dataset_version_id and poi.kind = latest_release.kind
@@ -99,6 +116,13 @@ export async function findProvincesWithinInfrastructureRadius(
 								latitude: Number(row.latitude),
 								longitude: Number(row.longitude),
 								referenceUrl: row.reference_url,
+								airportClassification: row.airport_classification,
+								airportOperationalStatus:
+									kind === "airport" ? row.operational_status : null,
+								portType: row.port_type,
+								portOperationalStatus:
+									kind === "seaport" ? row.operational_status : null,
+								classificationSourceUrl: row.classification_source_url,
 							}))
 						: [...fallbackPois];
 

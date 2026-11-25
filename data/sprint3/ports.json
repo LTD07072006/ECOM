@@ -1,0 +1,98 @@
+[
+    {
+        "id":  "VNHPH-LH",
+        "code":  "VNHPH-LH",
+        "name":  "Lach Huyen Deep-sea Port",
+        "kind":  "seaport",
+        "longitude":  106.8897,
+        "latitude":  20.8086,
+        "portType":  "deep_sea",
+        "operationalStatus":  "operational",
+        "classificationSourceUrl":  "https://vinamarine.gov.vn/",
+        "url":  "https://vinamarine.gov.vn/"
+    },
+    {
+        "id":  "VNQNH-CL",
+        "code":  "VNQNH-CL",
+        "name":  "Cai Lan Port",
+        "kind":  "seaport",
+        "longitude":  107.0431,
+        "latitude":  20.9764,
+        "portType":  "deep_sea",
+        "operationalStatus":  "operational",
+        "classificationSourceUrl":  "https://vinamarine.gov.vn/",
+        "url":  "https://vinamarine.gov.vn/"
+    },
+    {
+        "id":  "VNTHA-NS",
+        "code":  "VNTHA-NS",
+        "name":  "Nghi Son Deep-sea Port",
+        "kind":  "seaport",
+        "longitude":  105.8058,
+        "latitude":  19.3272,
+        "portType":  "deep_sea",
+        "operationalStatus":  "operational",
+        "classificationSourceUrl":  "https://vinamarine.gov.vn/",
+        "url":  "https://vinamarine.gov.vn/"
+    },
+    {
+        "id":  "VNHTI-VA",
+        "code":  "VNHTI-VA",
+        "name":  "Vung Ang - Son Duong Port",
+        "kind":  "seaport",
+        "longitude":  106.4122,
+        "latitude":  18.0975,
+        "portType":  "deep_sea",
+        "operationalStatus":  "operational",
+        "classificationSourceUrl":  "https://vinamarine.gov.vn/",
+        "url":  "https://vinamarine.gov.vn/"
+    },
+    {
+        "id":  "VNDAD-TS",
+        "code":  "VNDAD-TS",
+        "name":  "Tien Sa - Lien Chieu Port",
+        "kind":  "seaport",
+        "longitude":  108.2156,
+        "latitude":  16.1211,
+        "portType":  "container_terminal",
+        "operationalStatus":  "operational",
+        "classificationSourceUrl":  "https://vinamarine.gov.vn/",
+        "url":  "https://vinamarine.gov.vn/"
+    },
+    {
+        "id":  "VNQNG-DQ",
+        "code":  "VNQNG-DQ",
+        "name":  "Dung Quat Deep-sea Port",
+        "kind":  "seaport",
+        "longitude":  108.7864,
+        "latitude":  15.4086,
+        "portType":  "deep_sea",
+        "operationalStatus":  "operational",
+        "classificationSourceUrl":  "https://vinamarine.gov.vn/",
+        "url":  "https://vinamarine.gov.vn/"
+    },
+    {
+        "id":  "VNSGN-CM",
+        "code":  "VNSGN-CM",
+        "name":  "Cai Mep - Thi Vai Port Cluster",
+        "kind":  "seaport",
+        "longitude":  107.0189,
+        "latitude":  10.5256,
+        "portType":  "deep_sea",
+        "operationalStatus":  "operational",
+        "classificationSourceUrl":  "https://vinamarine.gov.vn/",
+        "url":  "https://vinamarine.gov.vn/"
+    },
+    {
+        "id":  "VNVCA-CP",
+        "code":  "VNVCA-CP",
+        "name":  "Cai Cui Port Cluster",
+        "kind":  "seaport",
+        "longitude":  105.8186,
+        "latitude":  9.9922,
+        "portType":  "river",
+        "operationalStatus":  "operational",
+        "classificationSourceUrl":  "https://vinamarine.gov.vn/",
+        "url":  "https://vinamarine.gov.vn/"
+    }
+]

@@ -120,6 +120,27 @@
       "when": 1795442165325,
       "tag": "0016_investor_suite_and_scenario_snapshot",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1795443000000,
+      "tag": "0017_infrastructure_evidence",
+      "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1795443600000,
+      "tag": "0018_api_observability",
+      "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1795444200000,
+      "tag": "0019_review_workflows",
+      "breakpoints": true
     }
   ]
 }

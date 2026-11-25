@@ -31,6 +31,7 @@ const manifestSchema = z.object({
 		)
 		.min(1),
 	airports: dataset,
+	ports: dataset,
 });
 
 const observations = z.object({
@@ -48,18 +49,57 @@ const infrastructureKind = z.enum([
 	"expressway_node",
 ]);
 
+const airportClassification = z.enum(["international", "domestic"]).nullable();
+const operationalStatus = z.enum(["operational", "planned", "not_operational"]);
+const classificationSourceUrl = z.url({ protocol: /^https$/ }).nullable();
+
 const airports = z
+	.array(
+		z
+			.object({
+				id: z.string().regex(/^[A-Z0-9-]+$/),
+				name: text,
+				code: z
+					.string()
+					.regex(/^[A-Z]{3}$/)
+					.nullable(),
+				kind: infrastructureKind.default("airport"),
+				longitude: z.number().min(-180).max(180).nullable(),
+				latitude: z.number().min(-90).max(90).nullable(),
+				airportClassification,
+				airportOperationalStatus: operationalStatus,
+				classificationSourceUrl,
+				url: z.url({ protocol: /^https$/ }),
+			})
+			.superRefine((airport, context) => {
+				if ((airport.longitude === null) !== (airport.latitude === null)) {
+					context.addIssue({
+						code: "custom",
+						message: "Airport coordinates must be both present or both null",
+						path: ["longitude"],
+					});
+				}
+			}),
+	)
+	.min(1);
+
+const ports = z
 	.array(
 		z.object({
 			id: z.string().regex(/^[A-Z0-9-]+$/),
 			name: text,
 			code: z
 				.string()
-				.regex(/^[A-Z]{3}$/)
+				.regex(/^[A-Z0-9-]+$/)
 				.nullable(),
-			kind: infrastructureKind.default("airport"),
+			kind: z.literal("seaport"),
 			longitude: z.number().min(-180).max(180),
 			latitude: z.number().min(-90).max(90),
+			portType: z
+				.enum(["deep_sea", "coastal", "river", "container_terminal"])
+				.nullable(),
+			operationalStatus,
+			classificationSourceUrl,
 			url: z.url({ protocol: /^https$/ }),
 		}),
 	)
@@ -122,10 +162,14 @@ export async function loadWave2(path: string) {
 	const points = airports.parse(await readDataset(path, manifest.airports));
 	if (new Set(points.map((point) => point.id)).size !== points.length)
 		throw new Error("Duplicate airport identifier");
+	const portPoints = ports.parse(await readDataset(path, manifest.ports));
+	if (new Set(portPoints.map((point) => point.id)).size !== portPoints.length)
+		throw new Error("Duplicate port identifier");
 	return {
 		manifest,
 		series,
 		points,
+		ports: portPoints,
 		boundaryDataset: geography.manifest.boundaries,
 	};
 }

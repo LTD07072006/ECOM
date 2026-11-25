@@ -69,6 +69,17 @@ export function SiteHeader() {
 								>
 									{t("meta.releaseTitle")}
 								</Link>
+								<Link
+									href="/internal/reviews"
+									className="site-nav-link"
+									aria-current={
+										pathname.startsWith("/internal/reviews")
+											? "page"
+											: undefined
+									}
+								>
+									Evidence review
+								</Link>
 								<Link href="/" className="site-nav-link">
 									{t("nav.map")}
 								</Link>
@@ -91,6 +102,28 @@ export function SiteHeader() {
 								>
 									{t("home.decisionLink")}
 								</Link>
+								<Link
+									href="/site-visit"
+									className="site-nav-link"
+									aria-current={
+										pathname.startsWith("/site-visit") ? "page" : undefined
+									}
+								>
+									{t("nav.siteVisit")}
+								</Link>
+								{isInternal && (
+									<Link
+										href="/internal/observability"
+										className="site-nav-link"
+										aria-current={
+											pathname.startsWith("/internal/observability")
+												? "page"
+												: undefined
+										}
+									>
+										{t("nav.observability")}
+									</Link>
+								)}
 								<Link
 									href="/investor-guide"
 									className="site-nav-link"

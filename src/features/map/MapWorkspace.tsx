@@ -8,6 +8,7 @@ import { ShortlistTray } from "../shortlist/ShortlistTray";
 import { readShortlist } from "../shortlist/store";
 import { ProvinceMap, type FocusedMicroLocation } from "./ProvinceMap";
 import { LayerControls, LayerLegend } from "./LayerControls";
+import { RoadConnectivity } from "./RoadConnectivity";
 import {
 	familyLeadColors,
 	familyOrder,
@@ -728,6 +729,9 @@ export function MapWorkspace({ coverage, provinces }: Props) {
 			</aside>
 
 			<div className="stage-controls-slot">
+				{!regionMode && location?.id === "HP-IZ-DEEPC" && (
+					<RoadConnectivity siteId={location.id} />
+				)}
 				{layerError && (
 					<p className="banner banner--error" role="status">
 						{t("map.layersUnavailable")}

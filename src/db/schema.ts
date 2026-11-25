@@ -60,6 +60,39 @@ export const apiClientQuotas = marketEntry.table(
 	],
 );
 
+export const apiObservabilityBuckets = marketEntry.table(
+	"api_observability_buckets",
+	{
+		bucketStart: timestamp("bucket_start", { withTimezone: true }).notNull(),
+		route: text("route").notNull(),
+		provider: text("provider").notNull(),
+		status: integer("status").notNull(),
+		requests: integer("requests").notNull().default(0),
+		errors: integer("errors").notNull().default(0),
+		quota: integer("quota").notNull().default(0),
+		fallbacks: integer("fallbacks").notNull().default(0),
+		cacheHits: integer("cache_hits").notNull().default(0),
+		cacheMisses: integer("cache_misses").notNull().default(0),
+		latencies: jsonb("latencies").notNull().default(sql`'[]'::jsonb`),
+		createdAt: timestamp("created_at", { withTimezone: true })
+			.defaultNow()
+			.notNull(),
+		updatedAt: timestamp("updated_at", { withTimezone: true })
+			.defaultNow()
+			.notNull(),
+	},
+	(table) => [
+		primaryKey({
+			columns: [table.bucketStart, table.route, table.provider, table.status],
+		}),
+		index("api_observability_buckets_route_idx").on(
+			table.route,
+			table.bucketStart,
+		),
+		index("api_observability_buckets_created_idx").on(table.createdAt),
+	],
+);
+
 export const investorInquiries = marketEntry.table(
 	"investor_inquiries",
 	{
@@ -612,6 +645,10 @@ export const infrastructurePois = marketEntry.table(
 		name: text("name").notNull(),
 		code: text("code"),
 		kind: text("kind").notNull(),
+		airportClassification: text("airport_classification"),
+		operationalStatus: text("operational_status"),
+		portType: text("port_type"),
+		classificationSourceUrl: text("classification_source_url"),
 		referenceUrl: text("reference_url").notNull(),
 		geom: geometry("geom").notNull(),
 	},
@@ -794,6 +831,8 @@ export const legalReferences = marketEntry.table(
 		status: text("status").notNull().default("pending_review"),
 		reviewNote: text("review_note"),
 		reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
+		reviewedBy: text("reviewed_by"),
+		reviewDueAt: date("review_due_at"),
 		createdAt: timestamp("created_at", { withTimezone: true })
 			.defaultNow()
 			.notNull(),
@@ -832,6 +871,8 @@ export const entryRequirements = marketEntry.table(
 		reviewStatus: text("review_status").notNull().default("to_verify"),
 		advisoryNoteVi: text("advisory_note_vi"),
 		advisoryNoteEn: text("advisory_note_en"),
+		reviewedBy: text("reviewed_by"),
+		reviewDueAt: date("review_due_at"),
 	},
 	(table) => [
 		foreignKey({
@@ -851,6 +892,123 @@ export const entryRequirements = marketEntry.table(
 		check(
 			"entry_requirements_review_status_check",
 			sql`${table.reviewStatus} in ('to_verify', 'needs_specialist_review', 'verified_by_counsel', 'retired')`,
+		),
+	],
+);
+
+export const siteVerificationEvidence = marketEntry.table(
+	"site_verification_evidence",
+	{
+		evidenceId: uuid("evidence_id").defaultRandom().primaryKey(),
+		parkId: text("park_id").notNull(),
+		field: text("field").notNull(),
+		value: jsonb("value").notNull(),
+		sourceUrl: text("source_url").notNull(),
+		verifiedOn: date("verified_on").notNull(),
+		expiresOn: date("expires_on"),
+		status: text("status").notNull().default("pending_review"),
+		reviewer: text("reviewer"),
+		reviewNote: text("review_note"),
+		reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
+		createdBy: text("created_by").notNull(),
+		createdAt: timestamp("created_at", { withTimezone: true })
+			.defaultNow()
+			.notNull(),
+		updatedAt: timestamp("updated_at", { withTimezone: true })
+			.defaultNow()
+			.notNull(),
+	},
+	(table) => [
+		unique("site_verification_evidence_key_unique").on(
+			table.parkId,
+			table.field,
+		),
+		index("site_verification_evidence_status_idx").on(
+			table.status,
+			table.expiresOn,
+		),
+		check(
+			"site_verification_evidence_url_check",
+			sql`${table.sourceUrl} ~ '^https://'`,
+		),
+		check(
+			"site_verification_evidence_status_check",
+			sql`${table.status} in ('unverified', 'pending_review', 'verified', 'expired')`,
+		),
+		check(
+			"site_verification_evidence_dates_check",
+			sql`${table.expiresOn} is null or ${table.expiresOn} >= ${table.verifiedOn}`,
+		),
+		check(
+			"site_verification_evidence_field_check",
+			sql`${table.field} in ('area', 'region', 'power', 'wastewater', 'sector', 'infrastructure')`,
+		),
+	],
+);
+
+export const siteVerificationAudit = marketEntry.table(
+	"site_verification_audit",
+	{
+		eventId: uuid("event_id").defaultRandom().primaryKey(),
+		evidenceId: uuid("evidence_id").notNull(),
+		actor: text("actor").notNull(),
+		action: text("action").notNull(),
+		fromStatus: text("from_status"),
+		toStatus: text("to_status"),
+		note: text("note"),
+		happenedAt: timestamp("happened_at", { withTimezone: true })
+			.defaultNow()
+			.notNull(),
+	},
+	(table) => [
+		foreignKey({
+			name: "site_verification_audit_evidence_fkey",
+			columns: [table.evidenceId],
+			foreignColumns: [siteVerificationEvidence.evidenceId],
+		}),
+		check(
+			"site_verification_audit_action_check",
+			sql`${table.action} in ('created', 'approved', 'rejected', 'revalidated', 'expired')`,
+		),
+		check(
+			"site_verification_audit_note_check",
+			sql`${table.note} is null or length(${table.note}) between 1 and 1000`,
+		),
+	],
+);
+
+export const legalReadinessAudit = marketEntry.table(
+	"legal_readiness_audit",
+	{
+		eventId: uuid("event_id").defaultRandom().primaryKey(),
+		entityType: text("entity_type").notNull(),
+		entityId: uuid("entity_id").notNull(),
+		actor: text("actor").notNull(),
+		action: text("action").notNull(),
+		fromStatus: text("from_status"),
+		toStatus: text("to_status"),
+		note: text("note").notNull(),
+		happenedAt: timestamp("happened_at", { withTimezone: true })
+			.defaultNow()
+			.notNull(),
+	},
+	(table) => [
+		index("legal_readiness_audit_entity_idx").on(
+			table.entityType,
+			table.entityId,
+			table.happenedAt,
+		),
+		check(
+			"legal_readiness_audit_entity_check",
+			sql`${table.entityType} in ('reference', 'requirement')`,
+		),
+		check(
+			"legal_readiness_audit_action_check",
+			sql`${table.action} in ('reviewed', 'revalidated', 'retired')`,
+		),
+		check(
+			"legal_readiness_audit_note_check",
+			sql`length(${table.note}) between 10 and 1000`,
 		),
 	],
 );

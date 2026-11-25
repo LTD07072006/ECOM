@@ -75,7 +75,11 @@ test("computeProximityForProvinces filters provinces within radius of seaports a
 		"airport",
 		30,
 	);
-	expect(nearAirport30Km.matchedProvinceIds).toEqual(["p-haiphong", "p-hanoi"]);
+	expect(nearAirport30Km.matchedProvinceIds).toEqual([
+		"p-dienbien",
+		"p-haiphong",
+		"p-hanoi",
+	]);
 });
 
 test("GET /api/map/proximity validates parameters and returns PostGIS proximity envelope", async () => {

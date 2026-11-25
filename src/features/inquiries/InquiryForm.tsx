@@ -10,6 +10,7 @@ export type InquiryFormProps = {
 	geographyLabels?: string[];
 	onSubmitted?: (referenceCode: string) => void;
 	defaultSector?: string;
+	defaultMessage?: string;
 	scenarioSnapshot?: ScenarioSnapshot;
 };
 
@@ -18,6 +19,7 @@ export function InquiryForm({
 	geographyLabels = [],
 	onSubmitted,
 	defaultSector = "",
+	defaultMessage = "",
 	scenarioSnapshot,
 }: InquiryFormProps) {
 	const { t } = useI18n();
@@ -120,6 +122,7 @@ export function InquiryForm({
 				<textarea
 					className="control-textarea"
 					name="message"
+					defaultValue={defaultMessage}
 					required
 					minLength={10}
 					maxLength={5000}

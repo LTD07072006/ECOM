@@ -1,6 +1,31 @@
 import type { MessageKey } from "./en";
 
 export const vi: Record<MessageKey, string> = {
+	"road.scope":
+		"Ước tính lái xe giữa các điểm tham chiếu, không phải cổng đã xác minh. Không tính giao thông trực tiếp hay hạn chế xe tải.",
+	"road.destination": "Điểm đến đường bộ",
+	"road.hph": "Cảng hàng không quốc tế Cát Bi",
+	"road.lh": "Khu vực cảng Lạch Huyện",
+	"road.check": "Xem ước tính lái xe",
+	"road.loading": "Đang kiểm tra mạng đường…",
+	"road.baseline": "Bản lưu OSRM · © Cộng tác viên OpenStreetMap",
+	"road.live": "Ước tính Mapbox Directions",
+	"road.metrics": "{km} km đường bộ · khoảng {minutes} phút",
+	"screen.verificationContact": "Liên hệ cơ quan quản lý khu công nghiệp",
+	"screen.verificationDraft": "Mở danh sách cần xác minh và soạn yêu cầu",
+	"screen.verificationIntro": "Vui lòng xác minh các thông tin sau cho:",
+	"screen.question.area":
+		"Hiện còn lô đất nào và diện tích sử dụng được của từng lô là bao nhiêu?",
+	"screen.question.region":
+		"Địa chỉ làm việc cụ thể thuộc vùng lương nào theo quy định hiện hành?",
+	"screen.question.power":
+		"Lô đất có thể được cấp công suất điện bao nhiêu và khi nào có thể đấu nối?",
+	"screen.question.wastewater":
+		"Dự án có thể được phân bổ bao nhiêu công suất xử lý nước thải và áp dụng giới hạn xả thải nào?",
+	"screen.question.sector":
+		"Khu công nghiệp có tiếp nhận ngành này không, và có điều kiện hay hạn chế nào?",
+	"screen.question.infrastructure":
+		"Công trình nào đáp ứng tiêu chí đã chọn và cách địa điểm bao xa?",
 	"site.specs": "Thông số mặt bằng và tiện ích",
 	"site.availableLandHa": "Đất khả dụng (ha)",
 	"site.powerCapacityMva": "Công suất điện (MVA)",
@@ -730,6 +755,16 @@ export const vi: Record<MessageKey, string> = {
 	"retail.evidenceClear": "Xóa siêu dữ liệu nghiên cứu",
 
 	"infra.airport": "Sân bay",
+	"infra.international": "Quốc tế",
+	"infra.domestic": "Nội địa",
+	"infra.operational": "Đang khai thác",
+	"infra.planned": "Quy hoạch",
+	"infra.notOperational": "Không khai thác",
+	"infra.unverified": "Chưa xác minh phân loại",
+	"infra.port.deep_sea": "Cảng nước sâu",
+	"infra.port.coastal": "Cảng ven biển",
+	"infra.port.river": "Cảng sông",
+	"infra.port.container_terminal": "Bến cảng container",
 	"infra.seaport": "Cảng biển",
 	"infra.industrial_park": "Khu công nghiệp",
 	"infra.icd": "Cảng cạn (ICD)",
@@ -1014,8 +1049,49 @@ export const vi: Record<MessageKey, string> = {
 	"common.confirm": "Xác nhận",
 	"nav.mainAria": "Điều hướng chính",
 	"nav.map": "Bản đồ cấp tỉnh",
+	"nav.siteVisit": "Khảo sát & logistics",
+	"nav.observability": "Quan sát vận hành",
 	"nav.investorGuide": "Hướng dẫn nhà đầu tư",
 	"nav.requestSupport": "Yêu cầu hỗ trợ",
+	"siteVisit.kicker": "Phân tích vị trí",
+	"siteVisit.title": "Khảo sát địa điểm & logistics",
+	"siteVisit.lede":
+		"Tìm địa điểm ứng viên, xem hạ tầng lân cận và ước tính tuyến đến một điểm logistics quan trọng.",
+	"siteVisit.searchLabel": "Tìm địa điểm ứng viên",
+	"siteVisit.searchPlaceholder": "Tìm địa chỉ, khu công nghiệp hoặc địa điểm",
+	"siteVisit.searching": "Đang tìm địa điểm…",
+	"siteVisit.destination": "Điểm đến tính tuyến",
+	"siteVisit.calculateRoute": "Tính tuyến",
+	"siteVisit.routeLoading": "Đang tính…",
+	"siteVisit.advisory":
+		"Chỉ là ước tính tham khảo; không phải cam kết giao thông hoặc tuyến xe tải chính thức.",
+	"siteVisit.candidate": "Địa điểm ứng viên",
+	"siteVisit.infrastructure": "Hạ tầng đã công bố",
+	"siteVisit.candidateSelected": "đã chọn",
+	"siteVisit.noCandidate": "Chọn một địa điểm để bắt đầu",
+	"siteVisit.source": "Xem nguồn",
+	"siteVisit.fallback": "Tuyến nền dự phòng",
+	"siteVisit.calculated": "Thời điểm tính",
+	"siteVisit.quota":
+		"Tạm thời đã đạt giới hạn tính tuyến. Vui lòng thử lại sau.",
+	"siteVisit.unavailable": "Tạm thời không thể tính tuyến.",
+	"siteVisit.addCompare": "Thêm vào so sánh",
+	"siteVisit.calculateCompare": "Tính các tuyến so sánh",
+	"siteVisit.addStop": "Thêm điểm khảo sát",
+	"siteVisit.compare": "So sánh địa điểm",
+	"siteVisit.compareNote":
+		"Các địa điểm được đối chiếu với cùng tập điểm logistics, không áp dụng điểm số mơ hồ.",
+	"siteVisit.candidates": "địa điểm",
+	"siteVisit.remove": "Xóa",
+	"siteVisit.itinerary": "Lộ trình khảo sát",
+	"siteVisit.itineraryNote":
+		"Sắp xếp tối đa năm điểm và chia sẻ lộ trình bằng URL.",
+	"siteVisit.moveUp": "Đưa điểm lên trước",
+	"siteVisit.moveDown": "Đưa điểm xuống sau",
+	"siteVisit.unavailableLegs": "chặng chưa có dữ liệu",
+	"siteVisit.share": "Chia sẻ lộ trình",
+	"siteVisit.calculateItinerary": "Tính các chặng khảo sát",
+	"siteVisit.mapData": "Dữ liệu bản đồ:",
 	"notFound.title": "Không tìm thấy trang",
 	"notFound.body":
 		"Trang bạn yêu cầu không tồn tại hoặc đã được chuyển sang địa chỉ khác.",

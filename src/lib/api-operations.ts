@@ -3,6 +3,8 @@ import { isIP } from "node:net";
 import { databasePool } from "../db/pool";
 import { releaseRole } from "../features/releases/authorization";
 import { error } from "./http";
+import { getTelemetryStore, type TelemetryOutcome } from "./observability";
+import { persistObservabilityEvent } from "../features/observability/repository";
 
 const limits = {
 	search: 180,
@@ -14,6 +16,8 @@ const limits = {
 	inquiry_status: 20,
 	boundaries: 60,
 	layers: 60,
+	road_routes: 10,
+	site_visit_routes: 30,
 } as const;
 const ceilings = {
 	search: 1800,
@@ -25,6 +29,8 @@ const ceilings = {
 	inquiry_status: 200,
 	boundaries: 600,
 	layers: 600,
+	road_routes: 100,
+	site_visit_routes: 300,
 } as const;
 type QuotaRoute = keyof typeof limits;
 type Route = QuotaRoute | "health";
@@ -226,6 +232,40 @@ export async function observeApi(
 		response.headers.set("Cache-Control", "no-store");
 	}
 	response.headers.set("X-Content-Type-Options", "nosniff");
+	const outcome: TelemetryOutcome =
+		response.headers.get("X-Api-Outcome") === "fallback"
+			? "fallback"
+			: response.status === 429
+				? "quota"
+				: response.status >= 500
+					? "error"
+					: response.status >= 400
+						? "error"
+						: "success";
+	const telemetryEvent = {
+		route,
+		status: response.status,
+		durationMs: Math.max(0, performance.now() - started),
+		occurredAt: Date.now(),
+		outcome,
+		provider: response.headers.get("X-Api-Provider") ?? undefined,
+		fallback:
+			response.headers.get("X-Api-Fallback") === "true" ||
+			response.headers.get("X-Api-Outcome") === "fallback",
+		cache: response.headers.get("Cache-Control")?.includes("no-store")
+			? "bypass"
+			: "miss",
+	} as const;
+	response.headers.delete("X-Api-Outcome");
+	response.headers.delete("X-Api-Provider");
+	response.headers.delete("X-Api-Fallback");
+	getTelemetryStore().record(telemetryEvent);
+	if (process.env.NODE_ENV === "production") {
+		void persistObservabilityEvent(
+			telemetryEvent,
+			new Date(telemetryEvent.occurredAt),
+		).catch(() => {});
+	}
 	if (process.env.NODE_ENV !== "test") {
 		console.info(
 			JSON.stringify({
