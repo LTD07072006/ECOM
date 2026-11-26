@@ -34,4 +34,17 @@ test.describe("site visit logistics workspace", () => {
 			page.getByRole("heading", { name: /itinerary|lộ trình/i }),
 		).toBeVisible();
 	});
+
+	test("shows logistics network controls after selecting a candidate", async ({
+		page,
+	}) => {
+		await page.goto(`${baseUrl}/site-visit?label=Test%20site&lng=105.8&lat=21`);
+		await expect(
+			page.getByRole("heading", { name: /connections from this site/i }),
+		).toBeVisible();
+		await expect(page.getByText(/0\/20/)).toBeVisible();
+		await expect(
+			page.getByRole("button", { name: /calculate logistics network/i }),
+		).toBeDisabled();
+	});
 });

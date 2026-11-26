@@ -3,11 +3,13 @@
 import "wemap-gl-js/dist/wemap-gl.css";
 import type { FeatureCollection, LineString, Point } from "geojson";
 import { useEffect, useRef } from "react";
+import type React from "react";
 import type wemap from "wemap-gl-js";
 import type { RouteAssessment } from "./route-assessment";
 import type { SiteContextProperties } from "./site-context";
 import type { SiteVisitCandidate } from "./site-visit-state";
 import { WEMAP_TOKEN } from "./wemap-config";
+import type { LogisticsOverview } from "../map/logistics-overview";
 
 type WemapMap = InstanceType<typeof wemap.Map>;
 type WemapMarker = InstanceType<typeof wemap.Marker>;
@@ -16,21 +18,27 @@ export function SiteVisitMap({
 	candidate,
 	context,
 	route,
+	network,
 	onContextSelect,
 }: {
 	candidate: SiteVisitCandidate | null;
 	context: FeatureCollection<Point, SiteContextProperties>;
 	route: RouteAssessment | null;
+	network: LogisticsOverview | null;
 	onContextSelect: (properties: SiteContextProperties) => void;
 }) {
 	const container = useRef<HTMLDivElement>(null);
 	const mapRef = useRef<WemapMap>(null);
 	const candidateMarker = useRef<WemapMarker>(null);
+	const networkMarkers = useRef<WemapMarker[]>([]);
+	const networkRenderVersion = useRef(0);
 	const contextRef = useRef(context);
 	const routeRef = useRef(route);
+	const networkRef = useRef(network);
 	const onContextSelectRef = useRef(onContextSelect);
 	contextRef.current = context;
 	routeRef.current = route;
+	networkRef.current = network;
 	onContextSelectRef.current = onContextSelect;
 	useEffect(() => {
 		let disposed = false;
@@ -85,10 +93,22 @@ export function SiteVisitMap({
 						);
 				});
 				if (routeRef.current) addRoute(map, routeRef.current.geometry);
+				if (networkRef.current)
+					addNetwork(
+						map,
+						networkRef.current,
+						networkMarkers,
+						networkRenderVersion,
+						mapRef,
+					);
 			});
 		});
 		return () => {
 			disposed = true;
+			networkRenderVersion.current += 1;
+			for (const marker of networkMarkers.current) marker.remove();
+			networkMarkers.current = [];
+			candidateMarker.current?.remove();
 			mapRef.current?.remove();
 			mapRef.current = null;
 		};
@@ -117,6 +137,20 @@ export function SiteVisitMap({
 		if (!map || !route) return;
 		if (map.isStyleLoaded()) addRoute(map, route.geometry);
 	}, [route]);
+	useEffect(() => {
+		const map = mapRef.current;
+		if (!map || !map.isStyleLoaded()) return;
+		if (network) {
+			addNetwork(map, network, networkMarkers, networkRenderVersion, mapRef);
+			return;
+		}
+		networkRenderVersion.current += 1;
+		for (const marker of networkMarkers.current) marker.remove();
+		networkMarkers.current = [];
+		const source = map.getSource("site-visit-network-routes");
+		if (source && "setData" in source)
+			source.setData({ type: "FeatureCollection", features: [] });
+	}, [network]);
 	return (
 		<div
 			ref={container}
@@ -141,4 +175,56 @@ function addRoute(map: WemapMap, geometry: LineString) {
 		source: "site-visit-route",
 		paint: { "line-color": "#26406B", "line-width": 5, "line-opacity": 0.9 },
 	});
+}
+
+function addNetwork(
+	map: WemapMap,
+	network: LogisticsOverview,
+	networkMarkers: React.MutableRefObject<WemapMarker[]>,
+	networkRenderVersion: React.MutableRefObject<number>,
+	mapRef: React.MutableRefObject<WemapMap | null>,
+) {
+	const renderVersion = ++networkRenderVersion.current;
+	void import("wemap-gl-js").then(({ default: wemap }) => {
+		if (
+			renderVersion !== networkRenderVersion.current ||
+			map !== mapRef.current
+		)
+			return;
+		for (const marker of networkMarkers.current) marker.remove();
+		networkMarkers.current = network.markers.features.map((feature) => {
+			const [longitude, latitude] = feature.geometry.coordinates;
+			const marker = new wemap.Marker({
+				color: feature.properties.role === "origin" ? "#B5432F" : "#3E7C67",
+			})
+				.setLngLat([longitude, latitude])
+				.addTo(map);
+			return marker;
+		});
+	});
+	const sourceId = "site-visit-network-routes";
+	const layerId = "site-visit-network-routes";
+	const source = map.getSource(sourceId);
+	const data = network.routeFeatures;
+	if (source && "setData" in source) {
+		source.setData(data);
+	} else {
+		map.addSource(sourceId, { type: "geojson", data });
+		map.addLayer({
+			id: layerId,
+			type: "line",
+			source: sourceId,
+			paint: {
+				"line-color": [
+					"match",
+					["get", "status"],
+					"baseline",
+					"#B5432F",
+					"#26406B",
+				],
+				"line-width": 3,
+				"line-opacity": 0.7,
+			},
+		});
+	}
 }

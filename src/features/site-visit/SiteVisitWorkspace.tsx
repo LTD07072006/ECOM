@@ -12,6 +12,9 @@ import {
 } from "./itinerary";
 import type { RouteAssessment } from "./route-assessment";
 import { SiteVisitMap } from "./SiteVisitMap";
+import { LogisticsNetworkPanel } from "./LogisticsNetworkPanel";
+import type { LogisticsOverview } from "../map/logistics-overview";
+import { selectLogisticsDestinations } from "../map/logistics-network";
 import { type SiteContextProperties, toSiteVisitContext } from "./site-context";
 import {
 	parseSiteVisitState,
@@ -38,6 +41,8 @@ export function SiteVisitWorkspace() {
 		useState<SiteContextProperties | null>(null);
 	const [pending, setPending] = useState(false);
 	const [routeError, setRouteError] = useState<string | null>(null);
+	const [networkOverview, setNetworkOverview] =
+		useState<LogisticsOverview | null>(null);
 	const [compareCandidates, setCompareCandidates] = useState<
 		SiteVisitCandidate[]
 	>(
@@ -90,9 +95,24 @@ export function SiteVisitWorkspace() {
 			),
 		[],
 	);
+	const logisticsDestinations = useMemo(
+		() =>
+			selectLogisticsDestinations(
+				canonicalInfrastructurePois.filter((poi) =>
+					["airport", "seaport", "icd", "expressway_node"].includes(poi.kind),
+				),
+				canonicalInfrastructurePois
+					.filter((poi) =>
+						["airport", "seaport", "icd", "expressway_node"].includes(poi.kind),
+					)
+					.map((poi) => poi.code),
+			),
+		[],
+	);
 	const sync = useCallback(
 		(next: SiteVisitCandidate | null, nextDestination = destination) => {
 			setCandidate(next);
+			setNetworkOverview(null);
 			const query = serializeSiteVisitState({
 				candidate: next,
 				destination: nextDestination,
@@ -380,6 +400,7 @@ export function SiteVisitWorkspace() {
 						candidate={candidate}
 						context={context}
 						route={route}
+						network={networkOverview}
 						onContextSelect={setSelectedContext}
 					/>
 					<div className="site-visit-legend">
@@ -394,6 +415,13 @@ export function SiteVisitWorkspace() {
 					</div>
 				</div>
 			</section>
+			{candidate && (
+				<LogisticsNetworkPanel
+					candidate={candidate}
+					destinations={logisticsDestinations}
+					onOverviewChange={setNetworkOverview}
+				/>
+			)}
 			{compareCandidates.length > 0 && (
 				<section
 					className="site-visit-secondary"
