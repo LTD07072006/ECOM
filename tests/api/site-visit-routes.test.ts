@@ -1,5 +1,27 @@
 import { expect, test } from "bun:test";
 import { GET, POST } from "../../src/app/api/site-visit/route/route";
+import { GET as context } from "../../src/app/api/site-visit/context/route";
+
+test("site visit endpoints reject missing and blank coordinates", async () => {
+	for (const query of ["lat=21", "lng=%20&lat=21", "lng=105&lat="]) {
+		expect(
+			(
+				await context(
+					new Request(`http://localhost/api/site-visit/context?${query}`),
+				)
+			).status,
+		).toBe(400);
+		expect(
+			(
+				await GET(
+					new Request(
+						`http://localhost/api/site-visit/route?destination=VNHPH-LH&${query}`,
+					),
+				)
+			).status,
+		).toBe(400);
+	}
+});
 
 test("site visit route rejects unexpected query parameters", async () => {
 	const response = await GET(
@@ -9,7 +31,6 @@ test("site visit route rejects unexpected query parameters", async () => {
 	);
 	expect(response.status).toBe(400);
 	const body = await response.text();
-	expect(body).not.toContain("UpPfQSwTwXlPekxsVHKzlcPoGSWGLlsyZ");
 	expect(body).not.toContain("secret");
 });
 
@@ -33,7 +54,7 @@ test("site visit route rejects catalogue entries that are not logistics destinat
 	expect([400, 404]).toContain(response.status);
 });
 
-test("site visit itinerary endpoint does not echo provider credentials", async () => {
+test("site visit itinerary endpoint does not echo the rejected destination", async () => {
 	const response = await POST(
 		new Request("http://localhost/api/site-visit/route", {
 			method: "POST",
@@ -47,7 +68,7 @@ test("site visit itinerary endpoint does not echo provider credentials", async (
 		}),
 	);
 	const body = await response.text();
-	expect(body).not.toContain("UpPfQSwTwXlPekxsVHKzlcPoGSWGLlsyZ");
+	expect(body).not.toContain("secret-stop");
 });
 
 test("site visit itinerary rejects arbitrary coordinates and destination ids", async () => {

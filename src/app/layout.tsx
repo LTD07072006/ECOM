@@ -32,7 +32,7 @@ export default async function RootLayout({
 			lang={locale}
 			className={`${beVietnamPro.variable} ${beVietnamPro.className}`}
 		>
-			<body className={beVietnamPro.className}>
+			<body className={beVietnamPro.className} suppressHydrationWarning>
 				<LocaleProvider locale={locale}>
 					<SiteHeader />
 					{children}

@@ -16,7 +16,9 @@ Wave 2 dùng mã tỉnh `VN_ADMIN_2025_07` và các bảng theo 34 tỉnh trong 
 
 Nguồn tăng trưởng thứ hai gồm bốn giá trị nêu rõ cho Hà Nội, Quảng Ninh, Hải Phòng và TP.HCM. UI hiển thị chênh lệch theo điểm phần trăm khi cả hai nguồn có giá trị cho tỉnh được chọn. [Thông cáo tăng trưởng GRDP](https://www.nso.gov.vn/du-lieu-va-so-lieu-thong-ke/2026/01/thong-cao-bao-chi-ve-ket-qua-tang-truong-tong-san-pham-tren-dia-ban-grdp-cua-34-tinh-thanh-pho-nam-2025/).
 
-Lớp hạ tầng gồm 22 sân bay dân dụng được ghi nhận có chuyến bay theo lịch trong snapshot OurAirports thu thập ngày 20/11/2026. `ST_Covers` gắn mỗi POI với đúng một tỉnh theo COD-AB v02. POI dùng để tham khảo vị trí. [Dữ liệu mở OurAirports](https://ourairports.com/data/).
+Lớp hạ tầng có 23 sân bay có tọa độ và 8 cảng biển trong bản dữ liệu `2026-11-20-r2`. Sân bay Long Thành dùng tọa độ điểm quy chiếu của AIP và được ghi nhận là đang chuẩn bị khai thác thương mại tại kỳ dữ liệu. Nà Sản thiếu tọa độ nên không có điểm trên bản đồ. [Dữ liệu mở OurAirports](https://ourairports.com/data/), [tọa độ AIP của Long Thành](https://aim.vatm.vn/images/stories/vnaic.vn/SanPhamDichVu/AIP-SUP/17-11/2026/vv-esup-61-26-approvedbycaav.pdf).
+
+`ST_Covers` gắn mỗi POI với đúng một tỉnh theo COD-AB v02. Khi một điểm cảng nằm ngoài đa giác, chỉ dùng mã tỉnh được ghi rõ trong dữ liệu có dẫn nguồn và cách đa giác tỉnh đó tối đa 2 km. Cảng Dung Quất giữ tọa độ gốc và được gắn với Quảng Ngãi theo nguồn vùng nước cảng biển. [Cục Hàng hải và Đường thủy Việt Nam](https://www.vimawa.gov.vn/vi/tin-tuc/bo-gtvt-cong-bo-vung-nuoc-cang-bien-quang-ngai).
 
 ## Import và công bố
 

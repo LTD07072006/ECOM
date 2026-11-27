@@ -1,11 +1,16 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { LogisticsDestination } from "../map/logistics-network";
-import type { LogisticsOverviewLeg } from "../map/logistics-overview";
 import { selectLogisticsDestinations } from "../map/logistics-network";
-import { buildLogisticsOverview } from "../map/logistics-overview";
-import { normalizeLogisticsRouteResponse } from "../map/logistics-overview";
+import type {
+	LogisticsOverviewLeg,
+	LogisticsRouteResponse,
+} from "../map/logistics-overview";
+import {
+	buildLogisticsOverview,
+	normalizeLogisticsRouteResponse,
+} from "../map/logistics-overview";
 import { LogisticsMatrix } from "./LogisticsMatrix";
 import type { SiteVisitCandidate } from "./site-visit-state";
 
@@ -15,31 +20,20 @@ type Props = {
 	onOverviewChange: (
 		overview: ReturnType<typeof buildLogisticsOverview> | null,
 	) => void;
-};
-
-type RouteResponse = {
-	data?: {
-		mode: "live" | "baseline" | "unavailable";
-		distanceMeters: number;
-		durationSeconds: number;
-		provider: string;
-		fallback: boolean;
-		geometry: LogisticsOverviewLeg["geometry"];
-		observedOn?: string;
-		sourceUrl?: string;
-		errorCategory?: "provider_error" | "timeout" | "quota" | "invalid_response";
-	};
+	onDestinationSelect?: (destinationCode: string) => void;
 };
 
 export function LogisticsNetworkPanel({
 	candidate,
 	destinations,
 	onOverviewChange,
+	onDestinationSelect,
 }: Props) {
 	const [selectedCodes, setSelectedCodes] = useState<string[]>([]);
 	const [legs, setLegs] = useState<LogisticsOverviewLeg[]>([]);
 	const [pending, setPending] = useState(false);
 	const [error, setError] = useState(false);
+	const activeRequest = useRef<AbortController | null>(null);
 	const selected = selectLogisticsDestinations(destinations, selectedCodes);
 	const candidateKey = candidate
 		? `${candidate.longitude}:${candidate.latitude}:${candidate.label}`
@@ -47,12 +41,16 @@ export function LogisticsNetworkPanel({
 	useEffect(() => {
 		void candidateKey;
 		setLegs([]);
+		setPending(false);
 		setError(false);
 		onOverviewChange(null);
+		return () => activeRequest.current?.abort();
 	}, [candidateKey, onOverviewChange]);
 
 	const toggle = (code: string) => {
+		activeRequest.current?.abort();
 		setLegs([]);
+		setPending(false);
 		setError(false);
 		onOverviewChange(null);
 		setSelectedCodes((current) =>
@@ -66,25 +64,32 @@ export function LogisticsNetworkPanel({
 
 	const calculate = useCallback(async () => {
 		if (!candidate || selected.length === 0) return;
+		activeRequest.current?.abort();
+		const request = new AbortController();
+		activeRequest.current = request;
 		setPending(true);
 		setError(false);
 		const next: LogisticsOverviewLeg[] = [];
 		let hadFailure = false;
 		let cursor = 0;
 		const worker = async () => {
-			while (cursor < selected.length) {
+			while (!request.signal.aborted && cursor < selected.length) {
 				const destination = selected[cursor++];
 				if (!destination) continue;
 				try {
 					const response = await fetch(
 						`/api/site-visit/route?lng=${candidate.longitude}&lat=${candidate.latitude}&destination=${encodeURIComponent(destination.code)}`,
+						{ signal: request.signal },
 					);
 					if (!response.ok) throw new Error("route");
-					const payload = (await response.json()) as RouteResponse;
+					const payload = (await response.json()) as {
+						data?: LogisticsRouteResponse;
+					};
 					const route = payload.data;
 					if (!route) throw new Error("route");
 					next.push(normalizeLogisticsRouteResponse(destination.code, route));
 				} catch {
+					if (request.signal.aborted) return;
 					hadFailure = true;
 					next.push({
 						destinationCode: destination.code,
@@ -98,6 +103,7 @@ export function LogisticsNetworkPanel({
 			}
 		};
 		await Promise.all([worker(), worker(), worker()]);
+		if (request.signal.aborted) return;
 		setLegs(next);
 		setError(hadFailure);
 		onOverviewChange(
@@ -167,7 +173,13 @@ export function LogisticsNetworkPanel({
 					<span>{overview.summary.unavailable} unavailable</span>
 				</div>
 			)}
-			{overview && <LogisticsMatrix destinations={selected} legs={legs} />}
+			{overview && (
+				<LogisticsMatrix
+					destinations={selected}
+					legs={legs}
+					onDestinationSelect={onDestinationSelect}
+				/>
+			)}
 		</section>
 	);
 }

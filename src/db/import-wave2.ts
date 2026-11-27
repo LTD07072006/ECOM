@@ -12,10 +12,53 @@ import {
 } from "./release-workflow";
 import { safeSourceUrl } from "../lib/source-url";
 
-async function importWave2(
-	release: Awaited<ReturnType<typeof loadWave2>>,
-	publish: boolean,
+type Wave2Release = Awaited<ReturnType<typeof loadWave2>>;
+const coastalAllowanceMeters = 2_000;
+
+async function infrastructureProvince(
+	tx: postgres.TransactionSql,
+	release: Wave2Release,
+	point: { id: string; longitude: number; latitude: number },
+	coastalProvinceCode?: string,
 ) {
+	const { geographyVersion } = release.manifest;
+	const boundary = release.boundaryDataset;
+	const matches = await tx<{ geo_id: string; admin_code: string }[]>`
+    with location as (
+      select ST_SetSRID(ST_MakePoint(${point.longitude}, ${point.latitude}), 4326) as geom
+    ), candidates as (
+      select geo.geo_id, geo.admin_code, shape.geom
+      from market_entry.geo_boundaries shape
+      join market_entry.geo_units geo on geo.geo_id = shape.geo_id and geo.level = 'province'
+      join market_entry.geography_versions version on version.geography_version_id = geo.geography_version_id
+      join market_entry.dataset_versions dataset on dataset.dataset_version_id = shape.dataset_version_id
+      join market_entry.source_registry source on source.source_id = dataset.source_id
+      where version.code = ${geographyVersion} and dataset.source_id = ${boundary.source.id}
+        and dataset.dataset_code = ${boundary.datasetCode} and dataset.version_label = ${boundary.version}
+        and dataset.publication_status = 'published' and source.access_right = 'public' and source.status = 'active'
+    ), covered as (
+      select geo_id, admin_code from candidates cross join location
+      where ST_Covers(candidates.geom, location.geom)
+    )
+    select geo_id, admin_code from covered
+    union all
+    select geo_id, admin_code from candidates cross join location
+    where admin_code = ${coastalProvinceCode ?? null}
+      and not exists (select 1 from covered)
+      and ST_DWithin(candidates.geom::geography, location.geom::geography, ${coastalAllowanceMeters})
+  `;
+	if (
+		matches.length !== 1 ||
+		(coastalProvinceCode && matches[0].admin_code !== coastalProvinceCode)
+	) {
+		throw new Error(
+			`Infrastructure point ${point.id} does not match exactly one expected province in ${geographyVersion}`,
+		);
+	}
+	return matches[0].geo_id;
+}
+
+async function importWave2(release: Wave2Release, publish: boolean) {
 	const client = postgres(env.DATABASE_URL, { max: 1 });
 	try {
 		await client.begin(async (tx) => {
@@ -116,7 +159,6 @@ async function importWave2(
 				await tx`insert into market_entry.observations ${tx(records)} on conflict on constraint observations_natural_key do nothing`;
 			}
 
-			const boundary = release.boundaryDataset;
 			for (const airport of release.points) {
 				if (!safeSourceUrl(airport.url))
 					throw new Error(
@@ -130,26 +172,15 @@ async function importWave2(
 						"Airport classification source must use a valid HTTPS source URL without credentials.",
 					);
 				if (airport.longitude === null || airport.latitude === null) continue;
-				const matches = await tx<{ geo_id: string }[]>`
-          select geo.geo_id
-          from market_entry.geo_boundaries shape
-          join market_entry.geo_units geo on geo.geo_id = shape.geo_id and geo.level = 'province'
-          join market_entry.geography_versions version on version.geography_version_id = geo.geography_version_id
-          join market_entry.dataset_versions dataset on dataset.dataset_version_id = shape.dataset_version_id
-          join market_entry.source_registry source on source.source_id = dataset.source_id
-          where version.code = ${geographyVersion} and dataset.source_id = ${boundary.source.id}
-            and dataset.dataset_code = ${boundary.datasetCode} and dataset.version_label = ${boundary.version}
-            and dataset.publication_status = 'published' and source.access_right = 'public' and source.status = 'active'
-            and ST_Covers(shape.geom, ST_SetSRID(ST_MakePoint(${airport.longitude}, ${airport.latitude}), 4326))
-        `;
-				if (matches.length !== 1)
-					throw new Error(
-						`Airport ${airport.id} has ${matches.length} matching provinces in ${geographyVersion}`,
-					);
+				const geoId = await infrastructureProvince(tx, release, {
+					id: airport.id,
+					longitude: airport.longitude,
+					latitude: airport.latitude,
+				});
 				await tx`
           insert into market_entry.infrastructure_pois
             (dataset_version_id, geo_id, source_key, name, code, kind, airport_classification, operational_status, classification_source_url, reference_url, geom)
-          values (${airportVersion}, ${matches[0].geo_id}, ${airport.id}, ${airport.name}, ${airport.code}, ${airport.kind}, ${airport.airportClassification}, ${airport.airportOperationalStatus}, ${airport.classificationSourceUrl}, ${airport.url},
+          values (${airportVersion}, ${geoId}, ${airport.id}, ${airport.name}, ${airport.code}, ${airport.kind}, ${airport.airportClassification}, ${airport.airportOperationalStatus}, ${airport.classificationSourceUrl}, ${airport.url},
             ST_SetSRID(ST_MakePoint(${airport.longitude}, ${airport.latitude}), 4326))
           on conflict (dataset_version_id, source_key) do nothing
         `;
@@ -163,26 +194,17 @@ async function importWave2(
 					throw new Error(
 						"Port sources must use valid HTTPS source URLs without credentials.",
 					);
-				const matches = await tx<{ geo_id: string }[]>`
-          select geo.geo_id
-          from market_entry.geo_boundaries shape
-          join market_entry.geo_units geo on geo.geo_id = shape.geo_id and geo.level = 'province'
-          join market_entry.geography_versions version on version.geography_version_id = geo.geography_version_id
-          join market_entry.dataset_versions dataset on dataset.dataset_version_id = shape.dataset_version_id
-          join market_entry.source_registry source on source.source_id = dataset.source_id
-          where version.code = ${geographyVersion} and dataset.source_id = ${boundary.source.id}
-            and dataset.dataset_code = ${boundary.datasetCode} and dataset.version_label = ${boundary.version}
-            and dataset.publication_status = 'published' and source.access_right = 'public' and source.status = 'active'
-            and ST_Covers(shape.geom, ST_SetSRID(ST_MakePoint(${port.longitude}, ${port.latitude}), 4326))
-        `;
-				if (matches.length !== 1)
-					throw new Error(
-						`Port ${port.id} has ${matches.length} matching provinces in ${geographyVersion}`,
-					);
+				// An explicitly documented coastal point may be outside the land polygon.
+				const geoId = await infrastructureProvince(
+					tx,
+					release,
+					port,
+					port.coastalProvinceCode,
+				);
 				await tx`
           insert into market_entry.infrastructure_pois
             (dataset_version_id, geo_id, source_key, name, code, kind, operational_status, port_type, classification_source_url, reference_url, geom)
-          values (${portVersion}, ${matches[0].geo_id}, ${port.id}, ${port.name}, ${port.code}, ${port.kind}, ${port.operationalStatus}, ${port.portType}, ${port.classificationSourceUrl}, ${port.url},
+          values (${portVersion}, ${geoId}, ${port.id}, ${port.name}, ${port.code}, ${port.kind}, ${port.operationalStatus}, ${port.portType}, ${port.classificationSourceUrl}, ${port.url},
             ST_SetSRID(ST_MakePoint(${port.longitude}, ${port.latitude}), 4326))
           on conflict (dataset_version_id, source_key) do nothing
         `;

@@ -1,3 +1,16 @@
-// This is a browser token by design. Restrict it to the approved app origins
-// in the WeMap console before deploying the application publicly.
-export const WEMAP_TOKEN = "UpPfQSwTwXlPekxsVHKzlcPoGSWGLlsyZ";
+// Read at request time so the Docker image can be built without a token.
+function configuredToken(name: string) {
+	return process.env[name]?.trim() || undefined;
+}
+
+export function wemapBrowserToken() {
+	return configuredToken("NEXT_PUBLIC_WEMAP_TOKEN");
+}
+
+export function wemapRoutingToken() {
+	return configuredToken("WEMAP_SERVER_TOKEN") ?? wemapBrowserToken();
+}
+
+export function wemapMapToken() {
+	return configuredToken("WEMAP_MAP_TOKEN") ?? wemapBrowserToken();
+}

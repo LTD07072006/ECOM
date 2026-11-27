@@ -1058,6 +1058,29 @@ export const en = {
 		"Advisory estimate; not a traffic guarantee or official truck route.",
 	"siteVisit.candidate": "Candidate site",
 	"siteVisit.infrastructure": "Published infrastructure",
+	"siteVisit.infrastructureFilter": "Infrastructure nearby",
+	"siteVisit.infrastructureKind.airport": "Airports",
+	"siteVisit.infrastructureKind.seaport": "Seaports",
+	"siteVisit.infrastructureKind.icd": "ICDs",
+	"siteVisit.infrastructureKind.industrial_park": "Industrial parks",
+	"siteVisit.infrastructureFilterNote":
+		"Showing published POIs within {radius} km of the candidate site. Counts include all nearby POIs; unchecked kinds are hidden from the map.",
+	"siteVisit.infrastructureChooseCandidate":
+		"Choose or pin a candidate site to inspect nearby infrastructure.",
+	"siteVisit.noNearbyInfrastructure":
+		"No nearby infrastructure matches the current filters.",
+	"siteVisit.clearInfrastructureFilters": "Clear all",
+	"siteVisit.selectInfrastructureFilters": "Select all",
+	"siteVisit.routeStatus": "How to read route status",
+	"siteVisit.routeStatus.live":
+		"Live: calculated by the current routing provider.",
+	"siteVisit.routeStatus.baseline":
+		"Baseline: dated or fallback estimate, not a current traffic route.",
+	"siteVisit.routeStatus.unavailable":
+		"Unavailable: no usable route measurement is available.",
+	"siteVisit.routeStatus.advisory":
+		"All routes are advisory estimates, not official truck routes or investment guarantees.",
+	"siteVisit.noMatchingRoutes": "No routes match the current table filters.",
 	"siteVisit.candidateSelected": "candidate selected",
 	"siteVisit.noCandidate": "Choose a place to begin",
 	"siteVisit.source": "View source",
@@ -1083,6 +1106,9 @@ export const en = {
 	"siteVisit.share": "Share itinerary",
 	"siteVisit.calculateItinerary": "Calculate itinerary legs",
 	"siteVisit.mapData": "Map data:",
+	"siteVisit.mapLoading": "Loading the map…",
+	"siteVisit.mapFallback": "Showing the OpenStreetMap basemap.",
+	"siteVisit.mapUnavailable": "The map could not load. Try reloading the page.",
 	"notFound.title": "Page not found",
 	"notFound.body": "The page you requested does not exist or may have moved.",
 	"error.title": "Something went wrong",

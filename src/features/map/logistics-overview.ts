@@ -22,6 +22,25 @@ export type LogisticsRouteResponse = {
 	errorCategory?: LogisticsLegResult["errorCategory"];
 };
 
+export function describeLogisticsStatus(
+	status: "live" | "baseline" | "unavailable",
+): { label: string; meaning: string } {
+	if (status === "live")
+		return {
+			label: "live",
+			meaning: "A route calculated from the current routing provider.",
+		};
+	if (status === "baseline")
+		return {
+			label: "baseline",
+			meaning: "A dated or fallback estimate, not a current traffic route.",
+		};
+	return {
+		label: "unavailable",
+		meaning: "No usable route measurement is available.",
+	};
+}
+
 export function normalizeLogisticsRouteResponse(
 	destinationCode: string,
 	response: LogisticsRouteResponse,

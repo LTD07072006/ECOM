@@ -6,7 +6,8 @@ import {
 	resolveRouteAssessment,
 	type WemapRouteLike,
 } from "../../../../features/site-visit/route-assessment";
-import { WEMAP_TOKEN } from "../../../../features/site-visit/wemap-config";
+import { wemapRoutingToken } from "../../../../features/site-visit/wemap-config";
+import { readSiteCoordinates } from "../../../../features/site-visit/site-visit-state";
 import { cacheHeaders } from "../../../../lib/cache-policy";
 
 export const dynamic = "force-dynamic";
@@ -23,30 +24,16 @@ export function POST(request: Request) {
 
 async function route(request: Request) {
 	const query = boundedQuery(request, "lng", "lat", "destination");
-	if (
-		!query ||
-		!query.has("lng") ||
-		!query.has("lat") ||
-		!query.has("destination")
-	)
-		return error("Invalid route parameters.", 400);
-	const longitude = Number(query.get("lng"));
-	const latitude = Number(query.get("lat"));
+	if (!query) return error("Invalid route parameters.", 400);
+	const coordinates = readSiteCoordinates(query.get("lng"), query.get("lat"));
 	const destination = canonicalInfrastructurePois.find(
 		(poi) =>
 			poi.code === query.get("destination") &&
 			["airport", "seaport", "icd", "expressway_node"].includes(poi.kind),
 	);
-	if (
-		!Number.isFinite(longitude) ||
-		longitude < -180 ||
-		longitude > 180 ||
-		!Number.isFinite(latitude) ||
-		latitude < -90 ||
-		latitude > 90 ||
-		!destination
-	)
+	if (!coordinates || !destination)
 		return error("Invalid route parameters.", 400);
+	const { longitude, latitude } = coordinates;
 	const baselineDistance =
 		haversineKm(
 			latitude,
@@ -69,16 +56,18 @@ async function route(request: Request) {
 		},
 		baseline,
 		requestRoute: async (origin, target) => {
+			const token = wemapRoutingToken();
+			if (!token) throw new Error("WeMap routing is unavailable");
 			const { default: wemap } = await import("wemap-gl-js");
 			const provider = wemap.weRoutingProvider({
 				version: 2,
-				apiKey: WEMAP_TOKEN,
+				apiKey: token,
 			});
 			const routes = await Promise.race([
 				provider.getRoute([origin, target], {
 					profile: "driving",
 					language: "vi",
-					apiKey: WEMAP_TOKEN,
+					apiKey: token,
 				}),
 				new Promise<never>((_, reject) =>
 					setTimeout(
@@ -148,16 +137,18 @@ async function itineraryRoute(request: Request) {
 			sourceUrl: destination.referenceUrl,
 		},
 		requestRoute: async (from, to) => {
+			const token = wemapRoutingToken();
+			if (!token) throw new Error("WeMap routing is unavailable");
 			const { default: wemap } = await import("wemap-gl-js");
 			const provider = wemap.weRoutingProvider({
 				version: 2,
-				apiKey: WEMAP_TOKEN,
+				apiKey: token,
 			});
 			const routes = await Promise.race([
 				provider.getRoute([from, to], {
 					profile: "driving",
 					language: "vi",
-					apiKey: WEMAP_TOKEN,
+					apiKey: token,
 				}),
 				new Promise<never>((_, reject) =>
 					setTimeout(

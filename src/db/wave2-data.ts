@@ -98,6 +98,7 @@ const ports = z
 			portType: z
 				.enum(["deep_sea", "coastal", "river", "container_terminal"])
 				.nullable(),
+			coastalProvinceCode: province.optional(),
 			operationalStatus,
 			classificationSourceUrl,
 			url: z.url({ protocol: /^https$/ }),
@@ -165,6 +166,10 @@ export async function loadWave2(path: string) {
 	const portPoints = ports.parse(await readDataset(path, manifest.ports));
 	if (new Set(portPoints.map((point) => point.id)).size !== portPoints.length)
 		throw new Error("Duplicate port identifier");
+	for (const port of portPoints) {
+		if (port.coastalProvinceCode && !expected.has(port.coastalProvinceCode))
+			throw new Error(`Unknown coastal province for port ${port.id}`);
+	}
 	return {
 		manifest,
 		series,

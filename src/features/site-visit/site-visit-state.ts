@@ -13,9 +13,33 @@ export type SiteVisitState = {
 	compareCandidates?: SiteVisitCandidate[];
 };
 
+export function createPinnedCandidate(
+	longitude: number,
+	latitude: number,
+): SiteVisitCandidate {
+	return { label: "Pinned location", longitude, latitude };
+}
+
 const validDestinationIds = new Set(
 	canonicalInfrastructurePois.map((poi) => poi.code),
 );
+
+export function readSiteCoordinates(longitude: unknown, latitude: unknown) {
+	const lng = readCoordinate(longitude, 180);
+	const lat = readCoordinate(latitude, 90);
+	return lng === null || lat === null
+		? null
+		: { longitude: lng, latitude: lat };
+}
+
+function readCoordinate(value: unknown, limit: number) {
+	if (typeof value === "string" && value.trim()) value = Number(value);
+	return typeof value === "number" &&
+		Number.isFinite(value) &&
+		Math.abs(value) <= limit
+		? value
+		: null;
+}
 
 export function serializeSiteVisitState(state: SiteVisitState): string {
 	const params = new URLSearchParams();
@@ -28,79 +52,58 @@ export function serializeSiteVisitState(state: SiteVisitState): string {
 		params.set("destination", state.destination);
 	}
 	if (state.itineraryStops?.length) {
-		params.set(
-			"stops",
-			state.itineraryStops
-				.slice(0, 5)
-				.map((stop) => `${stop.label}|${stop.longitude}|${stop.latitude}`)
-				.join(","),
-		);
+		params.set("stops", serializeStops(state.itineraryStops, 5));
 	}
 	if (state.compareCandidates?.length) {
-		params.set(
-			"compare",
-			state.compareCandidates
-				.slice(0, 3)
-				.map(
-					(candidate) =>
-						`${candidate.label}|${candidate.longitude}|${candidate.latitude}`,
-				)
-				.join(","),
-		);
+		params.set("compare", serializeStops(state.compareCandidates, 3));
 	}
 	return params.toString();
 }
 
-export function parseSiteVisitState(search: string): SiteVisitState {
-	const params = new URLSearchParams(search);
-	const longitude = Number(params.get("lng"));
-	const latitude = Number(params.get("lat"));
+export function parseSiteVisitState(
+	search: string | URLSearchParams,
+): SiteVisitState {
+	const params =
+		typeof search === "string" ? new URLSearchParams(search) : search;
+	const coordinates = readSiteCoordinates(params.get("lng"), params.get("lat"));
 	const label = params.get("label")?.trim() ?? "";
-	const candidate =
-		label &&
-		Number.isFinite(longitude) &&
-		longitude >= -180 &&
-		longitude <= 180 &&
-		Number.isFinite(latitude) &&
-		latitude >= -90 &&
-		latitude <= 90
-			? { label, longitude, latitude }
-			: null;
+	const candidate = label && coordinates ? { label, ...coordinates } : null;
 	const destination = params.get("destination");
-	const itineraryStops = parseStops(params.get("stops"));
-	const compareCandidates = parseStops(params.get("compare"));
+	const itineraryStops = parseStops(params.get("stops"), 5);
+	const compareCandidates = parseStops(params.get("compare"), 3);
 	return {
 		candidate,
 		destination:
 			destination && validDestinationIds.has(destination) ? destination : null,
 		...(itineraryStops.length > 0 ? { itineraryStops } : {}),
-		...(compareCandidates.length > 0
-			? { compareCandidates: compareCandidates.slice(0, 3) }
-			: {}),
+		...(compareCandidates.length > 0 ? { compareCandidates } : {}),
 	};
 }
 
-function parseStops(value: string | null): SiteVisitCandidate[] {
+function serializeStops(stops: SiteVisitCandidate[], limit: number) {
+	return JSON.stringify(
+		stops
+			.slice(0, limit)
+			.map(({ label, longitude, latitude }) => [label, longitude, latitude]),
+	);
+}
+
+function parseStops(value: string | null, limit: number): SiteVisitCandidate[] {
 	if (!value) return [];
-	return value
-		.split(",")
-		.slice(0, 5)
-		.map((part) => {
-			const [label, longitude, latitude] = part.split("|");
-			return {
-				label: label?.trim() ?? "",
-				longitude: Number(longitude),
-				latitude: Number(latitude),
-			};
-		})
-		.filter(
-			(stop) =>
-				Boolean(stop.label) &&
-				Number.isFinite(stop.longitude) &&
-				stop.longitude >= -180 &&
-				stop.longitude <= 180 &&
-				Number.isFinite(stop.latitude) &&
-				stop.latitude >= -90 &&
-				stop.latitude <= 90,
-		);
+	let entries: unknown;
+	try {
+		entries = value.startsWith("[")
+			? JSON.parse(value)
+			: value.split(",", limit).map((part) => part.split("|"));
+	} catch {
+		return [];
+	}
+	if (!Array.isArray(entries)) return [];
+	return entries.slice(0, limit).flatMap((item) => {
+		if (!Array.isArray(item) || item.length !== 3) return [];
+		const [name, longitude, latitude] = item;
+		const label = typeof name === "string" ? name.trim() : "";
+		const coordinates = readSiteCoordinates(longitude, latitude);
+		return label && coordinates ? [{ label, ...coordinates }] : [];
+	});
 }

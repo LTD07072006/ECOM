@@ -66,10 +66,11 @@
         "kind":  "seaport",
         "longitude":  108.7864,
         "latitude":  15.4086,
+        "coastalProvinceCode":  "51",
         "portType":  "deep_sea",
         "operationalStatus":  "operational",
         "classificationSourceUrl":  "https://vinamarine.gov.vn/",
-        "url":  "https://vinamarine.gov.vn/"
+        "url":  "https://www.vimawa.gov.vn/vi/tin-tuc/bo-gtvt-cong-bo-vung-nuoc-cang-bien-quang-ngai"
     },
     {
         "id":  "VNSGN-CM",

@@ -15,7 +15,16 @@ export type SiteContextProperties = {
 	latitude: number;
 };
 
-const contextRadiusKm = 150;
+export const SITE_CONTEXT_KINDS = [
+	"airport",
+	"seaport",
+	"icd",
+	"industrial_park",
+] as const;
+export type SiteContextKind = (typeof SITE_CONTEXT_KINDS)[number];
+export const SITE_CONTEXT_RADIUS_KM = 150;
+
+export type SiteContextKindCounts = Record<SiteContextKind, number>;
 
 export function toSiteVisitContext(center: {
 	longitude: number;
@@ -33,7 +42,7 @@ export function toSiteVisitContext(center: {
 					center.longitude,
 					poi.latitude,
 					poi.longitude,
-				) <= contextRadiusKm,
+				) <= SITE_CONTEXT_RADIUS_KM,
 		)
 		.map((poi) => ({
 			type: "Feature" as const,
@@ -52,4 +61,30 @@ export function toSiteVisitContext(center: {
 			},
 		}));
 	return { type: "FeatureCollection", features };
+}
+
+export function filterSiteVisitContext(
+	context: FeatureCollection<Point, SiteContextProperties>,
+	enabledKinds: readonly SiteContextKind[],
+): FeatureCollection<Point, SiteContextProperties> {
+	const enabled = new Set(enabledKinds);
+	return {
+		type: "FeatureCollection",
+		features: context.features.filter((feature) =>
+			enabled.has(feature.properties.kind as SiteContextKind),
+		),
+	};
+}
+
+export function countSiteVisitContextByKind(
+	context: FeatureCollection<Point, SiteContextProperties>,
+): SiteContextKindCounts {
+	const counts = Object.fromEntries(
+		SITE_CONTEXT_KINDS.map((kind) => [kind, 0]),
+	) as SiteContextKindCounts;
+	for (const feature of context.features) {
+		if (feature.properties.kind in counts)
+			counts[feature.properties.kind as SiteContextKind] += 1;
+	}
+	return counts;
 }

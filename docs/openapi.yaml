@@ -424,6 +424,26 @@ paths:
             application/json:
               schema: {type: object}
          '400': {$ref: '#/components/responses/BadRequest'}
+  /api/site-visit/wemap/{asset}:
+    get:
+      summary: Serve WeMap basemap assets for the site visit map
+      security: []
+      parameters:
+        - name: asset
+          in: path
+          required: true
+          description: A style, sprite, glyph, tile metadata, or vector tile path from the supported basemap.
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Map asset in JSON, PNG, or vector tile format
+        "404":
+          description: Unsupported asset path
+        "502":
+          description: Map provider unavailable
+        "503":
+          description: Map credential not configured
   /api/site-visit/route:
     get:
       summary: Advisory route estimate from a candidate site to a published destination

@@ -1,8 +1,9 @@
 import { describe, expect, test } from "bun:test";
 import {
 	buildLogisticsOverview,
-	normalizeLogisticsRouteResponse,
+	describeLogisticsStatus,
 	type LogisticsOverviewLeg,
+	normalizeLogisticsRouteResponse,
 } from "../../src/features/map/logistics-overview";
 
 const destination = (
@@ -20,6 +21,20 @@ const destination = (
 });
 
 describe("logistics overview view model", () => {
+	test("explains route statuses without implying unavailable data is zero", () => {
+		expect(describeLogisticsStatus("live")).toEqual({
+			label: "live",
+			meaning: "A route calculated from the current routing provider.",
+		});
+		expect(describeLogisticsStatus("baseline")).toEqual({
+			label: "baseline",
+			meaning: "A dated or fallback estimate, not a current traffic route.",
+		});
+		expect(describeLogisticsStatus("unavailable")).toEqual({
+			label: "unavailable",
+			meaning: "No usable route measurement is available.",
+		});
+	});
 	test("normalizes unavailable API responses without exposing zero measurements", () => {
 		expect(
 			normalizeLogisticsRouteResponse("D-1", {
@@ -124,5 +139,33 @@ describe("logistics overview view model", () => {
 			],
 		);
 		expect(model.routeFeatures.features).toHaveLength(0);
+	});
+
+	test("keeps route status on rendered features for map selection", () => {
+		const model = buildLogisticsOverview(
+			{ longitude: 105.8, latitude: 21 },
+			[destination("P-1"), destination("A-1", "airport")],
+			[
+				{
+					destinationCode: "P-1",
+					status: "baseline",
+					distanceMeters: 12000,
+					durationSeconds: 1800,
+					provider: "dated-baseline",
+					fallback: true,
+					geometry: {
+						type: "LineString",
+						coordinates: [
+							[105.8, 21],
+							[106, 21],
+						],
+					},
+				},
+			] satisfies LogisticsOverviewLeg[],
+		);
+		expect(model.routeFeatures.features[0]?.properties).toEqual({
+			destinationCode: "P-1",
+			status: "baseline",
+		});
 	});
 });

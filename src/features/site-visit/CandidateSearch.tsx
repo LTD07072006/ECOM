@@ -3,11 +3,12 @@
 import { useEffect, useRef, useState } from "react";
 import { useI18n } from "../../lib/i18n/provider";
 import type { SiteVisitCandidate } from "./site-visit-state";
-import { WEMAP_TOKEN } from "./wemap-config";
+type Props = {
+	token?: string;
+	onSelect: (candidate: SiteVisitCandidate) => void;
+};
 
-type Props = { onSelect: (candidate: SiteVisitCandidate) => void };
-
-export function CandidateSearch({ onSelect }: Props) {
+export function CandidateSearch({ token, onSelect }: Props) {
 	const { t } = useI18n();
 	const [query, setQuery] = useState("");
 	const [results, setResults] = useState<SiteVisitCandidate[]>([]);
@@ -15,7 +16,7 @@ export function CandidateSearch({ onSelect }: Props) {
 	const sequence = useRef(0);
 	useEffect(() => {
 		const value = query.trim();
-		if (value.length < 2) {
+		if (!token || value.length < 2) {
 			setResults([]);
 			return;
 		}
@@ -25,7 +26,6 @@ export function CandidateSearch({ onSelect }: Props) {
 			setPending(true);
 			void import("wemap-gl-js")
 				.then(async (wemap) => {
-					const token = WEMAP_TOKEN;
 					if (id !== sequence.current) return;
 					const provider = wemap.default.weGeoCoderProvider({
 						version: 1,
@@ -66,12 +66,13 @@ export function CandidateSearch({ onSelect }: Props) {
 			clearTimeout(timer);
 			controller.abort();
 		};
-	}, [query]);
+	}, [query, token]);
 	return (
 		<div className="site-visit-search">
 			<label htmlFor="site-visit-search">{t("siteVisit.searchLabel")}</label>
 			<input
 				id="site-visit-search"
+				disabled={!token}
 				value={query}
 				onChange={(event) => setQuery(event.target.value)}
 				placeholder={t("siteVisit.searchPlaceholder")}

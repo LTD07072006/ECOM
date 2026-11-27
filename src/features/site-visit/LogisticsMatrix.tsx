@@ -1,21 +1,25 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useI18n } from "../../lib/i18n/provider";
 import {
 	filterLogisticsMatrix,
-	toLogisticsMatrixRows,
 	type LogisticsMatrixLeg,
 	type LogisticsMatrixRow,
+	toLogisticsMatrixRows,
 } from "../map/logistics-matrix";
 import type { LogisticsDestination } from "../map/logistics-network";
 
 export function LogisticsMatrix({
 	destinations,
 	legs,
+	onDestinationSelect,
 }: {
 	destinations: readonly LogisticsDestination[];
 	legs: readonly LogisticsMatrixLeg[];
+	onDestinationSelect?: (destinationCode: string) => void;
 }) {
+	const { t } = useI18n();
 	const [kind, setKind] = useState<LogisticsDestination["kind"] | "">("");
 	const [status, setStatus] = useState<LogisticsMatrixLeg["status"] | "">("");
 	const [selected, setSelected] = useState<LogisticsMatrixRow | null>(null);
@@ -37,6 +41,15 @@ export function LogisticsMatrix({
 				<div>
 					<p className="site-visit-kicker">Route matrix</p>
 					<h2 id="site-visit-matrix-title">Site connections</h2>
+					<details className="site-visit-route-status-help">
+						<summary>{t("siteVisit.routeStatus")}</summary>
+						<div>
+							<p>{t("siteVisit.routeStatus.live")}</p>
+							<p>{t("siteVisit.routeStatus.baseline")}</p>
+							<p>{t("siteVisit.routeStatus.unavailable")}</p>
+							<small>{t("siteVisit.routeStatus.advisory")}</small>
+						</div>
+					</details>
 				</div>
 				<div className="site-visit-matrix-filters">
 					<label>
@@ -82,39 +95,54 @@ export function LogisticsMatrix({
 						</tr>
 					</thead>
 					<tbody>
-						{rows.map((row) => (
-							<tr key={row.destinationCode}>
-								<th scope="row">
-									<button
-										type="button"
-										className="site-visit-matrix-link"
-										onClick={() => setSelected(row)}
-									>
-										{row.name}
-									</button>
-									<small>{row.provinceName}</small>
-								</th>
-								<td>{row.kind}</td>
-								<td>
-									<span
-										className={`site-visit-status-chip site-visit-status-chip--${row.status}`}
-									>
-										{row.status}
-									</span>
+						{rows.length === 0 ? (
+							<tr>
+								<td colSpan={6} className="site-visit-table-empty">
+									{t("siteVisit.noMatchingRoutes")}
 								</td>
-								<td>
-									{row.distanceMeters == null
-										? "—"
-										: `${Math.round(row.distanceMeters / 100) / 10} km`}
-								</td>
-								<td>
-									{row.durationSeconds == null
-										? "—"
-										: `${Math.round(row.durationSeconds / 60)} min`}
-								</td>
-								<td>{row.provider ?? "—"}</td>
 							</tr>
-						))}
+						) : (
+							rows.map((row) => (
+								<tr key={row.destinationCode}>
+									<th scope="row">
+										<button
+											type="button"
+											className="site-visit-matrix-link"
+											data-destination-code={row.destinationCode}
+											aria-current={
+												selected?.destinationCode === row.destinationCode
+											}
+											onClick={() => {
+												setSelected(row);
+												onDestinationSelect?.(row.destinationCode);
+											}}
+										>
+											{row.name}
+										</button>
+										<small>{row.provinceName}</small>
+									</th>
+									<td>{row.kind}</td>
+									<td>
+										<span
+											className={`site-visit-status-chip site-visit-status-chip--${row.status}`}
+										>
+											{row.status}
+										</span>
+									</td>
+									<td>
+										{row.distanceMeters == null
+											? "—"
+											: `${Math.round(row.distanceMeters / 100) / 10} km`}
+									</td>
+									<td>
+										{row.durationSeconds == null
+											? "—"
+											: `${Math.round(row.durationSeconds / 60)} min`}
+									</td>
+									<td>{row.provider ?? "—"}</td>
+								</tr>
+							))
+						)}
 					</tbody>
 				</table>
 			</div>

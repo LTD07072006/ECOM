@@ -51,7 +51,7 @@ test("Wave 2 layer controls and comparison use published sources", async ({
 		"34 of 34 provinces",
 	);
 	await page.getByLabel("Civil airports").check();
-	await expect(page.getByText("22 reference points")).toBeVisible();
+	await expect(page.getByText("23 reference points")).toBeVisible();
 	await page.getByLabel("Find a place").fill("ha noi");
 	await page
 		.getByRole("button", {
@@ -134,6 +134,31 @@ test("province map recovers when animation frames resume", async ({ page }) => {
 		"ready",
 		{ timeout: 10000 },
 	);
+});
+
+test("province boundaries render when the external map style stalls", async ({
+	page,
+}) => {
+	let release = () => {};
+	const held = new Promise<void>((resolve) => {
+		release = resolve;
+	});
+	await page.route(
+		"https://tiles.openfreemap.org/styles/bright",
+		async (route) => {
+			await held;
+			await route.abort();
+		},
+	);
+	try {
+		await page.goto(baseUrl);
+		await expect(page.locator(".province-map")).toHaveAttribute(
+			"data-map-status",
+			"ready",
+		);
+	} finally {
+		release();
+	}
 });
 
 test("boundary request failure exposes fallback instead of endless loading", async ({
