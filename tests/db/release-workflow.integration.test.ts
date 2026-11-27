@@ -140,9 +140,10 @@ workflowTest(
 				message: "The approving reviewer cannot publish the same batch.",
 			});
 			expect((await change(steward, wave.id, "publish")).status).toBe(200);
-			expect(
-				(await loadMapLayers()).infrastructure?.points.features,
-			).toHaveLength(22);
+			expect((await loadMapLayers()).infrastructure?.kinds).toMatchObject({
+				airport: 23,
+				seaport: 8,
+			});
 			expect((await change(steward, wave.id, "retire")).status).toBe(200);
 			expect((await loadMapLayers()).infrastructure).toBeNull();
 			expect(

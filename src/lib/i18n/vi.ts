@@ -1067,6 +1067,30 @@ export const vi: Record<MessageKey, string> = {
 		"Chỉ là ước tính tham khảo; không phải cam kết giao thông hoặc tuyến xe tải chính thức.",
 	"siteVisit.candidate": "Địa điểm ứng viên",
 	"siteVisit.infrastructure": "Hạ tầng đã công bố",
+	"siteVisit.infrastructureFilter": "Hạ tầng quanh điểm chọn",
+	"siteVisit.infrastructureKind.airport": "Sân bay",
+	"siteVisit.infrastructureKind.seaport": "Cảng biển",
+	"siteVisit.infrastructureKind.icd": "ICD",
+	"siteVisit.infrastructureKind.industrial_park": "Khu công nghiệp",
+	"siteVisit.infrastructureFilterNote":
+		"Hiển thị POI đã công bố trong bán kính {radius} km quanh điểm ứng viên. Số lượng gồm toàn bộ POI lân cận; loại bị bỏ chọn sẽ ẩn trên bản đồ.",
+	"siteVisit.infrastructureChooseCandidate":
+		"Hãy chọn hoặc ghim một điểm ứng viên để xem hạ tầng lân cận.",
+	"siteVisit.noNearbyInfrastructure":
+		"Không có hạ tầng lân cận phù hợp với bộ lọc hiện tại.",
+	"siteVisit.clearInfrastructureFilters": "Bỏ chọn tất cả",
+	"siteVisit.selectInfrastructureFilters": "Chọn tất cả",
+	"siteVisit.routeStatus": "Cách đọc trạng thái tuyến",
+	"siteVisit.routeStatus.live":
+		"Live: được tính bởi nhà cung cấp định tuyến hiện tại.",
+	"siteVisit.routeStatus.baseline":
+		"Baseline: ước tính từ dữ liệu cũ hoặc dự phòng, không phải tuyến giao thông hiện tại.",
+	"siteVisit.routeStatus.unavailable":
+		"Unavailable: không có số đo tuyến hợp lệ.",
+	"siteVisit.routeStatus.advisory":
+		"Tất cả tuyến chỉ là ước tính tham khảo, không phải tuyến xe tải chính thức hoặc cam kết đầu tư.",
+	"siteVisit.noMatchingRoutes":
+		"Không có tuyến phù hợp với bộ lọc bảng hiện tại.",
 	"siteVisit.candidateSelected": "đã chọn",
 	"siteVisit.noCandidate": "Chọn một địa điểm để bắt đầu",
 	"siteVisit.source": "Xem nguồn",
@@ -1092,6 +1116,9 @@ export const vi: Record<MessageKey, string> = {
 	"siteVisit.share": "Chia sẻ lộ trình",
 	"siteVisit.calculateItinerary": "Tính các chặng khảo sát",
 	"siteVisit.mapData": "Dữ liệu bản đồ:",
+	"siteVisit.mapLoading": "Đang tải bản đồ…",
+	"siteVisit.mapFallback": "Đang hiển thị bản đồ nền OpenStreetMap.",
+	"siteVisit.mapUnavailable": "Không tải được bản đồ. Hãy thử tải lại trang.",
 	"notFound.title": "Không tìm thấy trang",
 	"notFound.body":
 		"Trang bạn yêu cầu không tồn tại hoặc đã được chuyển sang địa chỉ khác.",

@@ -1,51 +1,63 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useI18n } from "../../lib/i18n/provider";
+import { selectLogisticsDestinations } from "../map/logistics-network";
+import type { LogisticsOverview } from "../map/logistics-overview";
 import { canonicalInfrastructurePois } from "../map/proximity";
 import { CandidateSearch } from "./CandidateSearch";
 import { compareCandidateRoutes, limitCandidates } from "./compare";
-import {
-	type ItineraryLeg,
-	itinerarySummary,
-	parseItinerary,
-} from "./itinerary";
+import { type ItineraryLeg, itinerarySummary } from "./itinerary";
+import { LogisticsNetworkPanel } from "./LogisticsNetworkPanel";
 import type { RouteAssessment } from "./route-assessment";
 import { SiteVisitMap } from "./SiteVisitMap";
-import { type SiteContextProperties, toSiteVisitContext } from "./site-context";
 import {
-	parseSiteVisitState,
+	countSiteVisitContextByKind,
+	filterSiteVisitContext,
+	SITE_CONTEXT_KINDS,
+	SITE_CONTEXT_RADIUS_KM,
+	type SiteContextKind,
+	type SiteContextProperties,
+	toSiteVisitContext,
+} from "./site-context";
+import {
 	type SiteVisitCandidate,
+	type SiteVisitState,
 	serializeSiteVisitState,
 } from "./site-visit-state";
 
-export function SiteVisitWorkspace() {
+export function SiteVisitWorkspace({
+	initialState,
+	wemapToken,
+	wemapEnabled,
+}: {
+	initialState: SiteVisitState;
+	wemapToken?: string;
+	wemapEnabled: boolean;
+}) {
 	const { t, formatNumber } = useI18n();
-	const [candidate, setCandidate] = useState<SiteVisitCandidate | null>(
-		() =>
-			parseSiteVisitState(
-				typeof window === "undefined" ? "" : window.location.search,
-			).candidate,
-	);
+	const [candidate, setCandidate] = useState(initialState.candidate);
 	const [destination, setDestination] = useState(
-		() =>
-			parseSiteVisitState(
-				typeof window === "undefined" ? "" : window.location.search,
-			).destination ?? "VNHPH-LH",
+		initialState.destination ?? "VNHPH-LH",
 	);
 	const [route, setRoute] = useState<RouteAssessment | null>(null);
+	const routeRequest = useRef<AbortController | null>(null);
+	const [routePending, setRoutePending] = useState(false);
 	const [selectedContext, setSelectedContext] =
 		useState<SiteContextProperties | null>(null);
+	const [enabledContextKinds, setEnabledContextKinds] = useState<
+		SiteContextKind[]
+	>(() => [...SITE_CONTEXT_KINDS]);
 	const [pending, setPending] = useState(false);
 	const [routeError, setRouteError] = useState<string | null>(null);
+	const [networkOverview, setNetworkOverview] =
+		useState<LogisticsOverview | null>(null);
+	const [selectedDestinationCode, setSelectedDestinationCode] = useState<
+		string | null
+	>(null);
 	const [compareCandidates, setCompareCandidates] = useState<
 		SiteVisitCandidate[]
-	>(
-		() =>
-			(typeof window === "undefined"
-				? null
-				: parseSiteVisitState(window.location.search).compareCandidates) ?? [],
-	);
+	>(initialState.compareCandidates ?? []);
 	const [compareResults, setCompareResults] = useState<
 		Array<{
 			candidateId: string;
@@ -55,34 +67,37 @@ export function SiteVisitWorkspace() {
 		}>
 	>([]);
 	const [itineraryStops, setItineraryStops] = useState<SiteVisitCandidate[]>(
-		() => {
-			if (typeof window === "undefined") return [];
-			const state = parseSiteVisitState(window.location.search);
-			if (state.itineraryStops) return state.itineraryStops;
-			const ids = parseItinerary(window.location.search);
-			return ids
-				.map((id) => {
-					const [label, longitude, latitude] = id.split("|");
-					return {
-						label: label ?? id,
-						longitude: Number(longitude),
-						latitude: Number(latitude),
-					};
-				})
-				.filter(
-					(stop) =>
-						Number.isFinite(stop.longitude) && Number.isFinite(stop.latitude),
-				);
-		},
+		initialState.itineraryStops ?? [],
 	);
 	const [itineraryLegs, setItineraryLegs] = useState<ItineraryLeg[]>([]);
-	const context = useMemo(
+	const nearbyContext = useMemo(
 		() =>
 			toSiteVisitContext(
 				candidate ?? { longitude: 105.8542, latitude: 21.0285 },
 			),
 		[candidate],
 	);
+	const context = useMemo(
+		() => filterSiteVisitContext(nearbyContext, enabledContextKinds),
+		[enabledContextKinds, nearbyContext],
+	);
+	const contextCounts = useMemo(
+		() =>
+			candidate
+				? countSiteVisitContextByKind(nearbyContext)
+				: Object.fromEntries(SITE_CONTEXT_KINDS.map((kind) => [kind, 0])),
+		[candidate, nearbyContext],
+	);
+	const toggleContextKind = useCallback((kind: SiteContextKind) => {
+		setEnabledContextKinds((current) =>
+			current.includes(kind)
+				? current.filter((item) => item !== kind)
+				: [...current, kind],
+		);
+	}, []);
+	const setAllContextKinds = useCallback((enabled: boolean) => {
+		setEnabledContextKinds(enabled ? [...SITE_CONTEXT_KINDS] : []);
+	}, []);
 	const destinations = useMemo(
 		() =>
 			canonicalInfrastructurePois.filter((poi) =>
@@ -90,50 +105,85 @@ export function SiteVisitWorkspace() {
 			),
 		[],
 	);
-	const sync = useCallback(
-		(next: SiteVisitCandidate | null, nextDestination = destination) => {
-			setCandidate(next);
-			const query = serializeSiteVisitState({
-				candidate: next,
-				destination: nextDestination,
-			});
-			window.history.replaceState(
-				null,
-				"",
-				query ? `/site-visit?${query}` : "/site-visit",
-			);
-		},
-		[destination],
+	const logisticsDestinations = useMemo(
+		() =>
+			selectLogisticsDestinations(
+				canonicalInfrastructurePois.filter((poi) =>
+					["airport", "seaport", "icd", "expressway_node"].includes(poi.kind),
+				),
+				canonicalInfrastructurePois
+					.filter((poi) =>
+						["airport", "seaport", "icd", "expressway_node"].includes(poi.kind),
+					)
+					.map((poi) => poi.code),
+			),
+		[],
 	);
-	useEffect(() => {
-		if (typeof window === "undefined") return;
-		const current = parseSiteVisitState(window.location.search);
-		const query = serializeSiteVisitState({
-			candidate: current.candidate ?? candidate,
-			destination: current.destination ?? destination,
-			compareCandidates,
-			itineraryStops,
-		});
-		const nextUrl = query ? `/site-visit?${query}` : "/site-visit";
-		if (`${window.location.pathname}${window.location.search}` !== nextUrl)
-			window.history.replaceState(null, "", nextUrl);
+	const clearRoute = useCallback(() => {
+		routeRequest.current?.abort();
+		setRoutePending(false);
+		setRoute(null);
+		setRouteError(null);
+	}, []);
+	const selectCandidate = useCallback(
+		(nextCandidate: SiteVisitCandidate) => {
+			clearRoute();
+			setNetworkOverview(null);
+			setSelectedDestinationCode(null);
+			setCandidate(nextCandidate);
+		},
+		[clearRoute],
+	);
+	useEffect(() => () => routeRequest.current?.abort(), []);
+	const updateShareUrl = useCallback(() => {
+		const url = new URL(window.location.href);
+		const shared = new URLSearchParams(
+			serializeSiteVisitState({
+				candidate,
+				destination,
+				compareCandidates,
+				itineraryStops,
+			}),
+		);
+		for (const key of [
+			"label",
+			"lng",
+			"lat",
+			"destination",
+			"compare",
+			"stops",
+		]) {
+			const value = shared.get(key);
+			if (value === null) url.searchParams.delete(key);
+			else url.searchParams.set(key, value);
+		}
+		if (url.href !== window.location.href)
+			window.history.replaceState(window.history.state, "", url);
 	}, [candidate, compareCandidates, destination, itineraryStops]);
+	useEffect(() => updateShareUrl(), [updateShareUrl]);
 	const calculateRoute = useCallback(async () => {
 		if (!candidate) return;
 		const target = destinations.find((item) => item.code === destination);
 		if (!target) return;
-		setPending(true);
+		routeRequest.current?.abort();
+		const request = new AbortController();
+		routeRequest.current = request;
+		setRoutePending(true);
+		setRoute(null);
 		setRouteError(null);
 		try {
 			const response = await fetch(
 				`/api/site-visit/route?lng=${candidate.longitude}&lat=${candidate.latitude}&destination=${encodeURIComponent(target.code)}`,
+				{ signal: request.signal },
 			);
 			if (!response.ok)
 				throw new Error(response.status === 429 ? "quota" : "route");
 			const payload = (await response.json()) as { data?: RouteAssessment };
-			if (!payload.data) throw new Error("route");
-			setRoute(payload.data);
+			if (!payload.data || payload.data.mode === "unavailable")
+				throw new Error("route");
+			if (!request.signal.aborted) setRoute(payload.data);
 		} catch (error) {
+			if (request.signal.aborted) return;
 			setRouteError(
 				error instanceof Error && error.message === "quota"
 					? t("siteVisit.quota")
@@ -141,7 +191,7 @@ export function SiteVisitWorkspace() {
 			);
 			setRoute(null);
 		} finally {
-			setPending(false);
+			if (!request.signal.aborted) setRoutePending(false);
 		}
 	}, [candidate, destination, destinations, t]);
 	const addCompare = useCallback(() => {
@@ -173,22 +223,24 @@ export function SiteVisitWorkspace() {
 			const results = await Promise.all(
 				compareCandidates.flatMap((item) =>
 					destinations.map(async (target) => {
-						const response = await fetch(
-							`/api/site-visit/route?lng=${item.longitude}&lat=${item.latitude}&destination=${encodeURIComponent(target.code)}`,
-						);
-						if (!response.ok) return null;
-						const payload = (await response.json()) as {
-							data?: RouteAssessment;
-						};
-						const data = payload.data;
-						return data
-							? {
-									candidateId: item.label,
-									destinationCode: target.code,
-									distanceMeters: data.distanceMeters,
-									durationSeconds: data.durationSeconds,
-								}
-							: null;
+						try {
+							const response = await fetch(
+								`/api/site-visit/route?lng=${item.longitude}&lat=${item.latitude}&destination=${encodeURIComponent(target.code)}`,
+							);
+							if (!response.ok) return null;
+							const { data } = (await response.json()) as {
+								data?: RouteAssessment;
+							};
+							if (!data || data.mode === "unavailable") return null;
+							return {
+								candidateId: item.label,
+								destinationCode: target.code,
+								distanceMeters: data.distanceMeters,
+								durationSeconds: data.durationSeconds,
+							};
+						} catch {
+							return null;
+						}
 					}),
 				),
 			);
@@ -210,15 +262,6 @@ export function SiteVisitWorkspace() {
 			return next;
 		});
 	};
-	const shareItinerary = () => {
-		const query = serializeSiteVisitState({
-			candidate,
-			destination,
-			compareCandidates,
-			itineraryStops,
-		});
-		window.history.replaceState(null, "", `/site-visit?${query}`);
-	};
 	const calculateItinerary = useCallback(async () => {
 		if (itineraryStops.length < 2) return;
 		setPending(true);
@@ -239,7 +282,8 @@ export function SiteVisitWorkspace() {
 					});
 					if (!response.ok) throw new Error("unavailable");
 					const payload = (await response.json()) as { data?: RouteAssessment };
-					if (!payload.data) throw new Error("unavailable");
+					if (!payload.data || payload.data.mode === "unavailable")
+						throw new Error("unavailable");
 					return {
 						fromId: from.label,
 						toId: stop.label,
@@ -284,7 +328,53 @@ export function SiteVisitWorkspace() {
 			</header>
 			<section className="site-visit-layout">
 				<aside className="site-visit-panel">
-					<CandidateSearch onSelect={(value) => sync(value)} />
+					<fieldset className="site-visit-filter-group">
+						<div className="site-visit-filter-heading">
+							<legend>{t("siteVisit.infrastructureFilter")}</legend>
+							<div className="site-visit-filter-actions">
+								<button
+									type="button"
+									className="site-visit-inline-action"
+									onClick={() => setAllContextKinds(true)}
+								>
+									{t("siteVisit.selectInfrastructureFilters")}
+								</button>
+								<button
+									type="button"
+									className="site-visit-inline-action"
+									onClick={() => setAllContextKinds(false)}
+								>
+									{t("siteVisit.clearInfrastructureFilters")}
+								</button>
+							</div>
+						</div>
+						{SITE_CONTEXT_KINDS.map((kind) => (
+							<label key={kind}>
+								<input
+									type="checkbox"
+									checked={enabledContextKinds.includes(kind)}
+									onChange={() => toggleContextKind(kind)}
+								/>
+								<span>
+									{t(`siteVisit.infrastructureKind.${kind}`)} (
+									{contextCounts[kind]})
+								</span>
+							</label>
+						))}
+						<p className="site-visit-filter-note">
+							{candidate
+								? t("siteVisit.infrastructureFilterNote", {
+										radius: SITE_CONTEXT_RADIUS_KM,
+									})
+								: t("siteVisit.infrastructureChooseCandidate")}
+						</p>
+					</fieldset>
+					{candidate && context.features.length === 0 && (
+						<p className="site-visit-empty-state" role="status">
+							{t("siteVisit.noNearbyInfrastructure")}
+						</p>
+					)}
+					<CandidateSearch token={wemapToken} onSelect={selectCandidate} />
 					<div className="site-visit-field">
 						<label htmlFor="site-visit-destination">
 							{t("siteVisit.destination")}
@@ -293,10 +383,8 @@ export function SiteVisitWorkspace() {
 							id="site-visit-destination"
 							value={destination}
 							onChange={(event) => {
-								const value = event.target.value;
-								setDestination(value);
-								sync(candidate, value);
-								setRoute(null);
+								clearRoute();
+								setDestination(event.target.value);
 							}}
 						>
 							{destinations.map((item) => (
@@ -309,10 +397,10 @@ export function SiteVisitWorkspace() {
 					<button
 						type="button"
 						className="btn btn-cta"
-						disabled={!candidate || pending}
+						disabled={!candidate || routePending}
 						onClick={() => void calculateRoute()}
 					>
-						{pending
+						{routePending
 							? t("siteVisit.routeLoading")
 							: t("siteVisit.calculateRoute")}
 					</button>
@@ -328,9 +416,7 @@ export function SiteVisitWorkspace() {
 							<span>
 								{route.mode === "baseline"
 									? `${t("siteVisit.fallback")} · ${route.observedOn}`
-									: route.mode === "unavailable"
-										? t("siteVisit.unavailable")
-										: `${t("siteVisit.calculated")} · ${new Date(route.calculatedOn).toLocaleString()}`}
+									: `${t("siteVisit.calculated")} · ${new Date(route.calculatedOn).toLocaleString()}`}
 							</span>
 							{route.sourceUrl && (
 								<a href={route.sourceUrl} target="_blank" rel="noreferrer">
@@ -377,9 +463,14 @@ export function SiteVisitWorkspace() {
 				</aside>
 				<div className="site-visit-map-wrap">
 					<SiteVisitMap
+						wemapEnabled={wemapEnabled}
 						candidate={candidate}
 						context={context}
 						route={route}
+						network={networkOverview}
+						selectedDestinationCode={selectedDestinationCode}
+						onCandidateChange={selectCandidate}
+						onDestinationSelect={setSelectedDestinationCode}
 						onContextSelect={setSelectedContext}
 					/>
 					<div className="site-visit-legend">
@@ -394,6 +485,14 @@ export function SiteVisitWorkspace() {
 					</div>
 				</div>
 			</section>
+			{candidate && (
+				<LogisticsNetworkPanel
+					candidate={candidate}
+					destinations={logisticsDestinations}
+					onOverviewChange={setNetworkOverview}
+					onDestinationSelect={setSelectedDestinationCode}
+				/>
+			)}
 			{compareCandidates.length > 0 && (
 				<section
 					className="site-visit-secondary"
@@ -495,7 +594,7 @@ export function SiteVisitWorkspace() {
 					>
 						{t("siteVisit.calculateItinerary")}
 					</button>{" "}
-					<button type="button" className="btn" onClick={shareItinerary}>
+					<button type="button" className="btn" onClick={updateShareUrl}>
 						{t("siteVisit.share")}
 					</button>
 				</section>

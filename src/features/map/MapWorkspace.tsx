@@ -1,41 +1,45 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { GeoSearch } from "../search/GeoSearch";
+import type { MessageKey } from "../../lib/i18n";
+import { indicatorLabel, unitLabel } from "../../lib/i18n/data-labels";
+import { useI18n } from "../../lib/i18n/provider";
+import type { Geography, Profile } from "../geography/types";
 import { GeoProfilePanel } from "../profile/GeoProfilePanel";
+import { type RegionIds, RegionPanel } from "../regions/RegionPanel";
+import { GeoSearch } from "../search/GeoSearch";
 import { ShortlistButton } from "../shortlist/ShortlistButton";
 import { ShortlistTray } from "../shortlist/ShortlistTray";
 import { readShortlist } from "../shortlist/store";
-import { ProvinceMap, type FocusedMicroLocation } from "./ProvinceMap";
+import { readFilterInputs, summarizeLayerValues } from "./filters";
+import { scheduleWhenIdle } from "./idle-scheduler";
 import { LayerControls, LayerLegend } from "./LayerControls";
-import { RoadConnectivity } from "./RoadConnectivity";
 import {
 	familyLeadColors,
 	familyOrder,
-	layerFamily,
 	filterInfrastructureByKinds,
 	type IndicatorFamily,
 	type InfrastructureKind,
+	layerFamily,
 	type MapLayers,
 	type ProvinceInfrastructureItem,
 } from "./layers";
+import { type FocusedMicroLocation, ProvinceMap } from "./ProvinceMap";
 import {
 	getProvinceMicroLocations,
+	type MicroLocationCategory,
 	toProvinceMicroLocationGeoJson,
 	toProvinceRoadNetworkGeoJson,
 	toProvinceZoneFootprintsGeoJson,
-	type MicroLocationCategory,
 } from "./province-detail-locations";
-import {
-	catchmentRadii,
-	toCatchmentRingsGeoJson,
-	type CatchmentCenter,
-	type ProvinceProximityMatch,
-} from "./proximity";
 import type { ProvinceDistrictProfile } from "./province-districts";
-import type { Geography, Profile } from "../geography/types";
-import { RegionPanel, type RegionIds } from "../regions/RegionPanel";
-import { readFilterInputs, summarizeLayerValues } from "./filters";
+import {
+	type CatchmentCenter,
+	catchmentRadii,
+	type ProvinceProximityMatch,
+	toCatchmentRingsGeoJson,
+} from "./proximity";
+import { RoadConnectivity } from "./RoadConnectivity";
 import {
 	BOUNDARIES_LAYER,
 	mapStateQuery,
@@ -43,9 +47,6 @@ import {
 	readRegionIds,
 	regionQueryParams,
 } from "./url-state";
-import { useI18n } from "../../lib/i18n/provider";
-import { indicatorLabel, unitLabel } from "../../lib/i18n/data-labels";
-import type { MessageKey } from "../../lib/i18n";
 
 type Coverage = {
 	total: number;
@@ -168,16 +169,21 @@ export function MapWorkspace({ coverage, provinces }: Props) {
 
 	useEffect(() => {
 		const request = new AbortController();
-		void fetch("/api/map/layers", { signal: request.signal })
-			.then(async (response) => {
-				if (!response.ok) throw new Error("Layer request failed");
-				const result: { data: MapLayers } = await response.json();
-				if (!request.signal.aborted) setLayers(result.data);
-			})
-			.catch(() => {
-				if (!request.signal.aborted) setLayerError(true);
-			});
-		return () => request.abort();
+		const cancelIdle = scheduleWhenIdle(() => {
+			void fetch("/api/map/layers", { signal: request.signal })
+				.then(async (response) => {
+					if (!response.ok) throw new Error("Layer request failed");
+					const result: { data: MapLayers } = await response.json();
+					if (!request.signal.aborted) setLayers(result.data);
+				})
+				.catch(() => {
+					if (!request.signal.aborted) setLayerError(true);
+				});
+		});
+		return () => {
+			cancelIdle();
+			request.abort();
+		};
 	}, []);
 
 	const openProfile = useCallback((id: string) => {

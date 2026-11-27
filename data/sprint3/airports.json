@@ -245,12 +245,12 @@
     "id": "VVLT",
     "code": null,
     "name": "Long Thanh International Airport",
-    "longitude": 107.1003,
-    "latitude": 10.3279,
+    "longitude": 107.041111,
+    "latitude": 10.784444,
     "airportClassification": "international",
-    "airportOperationalStatus": "operational",
-    "classificationSourceUrl": "https://acv.vn/vi/ve-acv",
-    "url": "https://acv.vn/vi/du-an/cang-hang-khong-quoc-te-long-thanh"
+    "airportOperationalStatus": "planned",
+    "classificationSourceUrl": "https://caa.gov.vn/thong-tin-du-an/dong-nai-ra-soat-ha-tang-phoi-hop-voi-acv-dua-cang-hkqt-long-thanh-cat-canh-tu-24-12-20261120090011460.htm",
+    "url": "https://aim.vatm.vn/images/stories/vnaic.vn/SanPhamDichVu/AIP-SUP/17-11/2026/vv-esup-61-26-approvedbycaav.pdf"
   },
   {
     "id": "VVNS",

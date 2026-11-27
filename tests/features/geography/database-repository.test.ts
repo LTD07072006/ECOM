@@ -49,7 +49,7 @@ databaseTest("loads the public geography catalog from PostgreSQL", async () => {
 });
 
 databaseTest(
-	"Wave 2 exposes published provincial series, comparable GRDP sources and airport points",
+	"Wave 2 exposes published provincial series, comparable GRDP sources, airports and ports",
 	async () => {
 		const layers = await loadMapLayers();
 		const growth = layers.indicators.filter(
@@ -75,7 +75,18 @@ databaseTest(
 				periodStart: "2024-01-01",
 			}),
 		).toBe(false);
-		expect(layers.infrastructure?.points.features).toHaveLength(22);
+		expect(layers.infrastructure?.kinds).toMatchObject({
+			airport: 23,
+			seaport: 8,
+		});
+		const points = layers.infrastructure?.points.features ?? [];
+		expect(points.find((feature) => feature.id === "VVLT")).toMatchObject({
+			properties: { province: "Đồng Nai", airportOperationalStatus: "planned" },
+		});
+		expect(points.find((feature) => feature.id === "VNQNG-DQ")).toMatchObject({
+			properties: { province: "Quảng Ngãi", kind: "seaport" },
+			geometry: { coordinates: [108.7864, 15.4086] },
+		});
 		expect(
 			layers.infrastructure?.points.features.find(
 				(feature) => feature.properties.code === "HAN",

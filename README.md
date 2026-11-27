@@ -151,6 +151,12 @@ Chọn **Explore a retail scenario** trên trang chính, chọn ngành **Retail*
 
 Với từng chỉ tiêu và cấp địa bàn, hồ sơ chọn một tập số liệu công bố theo kỳ kết thúc mới nhất, tiếp theo là độ phủ và thời điểm công bố. Bản đồ mặc định dùng cùng thứ tự. Nếu tập được chọn thiếu một địa bàn, địa bàn đó hiển thị thiếu dữ liệu. Bộ điều khiển bản đồ cho phép chọn rõ một nguồn khác và xem chất lượng, kỳ, phương pháp và giấy phép của giá trị tại tỉnh đã chọn. So sánh giữ các chỉ tiêu tương thích và giải thích lý do từng chỉ tiêu còn lại không so sánh được.
 
+### Bản đồ khảo sát địa điểm
+
+Mở `/site-visit` để xem bản đồ, điểm hạ tầng và tuyến khảo sát. Đặt `WEMAP_MAP_TOKEN` trong `.env` để máy chủ tải style và tile WeMap. Nếu biến này để trống, hệ thống dùng `NEXT_PUBLIC_WEMAP_TOKEN`. Chỉ cấu hình `NEXT_PUBLIC_WEMAP_TOKEN` với key được phép dùng trên trình duyệt cho tìm kiếm địa chỉ. Có thể cấp `WEMAP_SERVER_TOKEN` riêng cho tính tuyến từ máy chủ.
+
+Khởi động lại ứng dụng sau khi đổi key. Docker Compose truyền các biến vào container khi chạy. Khi style WeMap không tải được, trang hiển thị bản đồ nền OpenStreetMap và báo rõ nguồn đang dùng.
+
 ### 2. Gửi inquiry và xử lý bằng quyền steward
 
 1. Trong hồ sơ địa bàn, chọn **Request investment support**. Từ shortlist, chọn **Request support for these places**.

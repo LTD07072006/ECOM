@@ -2,7 +2,6 @@
 
 import "maplibre-gl/dist/maplibre-gl.css";
 import type { FeatureCollection, LineString, Point, Polygon } from "geojson";
-import { useCallback, useEffect, useRef, useState } from "react";
 import type {
 	ExpressionSpecification,
 	GeoJSONSource,
@@ -10,31 +9,33 @@ import type {
 	Map as MapLibreMap,
 	Popup as MapPopup,
 } from "maplibre-gl";
-import type { DatasetMetadata, ProvinceMapData } from "../geography/types";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useI18n } from "../../lib/i18n/provider";
 import { safeSourceUrl } from "../../lib/source-url";
+import type { DatasetMetadata, ProvinceMapData } from "../geography/types";
+import { scheduleWhenIdle } from "./idle-scheduler";
 import {
 	colorScale,
+	type InfrastructureLayer,
 	infrastructureKindColors,
 	layerColor,
 	mapCanvasColors,
 	missingColor,
-	type InfrastructureLayer,
 	type StatisticalLayer,
 } from "./layers";
 import {
 	curatedProvinceMicroLocations,
-	utilityKeys,
 	type MicroLocationPointProperties,
 	type MicroZonePolygonProperties,
 	type ProvinceRoadProperties,
+	utilityKeys,
 } from "./province-detail-locations";
-import { toCatchmentRingsGeoJson } from "./proximity";
-import { useI18n } from "../../lib/i18n/provider";
 import {
-	toDistrictBoundaryGeoJson,
 	type DistrictBoundary,
 	type ProvinceDistrictProfile,
+	toDistrictBoundaryGeoJson,
 } from "./province-districts";
+import { toCatchmentRingsGeoJson } from "./proximity";
 
 const provinceSource = "provinces";
 const hatchLayer = "province-missing-hatch";
@@ -335,7 +336,12 @@ export function ProvinceMap({
 			try {
 				const styleRes = await fetch(
 					"https://tiles.openfreemap.org/styles/bright",
-					{ signal: request.signal },
+					{
+						signal: AbortSignal.any([
+							request.signal,
+							AbortSignal.timeout(2_000),
+						]),
+					},
 				);
 				if (styleRes.ok) {
 					const fetched = (await styleRes.json()) as Record<string, unknown>;
@@ -344,8 +350,9 @@ export function ProvinceMap({
 					mapStyle = fetched;
 				}
 			} catch {
-				// Fallback to inline style if offline
+				// Render provincial boundaries against the inline style if the provider is slow or offline.
 			}
+			if (request.signal.aborted || !container.current) return;
 
 			const reducedMotion = window.matchMedia(
 				"(prefers-reduced-motion: reduce)",
@@ -375,7 +382,6 @@ export function ProvinceMap({
 				dragRotate: false,
 				renderWorldCopies: false,
 				attributionControl: false,
-				canvasContextAttributes: { preserveDrawingBuffer: true },
 			});
 			map = view;
 			mapRef.current = view;
@@ -850,11 +856,14 @@ export function ProvinceMap({
 			queueMicrotask(handleMapLifecycle);
 		}
 
-		void mountMap().catch(() => {
-			if (!request.signal.aborted) setStatus("unavailable");
+		const cancelIdle = scheduleWhenIdle(() => {
+			void mountMap().catch(() => {
+				if (!request.signal.aborted) setStatus("unavailable");
+			});
 		});
 		return () => {
 			request.abort();
+			cancelIdle();
 			resizeObserver?.disconnect();
 			removeLifecycleListeners?.();
 			map?.remove();

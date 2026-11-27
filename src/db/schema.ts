@@ -83,6 +83,7 @@ export const apiObservabilityBuckets = marketEntry.table(
 	},
 	(table) => [
 		primaryKey({
+			name: "api_observability_buckets_pkey",
 			columns: [table.bucketStart, table.route, table.provider, table.status],
 		}),
 		index("api_observability_buckets_route_idx").on(
@@ -675,6 +676,22 @@ export const infrastructurePois = marketEntry.table(
     AND ST_NDims(${table.geom}) = 2 AND ST_GeometryType(${table.geom}) = 'ST_Point' AND NOT ST_IsEmpty(${table.geom})
     THEN ST_X(${table.geom}) BETWEEN -180 AND 180 AND ST_Y(${table.geom}) BETWEEN -90 AND 90 ELSE false END`,
 		),
+		check(
+			"infrastructure_pois_airport_classification_check",
+			sql`${table.airportClassification} is null or ${table.airportClassification} in ('international', 'domestic')`,
+		),
+		check(
+			"infrastructure_pois_operational_status_check",
+			sql`${table.operationalStatus} is null or ${table.operationalStatus} in ('operational', 'planned', 'not_operational')`,
+		),
+		check(
+			"infrastructure_pois_port_type_check",
+			sql`${table.portType} is null or ${table.portType} in ('deep_sea', 'coastal', 'river', 'container_terminal')`,
+		),
+		check(
+			"infrastructure_pois_classification_source_url_check",
+			sql`${table.classificationSourceUrl} is null or ${table.classificationSourceUrl} ~ '^https://'`,
+		),
 	],
 );
 
@@ -942,6 +959,10 @@ export const siteVerificationEvidence = marketEntry.table(
 		check(
 			"site_verification_evidence_field_check",
 			sql`${table.field} in ('area', 'region', 'power', 'wastewater', 'sector', 'infrastructure')`,
+		),
+		check(
+			"site_verification_evidence_note_check",
+			sql`${table.reviewNote} is null or length(${table.reviewNote}) between 1 and 1000`,
 		),
 	],
 );

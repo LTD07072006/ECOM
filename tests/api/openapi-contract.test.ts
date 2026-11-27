@@ -6,7 +6,7 @@ function routeFileToOpenApiPath(filePath: string) {
 	const withoutPrefix = normalized
 		.replace(/^src\/app/, "")
 		.replace(/\/route\.ts$/, "");
-	return withoutPrefix.replace(/\[([^\]]+)\]/g, "{$1}");
+	return withoutPrefix.replace(/\[(?:\.\.\.)?([^\]]+)\]/g, "{$1}");
 }
 
 test("docs/openapi.yaml documents every runtime /api route, HTTP method, security scheme, and schema (ECOM-34)", async () => {
